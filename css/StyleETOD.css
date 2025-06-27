@@ -1,0 +1,311 @@
+/* ---------------  Reglas globales --------------- */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Roboto', sans-serif;
+}
+
+body {
+  margin: 0;
+  background-color: #ffffff;
+  color: #ffffff;
+}
+
+/* ---------------  Encabezado --------------- */
+/* -------- Encabezado -------- */
+header {
+  background-color: #4a4c60;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+}
+
+/* agrupa logo + título */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;            /* espacio entre logo y texto */
+}
+
+/* logo */
+.logo {
+  height: 30px;
+}
+
+/* título */
+header h1 {
+  margin: 0;
+  font-size: 18px;
+  color: #ffffff;
+}
+
+/* bloque derecho (ya lo tenías) */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;    /* empuja todo esto a la derecha */
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.icon-btn img {
+  height: 25px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.icon-btn:hover img {
+  opacity: 0.85;
+  transform: scale(1.05);
+}
+
+
+/* número de usuario */
+header p {
+  margin: 0;
+  font-size: 16px;
+}
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: 40px;                      /* debajo del header */
+  background-color: #4a4c60;
+  border-radius: 8px;
+  display: none;                  /* se activa por JS */
+  flex-direction: column;
+  min-width: 160px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 1000;
+}
+
+.dropdown a {
+  color: #ffffff;
+  padding: 10px 15px;
+  text-decoration: none;
+  font-size: 14px;
+  border-bottom: 1px solid #5c5f72;
+}
+
+.dropdown a:last-child {
+  border-bottom: none;
+}
+
+.dropdown a:hover {
+  background-color: #3a3c4d;
+}
+
+/* Contenedor y botón de usuario */
+.user-menu-container {
+  position: relative;
+}
+
+/* Menú desplegable oculto */
+.user-dropdown {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  background-color: #4a4c60;
+  color: white;
+  border-radius: 8px;
+  padding: 10px;
+  display: none;
+  min-width: 200px;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+.user-dropdown p {
+  margin: 5px 0;
+}
+
+.user-option {
+  background-color: black;
+  color: white;
+  border: none;
+  padding: 8px;
+  width: 100%;
+  margin-top: 8px;
+  font-family: monospace;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 13px;
+}
+
+.user-option:hover {
+  background-color: #222;
+}
+
+.notification-container {
+  position: relative;
+}
+
+.notification-dropdown {
+  position: absolute;
+  right: 0;
+  top: 40px;
+  background-color: #4a4c60;
+  color: white;
+  border-radius: 8px;
+  padding: 10px;
+  width: 260px;
+  display: none;
+  font-size: 13px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+.notification-dropdown p {
+  margin: 8px 0;
+  line-height: 1.4;
+}
+
+.notification-dropdown u {
+  text-decoration-thickness: 1px;
+}
+
+.salida-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.salida-title {
+  font-family: monospace;
+  font-size: 32px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 10px;
+  border-bottom: 3px solid black;
+  padding-bottom: 10px;
+  width: 100%;
+  color: black;
+}
+
+.salida-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  width: 100%;
+  max-width: 700px;
+}
+
+.tab {
+  background-color: rgba(53, 46, 60, 0.3);
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-family: monospace;
+  cursor: pointer;
+  flex: 1;
+  transition: background 0.3s;
+}
+
+.tab.activo {
+  background-color: #4a4c60;
+  color: white;
+  border-radius: 8px;
+  border: none;
+  border-bottom: none;
+}
+
+.new-bttn:hover {
+  background-color: #8e92a6;
+  transform: scale(1.02);
+}
+
+.salida-form {
+  background-color: #4a4c60;
+  color: white;
+  font-family: monospace;
+  padding: 25px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.salida-row {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.salida-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 200px;
+}
+
+.salida-col.full {
+  flex: 100%;
+}
+
+.salida-col label {
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.salida-col input,
+.salida-col textarea,
+.item input {
+  padding: 6px;
+  font-family: monospace;
+  border-radius: 5px;
+  border: none;
+  width: 100%;
+}
+
+.items-title {
+  font-size: 16px;
+  font-weight: bold;
+  font-family: monospace;
+  text-align: left;
+  margin: 10px 0;
+}
+
+.item input {
+  flex: 1;
+  margin-bottom: 5px;
+}
+
+.salida-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn {
+  background-color: black;
+  color: white;
+  padding: 10px 20px;
+  font-family: monospace;
+  border: none;
+  cursor: pointer;
+  flex: 1;
+  min-width: 200px;
+  transition: background 0.2s;
+}
+
+.btn:hover {
+  background-color: #222;
+  transform: scale(1.01);
+}
