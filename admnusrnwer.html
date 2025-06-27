@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>SIA WARNING</title>
+    <link rel="stylesheet" href="css/StyleADUSNWER.css">
+</head>
+
+<body>
+<header>
+  <div class="brand">
+    <img src="img/cmapa.png" class="logo" />
+    <h1>SIA - CMAPA</h1>
+  </div>
+  <div class="header-right">
+    <div class="notification-container">
+      <button class="icon-btn" id="notif-toggle">
+        <img src="img/bell.png" class="imgh3" alt="Notificaciones" />
+      </button>
+      <div class="notification-dropdown" id="notif-dropdown">
+        <p><u>Tu solicitud de cambio de inventario se ha realizado exitosamente.</u></p>
+        <p>Producto: <strong>"Tornillos 1/4"</strong> llegó al punto de reorden.</p>
+      </div>
+    </div>
+    <p>00001</p>
+    <div class="user-menu-container">
+      <button class="icon-btn" id="user-toggle">
+        <img src="img/userB.png" class="imgh2" alt="Usuario" />
+      </button>
+      <div class="user-dropdown" id="user-dropdown">
+        <p><strong>Usuario:</strong> Administrador</p>
+        <p><strong>Apodo:</strong> Axel Olvera</p>
+        <button class="user-option">CAMBIAR CONTRASEÑA</button>
+      </div>
+    </div>
+    <!-- botón hamburguesa -->
+    <div class="menu-container">
+      <button class="icon-btn" id="menu-toggle">
+        <img src="img/menu.png" alt="Menú" />
+      </button>
+      <div class="dropdown" id="dropdown-menu">
+        <a href="#">Inicio</a>
+        <a href="#">Cierre de mes</a>
+        <a href="#">Menu de administador</a>
+        <a href="#">Acerca de</a>
+        <a href="#">Ayuda</a>
+        <a href="#">Cerrar Sesion</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<article class="ft-container">
+  <div class="son-container">
+    <h2>ADVERTENCIA</h2>
+    <p>
+      EL USUARIO YA SE ENCUENTRA REGISTRADO. <br>
+      VERIFIQUE LOS DATOS E INTENTELO NUEVAMENTE.
+    </p>
+    <div class="form-buttons">
+      <button type="submit" class="btn confirm">CONFIRMAR</button>
+    </div>
+  </div>
+</article>
+
+<main class="main-container">
+    <h1 class="titulo-seccion">NUEVO USUARIO</h1>
+    <section class="formulario-usuario">
+        <div class="campo doble">
+            <label>USUARIO</label>
+            <input type="text" />
+        </div>
+        <div class="campo doble">
+            <label>TIPO DE USUARIO</label>
+            <select>
+                <option>Administrador</option>
+                <option>Operador</option>
+                <option>Observador</option>
+            </select>
+        </div>
+        <div class="campo doble">
+            <label>CONTRASEÑA</label>
+            <input type="password" />
+        </div>
+        <div class="campo doble">
+            <label>CONFIRMAR CONTRASEÑA</label>
+            <input type="password" />
+        </div>
+        <div class="campo doble">
+            <label>APODO</label>
+            <input type="text" />
+        </div>
+        <div class="campo doble">
+            <label>DAR PERMISO A SECCIÓN</label>
+            <select>
+                <option>Ninguno</option>
+                <option>Inventario</option>
+                <option>Reportes</option>
+                <option>Administración</option>
+            </select>
+        </div>
+        <div class="botones-formulario">
+            <button class="boton-negro">CANCELAR</button>
+            <button class="boton-negro">CONFIRMAR</button>
+        </div>
+    </section>
+</main>
+
+<script>
+  const toggle = document.getElementById('menu-toggle');
+  const dropdown = document.getElementById('dropdown-menu');
+  toggle.addEventListener('click', () => {
+    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+  });
+  window.addEventListener('click', (e) => {
+    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+</script>
+
+<script>
+  const userToggle = document.getElementById('user-toggle');
+  const userDropdown = document.getElementById('user-dropdown');
+  userToggle.addEventListener('click', () => {
+    userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+  });
+
+  // Cerrar el menú al hacer clic fuera
+  window.addEventListener('click', (e) => {
+    if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
+      userDropdown.style.display = 'none';
+    }
+  });
+</script>
+
+<script>
+  const notifToggle = document.getElementById('notif-toggle');
+  const notifDropdown = document.getElementById('notif-dropdown');
+  notifToggle.addEventListener('click', () => {
+    notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
+  });
+  window.addEventListener('click', (e) => {
+    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
+      notifDropdown.style.display = 'none';
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>SIA WARNING</title>
+    <link rel="stylesheet" href="css/StyleETNOODER.css">
+</head>
+
+<body>
+<header>
+  <div class="brand">
+    <img src="img/cmapa.png" class="logo" />
+    <h1>SIA - CMAPA</h1>
+  </div>
+  <div class="header-right">
+    <div class="notification-container">
+      <button class="icon-btn" id="notif-toggle">
+        <img src="img/bell.png" class="imgh3" alt="Notificaciones" />
+      </button>
+      <div class="notification-dropdown" id="notif-dropdown">
+        <p><u>Tu solicitud de cambio de inventario se ha realizado exitosamente.</u></p>
+        <p>Producto: <strong>"Tornillos 1/4"</strong> llegó al punto de reorden.</p>
+      </div>
+    </div>
+    <p>00001</p>
+    <div class="user-menu-container">
+      <button class="icon-btn" id="user-toggle">
+        <img src="img/userB.png" class="imgh2" alt="Usuario" />
+      </button>
+      <div class="user-dropdown" id="user-dropdown">
+        <p><strong>Usuario:</strong> Administrador</p>
+        <p><strong>Apodo:</strong> Axel Olvera</p>
+        <button class="user-option">CAMBIAR CONTRASEÑA</button>
+      </div>
+    </div>
+    <!-- botón hamburguesa -->
+    <div class="menu-container">
+      <button class="icon-btn" id="menu-toggle">
+        <img src="img/menu.png" alt="Menú" />
+      </button>
+      <div class="dropdown" id="dropdown-menu">
+        <a href="#">Inicio</a>
+        <a href="#">Cierre de mes</a>
+        <a href="#">Menu de administador</a>
+        <a href="#">Acerca de</a>
+        <a href="#">Ayuda</a>
+        <a href="#">Cerrar Sesion</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<article class="ft-container">
+  <div class="son-container">
+    <h2>ADVERTENCIA</h2>
+    <p>
+      DEBES DE RELLENAR TODOS LOS CAMPOS PARA PODER REGISTRAR LA SALIDA, VERIFICA LOS DATOS E INTENTALO NUEVAMENTE.
+    </p>
+    <div class="form-buttons">
+      <button type="submit" class="btn confirm">CONFIRMAR</button>
+    </div>
+  </div>
+</article>
+
+<main class="salida-container">
+    <h2 class="salida-title">SALIDAS</h2>
+    <div class="salida-tabs">
+        <button class="tab">SALIDA CON ORDEN</button>
+        <button class="tab activo">SALIDA SIN ORDEN (USO INTERNO)</button>
+    </div>
+    <form class="salida-form">
+        <div class="salida-row">
+            <div class="salida-col">
+                <label>ÁREA QUE SOLICITA</label>
+                <input type="text" value="Comunidades" />
+            </div>
+            <div class="salida-col">
+                <label>QUIÉN SOLICITA</label>
+                <input type="text" value="Angel Ramírez" />
+            </div>
+            <div class="salida-col">
+                <label>FECHA</label>
+                <input type="date" value="2025-05-30" />
+            </div>
+        </div>
+        <div class="salida-row">
+            <div class="salida-col full">
+                <label>COMENTARIOS</label>
+                <textarea rows="3">Se armarán escritorios en el área</textarea>
+            </div>
+        </div>
+        <div class="salida-items">
+            <h3 class="items-title">ELEMENTOS EN LA ORDEN</h3>
+            <div class="salida-row item">
+                <input type="text" placeholder="CÓDIGO" value="ABCDEFGHIJKLMNÑOPQRSTUVWXYZ" />
+                <input type="text" placeholder="NOMBRE" value="MEDIDOR DE AGUA" />
+                <input type="number" placeholder="CANTIDAD" value="1" />
+            </div>
+            <div class="salida-row item">
+                <input type="text" placeholder="CÓDIGO" value="ABCDEFGHIJKLMNÑOPQRSTUVWXYZ" />
+                <input type="text" placeholder="NOMBRE" value="CODOS DE COBRE" />
+                <input type="number" placeholder="CANTIDAD" value="4" />
+            </div>
+            <div class="salida-row item">
+                <input type="text" placeholder="CÓDIGO" value="ABCDEFGHIJKLMNÑOPQRSTUVWXYZ" />
+                <input type="text" placeholder="NOMBRE" value="TUBO DE COBRE 1.5M" />
+                <input type="number" placeholder="CANTIDAD" value="1" />
+            </div>
+            <div class="salida-row item">
+                <input type="text" placeholder="CÓDIGO" value="ABCDEFGHIJKLMNÑOPQRSTUVWXYZ" />
+                <input type="text" placeholder="NOMBRE" value="LLAVES DE PRESIÓN" />
+                <input type="number" placeholder="CANTIDAD" value="1" />
+            </div>
+        </div>
+        <div class="salida-actions">
+            <button type="button" class="btn cancel">CANCELAR</button>
+            <button type="button" class="btn add">AÑADIR ELEMENTOS</button>
+            <button type="submit" class="btn confirm">CONFIRMAR SALIDA</button>
+        </div>
+    </form>
+</main>
+
+<script>
+  const toggle = document.getElementById('menu-toggle');
+  const dropdown = document.getElementById('dropdown-menu');
+  toggle.addEventListener('click', () => {
+    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+  });
+  window.addEventListener('click', (e) => {
+    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+</script>
+
+<script>
+  const userToggle = document.getElementById('user-toggle');
+  const userDropdown = document.getElementById('user-dropdown');
+  userToggle.addEventListener('click', () => {
+    userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+  });
+
+  // Cerrar el menú al hacer clic fuera
+  window.addEventListener('click', (e) => {
+    if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
+      userDropdown.style.display = 'none';
+    }
+  });
+</script>
+
+<script>
+  const notifToggle = document.getElementById('notif-toggle');
+  const notifDropdown = document.getElementById('notif-dropdown');
+  notifToggle.addEventListener('click', () => {
+    notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
+  });
+  window.addEventListener('click', (e) => {
+    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
+      notifDropdown.style.display = 'none';
+    }
+  });
+</script>   
+</body>
+</html>
