@@ -2,25 +2,32 @@
 session_start();
 require 'db.php';
 
-$user = $_POST['user'];
-$pass = $_POST['password'];
+// Sanitiza y recibe datos del formulario
+$usuario = trim($_POST['user']      ?? '');
+$clave   = trim($_POST['password']  ?? '');
 
-$sql = "SELECT * FROM usuarios WHERE usuario = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $user);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows === 1) {
-    $data = $result->fetch_assoc();
-
-    if ($pass === $data['contrasena']) {
-        $_SESSION['usuario'] = $data['usuario'];
-        header("Location: ../homepage.html");
-        exit();
-    }
+if ($usuario === '' || $clave === '') {
+    die("Faltan datos.");
 }
 
-header("Location: ../login.html?error=1");
-exit();
+// Consulta segura
+$stmt = $conn->prepare(
+    "SELECT * FROM usuarios
+     WHERE usuario = :usuario AND contrasena = :contrasena"
+);
+$stmt->execute([
+    ':usuario'    => $usuario,
+    ':contrasena' => $clave,      // ⚠️  En producción usa password_hash
+]);
+
+if ($stmt->rowCount() === 1) {
+    // Usuario válido: guarda datos en sesión (si los necesitas)
+    $_SESSION['usuario'] = $usuario;
+
+    // Redirige a la página principal
+    header("Location: ../homepage.html");
+    exit();
+}
+
+echo "<script>alert('Usuario o contraseña incorrectos');history.back();</script>";
 ?>
