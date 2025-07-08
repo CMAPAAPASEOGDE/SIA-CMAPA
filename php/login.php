@@ -25,7 +25,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         header("Location: /homepage.php");  // asegúrate que está en la raíz
         exit();
     } else {
-        header("Location: /homepage.php");
+        header("Location: /index.php?error=1");
         exit();
     }
 } else {
