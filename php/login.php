@@ -10,7 +10,7 @@ $contrasena = $_POST['password'];
 $sql = "SELECT * FROM usuarios WHERE usuario = :usuario AND contrasena = :contrasena AND estatus = 1";
 $stmt = $conn->prepare($sql);
 $stmt->bindParam(':usuario', $usuario);
-$stmt->bindParam(':contrasena', $contrasena); // si después usas hash, aquí cambia
+$stmt->bindParam(':contrasena', $contrasena); // Si usas hash más adelante, cámbialo
 $stmt->execute();
 
 // Verificar si existe
@@ -29,4 +29,3 @@ if ($stmt->rowCount() > 0) {
     exit();
 }
 ?>
-
