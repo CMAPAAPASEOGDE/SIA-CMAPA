@@ -12,8 +12,8 @@ echo "Contraseña recibida: $password<br>";
 // Consulta segura con parámetros
 $sql = "SELECT * FROM usuarios WHERE usuario = :usuario AND contrasena = :contrasena AND estatus = 1";
 $stmt = $conn->prepare($sql);
-$stmt->bindParam(':usuario', $usuario);
-$stmt->bindParam(':contrasena', $password); // Si usas hash más adelante, cámbialo
+$stmt->bindParam(':usuario', $usuario, PDO::PARAM_INT);
+$stmt->bindParam(':contrasena', $password, PDO::PARAM_STR); // Si usas hash más adelante, cámbialo
 $stmt->execute();
 
 // Verificar si existe
