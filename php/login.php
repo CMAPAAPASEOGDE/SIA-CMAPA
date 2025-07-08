@@ -25,7 +25,8 @@ if ($stmt->rowCount() > 0) {
     exit();
 } else {
     // Redirigir con error
-    header("Location: ../index.html?error=1");
+    header("Location: ../index.php?error=1");
     exit();
 }
 ?>
+
