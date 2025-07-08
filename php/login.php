@@ -19,7 +19,7 @@ if ($stmt->rowCount() > 0) {
     $_SESSION['idUsuario'] = $userData['idUsuario'];
     $_SESSION['usuario'] = $userData['usuario'];
     $_SESSION['apodo'] = $userData['apodo'];
-    $_SESSION['rol'] = $userData['idRol'];
+    $_SESSION['rol'] = $userData['idRol']; 
 
     header("Location: ../homepage.php");
     exit();
