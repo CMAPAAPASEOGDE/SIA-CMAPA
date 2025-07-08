@@ -7,7 +7,7 @@ $usuario = $_POST['user'];
 $contrasena = $_POST['password'];
 
 // Consulta segura con parámetros
-$sql = "SELECT * FROM Usuarios WHERE usuario = :usuario AND contrasena = :contrasena AND estatus = 1";
+$sql = "SELECT * FROM usuarios WHERE usuario = :usuario AND contrasena = :contrasena AND estatus = 1";
 $stmt = $conn->prepare($sql);
 $stmt->bindParam(':usuario', $usuario);
 $stmt->bindParam(':contrasena', $contrasena); // si después usas hash, aquí cambia
