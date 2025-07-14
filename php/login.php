@@ -22,7 +22,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['apodo'] = $userData['apodo'];
         $_SESSION['rol'] = $userData['idRol'];
 
-        header("Location: /homepage.php");  // asegúrate que está en la raíz
+        header("Location: /about.html");  // asegúrate que está en la raíz
         exit();
     } else {
         header("Location: /index.php?error=1");
