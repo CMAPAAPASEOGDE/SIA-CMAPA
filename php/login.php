@@ -4,7 +4,7 @@ require 'conexion.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Obtener datos del formulario
-    $usuario = $_POST['user'];
+    $usuario = $_POST['usuario'];
     $password = $_POST['password'];
 
     // Consulta segura
@@ -22,7 +22,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['apodo'] = $userData['apodo'];
         $_SESSION['rol'] = $userData['idRol'];
 
-        header("Location: /about.html");  // asegúrate que está en la raíz
+        header("Location: /homepage.php");  // asegúrate que está en la raíz
         exit();
     } else {
         header("Location: /index.php?error=1");

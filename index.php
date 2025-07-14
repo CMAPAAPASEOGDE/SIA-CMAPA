@@ -20,7 +20,7 @@
     <form action="php/login.php" method="POST">
       <div>
         <img src="img/userB.png" />
-        <input type="text" name="user" placeholder="Usuario" required />
+        <input type="text" name="usuario" placeholder="Usuario" required />
       </div>
       <div>
         <img src="img/padlockB.png" />
