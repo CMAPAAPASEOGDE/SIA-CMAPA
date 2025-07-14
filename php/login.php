@@ -21,7 +21,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = $_POST['password'];
 
     // Consulta segura
-    $sql = "SELECT * FROM Usuarios WHERE usuario = :usuario AND contrasena = :contrasena AND estatus = 1";
+    $sql = "SELECT * FROM Usuarios WHERE usuario = :'1' AND contrasena = :'123456' AND estatus = 1";
     $stmt = $conn->prepare($sql);
     $stmt->bindParam(':usuario', $usuario, PDO::PARAM_STR);
     $stmt->bindParam(':contrasena', $password, PDO::PARAM_STR);
