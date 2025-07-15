@@ -1,3 +1,54 @@
+<?php
+session_start();
+$error = '';
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $usuario = $_POST['usuario'];
+    $contrasena = $_POST['contrasena'];
+    
+    // Conexión a Azure SQL Server
+    $serverName = "sqlserver-sia.database.windows.net";
+    $connectionOptions = array(
+        "Database" => "db_sia",
+        "Uid" => "cmapADMIN",
+        "PWD" => "@siaADMN56*"
+    );
+    
+    $conn = sqlsrv_connect($serverName, $connectionOptions);
+    
+    if ($conn === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+    
+    // Consulta segura con parámetros
+    $sql = "SELECT idUsuario, usuario, idRol FROM usuarios WHERE usuario = usuario AND contrasena = contrasena";
+    $params = array($usuario, $contrasena);
+    $stmt = sqlsrv_query($conn, $sql, $params);
+    
+    if ($stmt === false) {
+        $error = "Error en la consulta: " . print_r(sqlsrv_errors(), true);
+    } else {
+        if (sqlsrv_has_rows($stmt)) {
+            $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+            
+            // Crear sesión
+            $_SESSION['user_id'] = $row['id'];
+            $_SESSION['nombre'] = $row['nombre'];
+            $_SESSION['rol'] = $row['rol'];
+            
+            // Redirección
+            header("Location: homepage.php");
+            exit();
+        } else {
+            $error = "Credenciales inválidas";
+        }
+    }
+    
+    sqlsrv_free_stmt($stmt);
+    sqlsrv_close($conn);
+}
+?>
+
 <!DOCTYPE html>
 
 <html>
@@ -9,6 +60,11 @@
 </head>
 
 <body>
+
+<?php if (!empty($error)): ?>
+        <div style="color:red;"><?= $error ?></div>
+    <?php endif; ?>
+
   <header>
     <img src="img/cmapa.png" />
     <h1>Sistema de Inventario de Almacén - CMAPA</h1>
@@ -24,7 +80,7 @@
       </div>
       <div>
         <img src="img/padlockB.png" />
-        <input type="password" name="password" placeholder="Contraseña" required />
+        <input type="password" name="contrasena" placeholder="Contraseña" required />
       </div>
       <p class="forgot">
         <a href="#" onclick="mostrarMensaje()">Olvidé mi contraseña</a>

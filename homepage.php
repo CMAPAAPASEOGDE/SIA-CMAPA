@@ -1,6 +1,6 @@
 <?php
 session_start();
-if (!isset($_SESSION['usuario'])) {
+if (!isset($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
 }
@@ -37,8 +37,8 @@ if (!isset($_SESSION['usuario'])) {
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
       </button>
       <div class="user-dropdown" id="user-dropdown">
-        <p><strong>Usuario:</strong> Administrador</p>
-        <p><strong>Apodo:</strong> Axel Olvera</p>
+        <p><strong>Usuario:</strong> <?= $_SESSION[ 'rol' ]?></p>
+        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'])?></p>
         <a href="passchng.html"><button class="user-option">CAMBIAR CONTRASEÑA</button></a>
       </div>
     </div>
