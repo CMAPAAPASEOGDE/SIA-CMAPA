@@ -8,7 +8,7 @@ http_response_code(403); // Código HTTP 403: Prohibido
 </head>
 <body>
     <h1>Error 403: Acceso restringido</h1>
-    <p>Solo administradores pueden acceder a esta sección.</p>
+    <p>Solo los usuarios con permisos pueden acceder a esta sección.</p>
     <a href="homepage.php">Volver al inicio</a>
 </body>
 </html>
