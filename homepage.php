@@ -58,7 +58,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
         <a href="admin.html">Menu de administador</a>
         <a href="about.html">Acerca de</a>
         <a href="help.html">Ayuda</a>
-        <a href="logout.php">Cerrar Sesion</a>
+        <a href="php/logout.php">Cerrar Sesion</a>
       </div>
     </div>
   </div>
