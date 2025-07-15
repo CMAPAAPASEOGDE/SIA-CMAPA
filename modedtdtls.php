@@ -23,8 +23,8 @@ if (!in_array($idRol, [1, 2])) {
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
-    <title>SIA Modifications Downs</title>
-    <link rel="stylesheet" href="css/StyleMDFBJS.css">
+    <title>SIA Modifications Edit Details</title>
+    <link rel="stylesheet" href="css/StyleMDEDDTLS.css">
 </head>
 
 <body>
@@ -71,18 +71,14 @@ if (!in_array($idRol, [1, 2])) {
 <main class="altas-container">
     <div class="altas-title">
         <h2>MODIFICACIONES DE INVENTARIO</h2>
-        <h3>BAJAS</h3>
+        <h3>EDITAR DETALLES DE LOS ELEMENTOS</h3>
     </div>
     <form class="altas-form">
         <label for="codigo">CÓDIGO</label>
         <input type="text" id="codigo" name="codigo" value="">
-        <label for="motivo">MOTIVO DE LA BAJA</label>
+        <label for="motivo">DETALLES A EDITAR</label>
         <textarea id="motivo" name="motivo" rows="5"></textarea>
         <div class="altas-row">
-            <div class="altas-column">
-                <label for="cantidad">CANTIDAD</label>
-                <input type="number" id="cantidad" name="cantidad" value="0">
-            </div>
             <div class="altas-column">
                 <label for="fecha">FECHA DE SOLICITUD</label>
                 <input type="date" id="fecha" name="fecha" value="">
