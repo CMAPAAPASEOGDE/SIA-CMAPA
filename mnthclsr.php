@@ -67,9 +67,9 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
         <h2>CIERRE DE MES</h2>
     </div>
     <div class="cierre-box">
-        <a href="mnthcnf.html"><button class="cierre-btn">CONFIRMAR CIERRE DE MES</button></a>
-        <a href="mnthrvsn.html"><button class="cierre-btn">REVISAR CIERRE DE MES</button></a>
-        <a href="homepage.html"><button class="cierre-btn cancel">CANCELAR</button></a>
+        <a href="mnthcnf.php"><button class="cierre-btn">CONFIRMAR CIERRE DE MES</button></a>
+        <a href="mnthrvsn.php"><button class="cierre-btn">REVISAR CIERRE DE MES</button></a>
+        <a href="homepage.php"><button class="cierre-btn cancel">CANCELAR</button></a>
     </div>
 </main>
 
