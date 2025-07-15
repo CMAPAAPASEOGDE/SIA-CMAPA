@@ -17,14 +17,20 @@ if ($idRol !== 1) {
 }
 ?>
 
+<?php
+  // Obtener fecha actual en formato DD/MM/AAAA
+  $fecha_actual = date('d/m/Y');
+?>
+
+
 <!DOCTYPE html>
 
 <html>
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
-    <title>SIA Admin System Logs</title>
-    <link rel="stylesheet" href="css/StyleADLGS.css">
+    <title>SIA Admin Elements Edition Entry</title>
+    <link rel="stylesheet" href="css/StyleADEDET.css">
 </head>
 
 <body>
@@ -68,21 +74,48 @@ if ($idRol !== 1) {
 </div>
 </header>
 
-<main class="main-logs">
-    <div class="contenedor-titulo-logs">
-        <img src="img/log.png" alt="Icono Logs" class="icono-logs" />
-        <h1 class="titulo">REGISTROS DEL SISTEMA</h1>
-    </div>
-        <div class="contenedor-logs">
-        <div class="log">USER 00001 MVMNT IN MAIN DB DELETE FROM USERS ID 00005 AT 10/04/25 14:23:05.23</div>
-        <div class="log">USER 00003 MVMNT IN SYS NW ENTRY DB ID 56 AT 10/04/25 15:01:36.55</div>
-        <div class="log">USER 00003 MVMNT IN SYS NW EXIT DB ID 98 AT 11/04/25 07:05:59.75</div>
-        <div class="log">{SYSTEM} SYSTEM BACKUP STARTED AT 11/04/25 07:08:23.25</div>
-        <div class="log">{SYSTEM} SYSTEM BACKUP FINISHED AT 11/04/25 07:12:52.86</div>
-        <div class="log">{SYSTEM} USER 00003 DICTD PERMISSIONS ERROR AT 11/04/25 08:02:53.10</div>
-        <div class="log">USER 00003 MVMNT IN SYS SYSTEM LOG OUT AT 11/04/25 08:03:32.03</div>
-        <div class="log">USER 00002 MVMNT IN SYS SYSTEM LOG IN AT 11/04/25 08:04:25.84 FROM 192.168.1.56</div>
-        <!-- Puedes añadir más registros aquí -->
+<main class="main-container">
+    <h1 class="titulo-seccion">EDITAR ELEMENTOS</h1>
+    <div class="contenedor-formulario">
+        <h2 class="subtitulo">AÑADIR ELEMENTOS</h2>
+        <label for="codigo">CÓDIGO</label>
+        <select id="codigo" class="input-ancho-grande">
+            <option>ABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789</option>
+        </select>
+        <div class="grupo-campos">
+            <div>
+                <label for="nombre">NOMBRE</label>
+                <input type="text" id="nombre" placeholder="Escriba Aqui">
+            </div>
+            <div>
+                <label for="linea">LÍNEA</label>
+                <input type="text" id="linea" placeholder="Escriba Aqui">
+            </div>
+            <div>
+                <label for="sublinea">SUBLÍNEA</label>
+                <input type="text" id="sublinea" placeholder="Escriba Aqui">
+            </div>
+        </div>
+        <div class="grupo-campos">
+            <div>
+                <label for="proveedor">PROVEEDOR</label>
+                <select id="proveedor">
+                    <option>Ferremaquinas</option>
+                </select>
+            </div>
+            <div>
+                <label for="cantidad">CANTIDAD</label>
+                <input type="number" id="cantidad" value="0">
+            </div>
+            <div>
+                <label for="fecha">FECHA DE REGISTRO</label>
+                <input type="date" id="fecha" value="<?php echo $fecha_actual; ?>">
+            </div>
+        </div>
+        <div class="botones-formulario">
+            <a href="admnedt.php"><button class="boton-negro">CANCELAR</button></a>
+            <button class="boton-negro">CONFIRMAR</button>
+        </div>
     </div>
 </main>
 
