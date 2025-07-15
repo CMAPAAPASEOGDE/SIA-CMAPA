@@ -23,8 +23,8 @@ if (!in_array($idRol, [1, 2])) {
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
-    <title>SIA Toolbox New Register</title>
-    <link rel="stylesheet" href="css/StyleBXNR.css">
+    <title>SIA Tool Devolution</title>
+    <link rel="stylesheet" href="css/StyleDVTL.css">
 </head>
 
 <body>
@@ -68,23 +68,43 @@ if (!in_array($idRol, [1, 2])) {
 </div>
 </header>
 
-<main class="caja-registro-container">
-    <div class="caja-registro-title">
-        <h2>CAJAS</h2>
-        <p class="subtitulo">REGISTRO NUEVO</p>
+<main class="devolucion-container">
+    <div class="devolucion-title">
+        <h2>DEVOLUCIÓN DE HERRAMIENTAS</h2>
     </div>
-    <form class="caja-registro-form">
-        <label for="responsable">RESPONSABLE OPERATIVO</label>
-        <input type="text" id="responsable" value="">
-        <label for="fecha">FECHA DE REGISTRO</label>
-        <input type="date" id="fecha" value="">
-        <label for="caja">ASIGNACIÓN DE CAJA</label>
-        <input type="text" id="caja" value="">
-        <label for="autoriza">AUTORIZO</label>
-        <input type="text" id="autoriza" value="">
-        <div class="registro-actions">
-            <a href="boxes.php"><button type="button" class="btn">CANCELAR</button></a>
-            <a href="#"><button type="button" class="btn">CONFIRMAR</button></a>
+    
+    <form class="devolucion-form">
+        <!-- Código -->
+        <label for="codigo">CÓDIGO</label>
+        <select id="codigo">
+            <option selected>ABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789</option>
+            <!-- Agrega más códigos reales aquí -->
+        </select>
+        <!-- Nombre -->
+        <label for="nombre">NOMBRE O DESCRIPCIÓN</label>
+        <input type="text" id="nombre" value="">
+        <!-- Observaciones -->
+        <label for="observaciones">OBSERVACIONES</label>
+        <textarea id="observaciones" rows="5"></textarea>
+        <!-- Estado y Fecha -->
+        <div class="form-row">
+            <div class="form-group">
+                <label for="estado">ESTADO</label>
+                <select id="estado">
+                  <option>NECESITA CAMBIO</option>
+                  <option>FUNCIONAL</option>
+                  <option>EN REPARACIÓN</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="fecha">FECHA DE RETORNO</label>
+                <input type="date" id="fecha" value="">
+            </div>
+        </div>
+        <!-- Botones -->
+        <div class="form-buttons">
+            <a href="warehouse.php"><button type="button" class="btn cancel">CANCELAR</button></a>
+            <a href="#"><button type="button" class="btn confirm">CONFIRMAR</button></a>
         </div>
     </form>
 </main>
@@ -127,6 +147,19 @@ if (!in_array($idRol, [1, 2])) {
     if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
       notifDropdown.style.display = 'none';
     }
+  });
+</script>
+
+<!--para accion de confirmar-->
+<script>
+  document.querySelector('.devolucion-form').addEventListener('submit', function (e) {
+    e.preventDefault(); // prevenir envío
+    alert('Formulario enviado correctamente.');
+    // Aquí podrías enviar por fetch(), guardar en base de datos, etc.
+  });
+
+  document.querySelector('.cancel').addEventListener('click', function () {
+    window.history.back(); // volver atrás o redireccionar
   });
 </script>
 </body>
