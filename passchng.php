@@ -93,25 +93,27 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 </header>
 
 <main class="pwd-container">
+  <form method="POST" action="">
     <div class="pwd-box">
         <!-- Contraseña anterior -->
         <div class="pwd-field">
             <img src="img/padlock.png" class="pwd-icon" alt="Lock">
-            <input type="password" id="old-pass" placeholder="Contraseña Anterior">
+            <input type="password" id="old-pass" name="old_Pass" placeholder="Contraseña Anterior" required>
         </div>
         <!-- Contraseña nueva -->
         <div class="pwd-field">
             <img src="img/padlock.png" class="pwd-icon" alt="Lock">
-            <input type="password" id="new-pass" placeholder="Contraseña Nueva">
+            <input type="password" id="new-pass" name="new_pass" placeholder="Contraseña Nueva" required>
         </div>
         <!-- Confirmar contraseña -->
         <div class="pwd-field">
             <img src="img/padlock.png" class="pwd-icon" alt="Lock">
-            <input type="password" id="confirm-pass" placeholder="Confirmar Contraseña">
+            <input type="password" id="confirm-pass" name="confirm-pass" placeholder="Confirmar Contraseña" required>
         </div>
         <!-- Botón aceptar -->
         <button class="accept-btn" id="pwd-accept">ACEPTAR</button>
     </div>
+  </form>
 </main>
 
 <script>
