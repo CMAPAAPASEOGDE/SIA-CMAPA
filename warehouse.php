@@ -1,7 +1,27 @@
+<?php
+// Iniciar sesión
+session_start();
+
+// Verificar si el usuario está autenticado
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    // Si no hay sesión activa, redirigir al login
+    header("Location: index.php");
+    exit();
+}
+
+// Verificar el rol del usuario
+$idRol = (int)($_SESSION['rol'] ?? 0);
+if (!in_array($idRol, [1, 2])) {
+    header("Location: acceso_denegado.php");
+    exit();
+}
+?>
+
 <!DOCTYPE html>
 <html>
 
 <head>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
     <meta charset="UTF-8" />
     <title>SIA My Warehouse</title>
     <link rel="stylesheet" href="css/styleWRHS.css">
@@ -18,18 +38,17 @@
       <button class="icon-btn" id="notif-toggle">
         <img src="img/bell.png" class="imgh3" alt="Notificaciones" />
       </button>
-      <div class="notification-dropdown" id="notif-dropdown">
-      </div>
+      <div class="notification-dropdown" id="notif-dropdown"></div>
     </div>
-    <p>00001</p>
+    <p> <?= $_SESSION['usuario'] ?> </p>
     <div class="user-menu-container">
       <button class="icon-btn" id="user-toggle">
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
       </button>
       <div class="user-dropdown" id="user-dropdown">
-        <p><strong>Usuario:</strong> Administrador</p>
-        <p><strong>Apodo:</strong> Axel Olvera</p>
-        <a href="passchng.html"><button class="user-option">CAMBIAR CONTRASEÑA</button></a>
+        <p><strong>Usuario:</strong> <?= $_SESSION[ 'rol' ]?></p>
+        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'])?></p>
+        <a href="passchng.php"><button class="user-option">CAMBIAR CONTRASEÑA</button></a>
       </div>
     </div>
     <!-- botón hamburguesa -->
@@ -38,15 +57,15 @@
         <img src="img/menu.png" alt="Menú" />
       </button>
       <div class="dropdown" id="dropdown-menu">
-        <a href="homepage.html">Inicio</a>
-        <a href="mnthclsr.html">Cierre de mes</a>
-        <a href="admin.html">Menu de administador</a>
-        <a href="about.html">Acerca de</a>
-        <a href="help.html">Ayuda</a>
-        <a href="login.html">Cerrar Sesion</a>
+        <a href="homepage.php">Inicio</a>
+        <a href="mnthclsr.php">Cierre de mes</a>
+        <a href="admin.php">Menu de administador</a>
+        <a href="about.php">Acerca de</a>
+        <a href="help.php">Ayuda</a>
+        <a href="logout.php">Cerrar Sesion</a>
       </div>
     </div>
-  </div>
+</div>
 </header>
 
 <main class="almacen-container">
@@ -58,20 +77,20 @@
   <div class="almacen-cards">
     <div class="card">
       <img src="img/boxes.png" class="imgs" alt="Entradas" />
-      <a href="exstentry.html"><button class="card-btn">Entradas</button></a>
+      <a href="exstentry.php"><button class="card-btn">Entradas</button></a>
     </div>
     <div class="card">
       <img src="img/truck.png" class="imgs" alt="Salidas" />
-      <a href="exitord.html"><button class="card-btn">Salidas</button></a>
+      <a href="exitord.php"><button class="card-btn">Salidas</button></a>
     </div>
     <div class="card">
       <img src="img/tool-box.png" class="imgs" alt="Cajas" />
-      <a href="boxes.html"><button class="card-btn">Cajas</button></a>
+      <a href="boxes.php"><button class="card-btn">Cajas</button></a>
     </div>
   </div>
   <div class="almacen-bottom">
-    <a href="devotool.html"><button class="flat-btn">Devolución de Herramientas</button></a>
-    <a href="modif.html"><button class="flat-btn">Modificación de almacén</button></a>
+    <a href="devotool.php"><button class="flat-btn">Devolución de Herramientas</button></a>
+    <a href="modif.php"><button class="flat-btn">Modificación de almacén</button></a>
   </div>
 </main>
 
