@@ -49,12 +49,12 @@ if (!isset($_SESSION['user_id'])) {
         <img src="img/menu.png" alt="Menú" />
       </button>
       <div class="dropdown" id="dropdown-menu">
-        <a href="homepage.html">Inicio</a>
+        <a href="homepage.php">Inicio</a>
         <a href="mnthclsr.html">Cierre de mes</a>
         <a href="admin.html">Menu de administador</a>
         <a href="about.html">Acerca de</a>
         <a href="help.html">Ayuda</a>
-        <a href="login.html">Cerrar Sesion</a>
+        <a href="logout.php">Cerrar Sesion</a>
       </div>
     </div>
   </div>
