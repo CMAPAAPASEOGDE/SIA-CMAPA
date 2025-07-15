@@ -17,7 +17,7 @@
 
   <section class="container">
     <h2>Bienvenid@</h2>
-    <form action="php/login.php" method="POST">
+    <form method="POST">
       <div>
         <img src="img/userB.png" />
         <input type="text" name="usuario" placeholder="Usuario" required />
