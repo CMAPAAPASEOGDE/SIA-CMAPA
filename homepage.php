@@ -10,6 +10,7 @@ if (!isset($_SESSION['user_id'])) {
 <html>
 
 <head>
+    <meta charset="UTF-8" />
     <title>SIA Homepage</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,7 +32,7 @@ if (!isset($_SESSION['user_id'])) {
       <div class="notification-dropdown" id="notif-dropdown">
       </div>
     </div>
-    <p>00001</p>
+    <p> <?= $_SESSION['usuario'] ?> </p>
     <div class="user-menu-container">
       <button class="icon-btn" id="user-toggle">
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
