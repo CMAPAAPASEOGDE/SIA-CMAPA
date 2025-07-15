@@ -21,7 +21,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
     
     // Consulta segura con parámetros
-    $sql = "SELECT idUsuario, usuario, idRol FROM usuarios WHERE usuario = usuario AND contrasena = contrasena";
+    $sql = "SELECT idUsuario, usuario, idRol FROM usuarios WHERE usuario = ? AND contrasena = ?";
     $params = array($usuario, $contrasena);
     $stmt = sqlsrv_query($conn, $sql, $params);
     
@@ -32,9 +32,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
             
             // Crear sesión
-            $_SESSION['user_id'] = $row['id'];
-            $_SESSION['nombre'] = $row['nombre'];
-            $_SESSION['rol'] = $row['rol'];
+            $_SESSION['user_id'] = $row['idUsuario'];
+            $_SESSION['nombre'] = $row['usuario'];
+            $_SESSION['rol'] = $row['idRol'];
             
             // Redirección
             header("Location: homepage.php");
