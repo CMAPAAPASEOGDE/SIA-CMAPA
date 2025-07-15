@@ -67,9 +67,9 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
         <h2>Reportes</h2>
     </div>
     <div class="reportes-menu">
-        <button class="report-btn">INVENTARIO DEL ALMACÉN</button>
-        <button class="report-btn">KARDEX DEL PRODUCTO</button>
-        <button class="report-btn">MOVIMIENTOS DEL ALMACÉN</button>
+        <a href="rprtsinv.php"><button class="report-btn">INVENTARIO DEL ALMACÉN</button></a>
+        <a href="rprtskrdx.php"><button class="report-btn">KARDEX DEL PRODUCTO</button></a>
+        <a href="rprtswhms.php"><button class="report-btn">MOVIMIENTOS DEL ALMACÉN</button></a>
         <button class="report-btn">CIERRE DE MES</button>
     </div>
     <p class="descarga-exito">
