@@ -10,18 +10,46 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 }
 ?>
 
+
 <!DOCTYPE html>
 <html>
 
 <head>
     <meta charset="UTF-8" />
-    <title>SIA Homepage</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styleHP.css">
+    <title>SIA Password Change</title>
+    <link rel="stylesheet" href="css/StylePSCH.css">
 </head>
+
+<script>
+  // Toggle mostrar/ocultar contraseña
+  document.querySelectorAll('.eye-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.target;
+      const input = document.getElementById(targetId);
+      input.type = input.type === 'password' ? 'text' : 'password';
+    });
+  });
+
+  // Validación básica
+  document.getElementById('pwd-accept').addEventListener('click', () => {
+    const oldPass = document.getElementById('old-pass').value.trim();
+    const newPass = document.getElementById('new-pass').value.trim();
+    const confirm = document.getElementById('confirm-pass').value.trim();
+
+    if (!oldPass || !newPass || !confirm) {
+      alert('Completa todos los campos.');
+      return;
+    }
+    if (newPass !== confirm) {
+      alert('La nueva contraseña y su confirmación no coinciden.');
+      return;
+    }
+
+    // Aquí iría tu llamada AJAX / envío de formulario
+    alert('Contraseña cambiada exitosamente.');
+  });
+</script>
 
 <body>
 <header>
@@ -64,19 +92,26 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 </div>
 </header>
 
-<main class="menu">
-  <div class="card">
-    <img src="img/warehouse.png" alt="Almacén" />
-    <a href="warehouse.php"><button class="card-btn">MI ALMACEN</button></a>
-  </div>
-  <div class="card">
-    <img src="img/inventory-management.png" alt="Inventario" />
-    <a href="inventory.php"><button class="card-btn">INVENTARIO</button></a>
-  </div>
-  <div class="card">
-    <img src="img/documentation.png" alt="Reportes" />
-    <a href="reports.php"><button class="card-btn">REPORTES</button></a>
-  </div>
+<main class="pwd-container">
+    <div class="pwd-box">
+        <!-- Contraseña anterior -->
+        <div class="pwd-field">
+            <img src="img/padlock.png" class="pwd-icon" alt="Lock">
+            <input type="password" id="old-pass" placeholder="Contraseña Anterior">
+        </div>
+        <!-- Contraseña nueva -->
+        <div class="pwd-field">
+            <img src="img/padlock.png" class="pwd-icon" alt="Lock">
+            <input type="password" id="new-pass" placeholder="Contraseña Nueva">
+        </div>
+        <!-- Confirmar contraseña -->
+        <div class="pwd-field">
+            <img src="img/padlock.png" class="pwd-icon" alt="Lock">
+            <input type="password" id="confirm-pass" placeholder="Confirmar Contraseña">
+        </div>
+        <!-- Botón aceptar -->
+        <button class="accept-btn" id="pwd-accept">ACEPTAR</button>
+    </div>
 </main>
 
 <script>
@@ -118,7 +153,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
       notifDropdown.style.display = 'none';
     }
   });
-</script>
+</script>  
 </body>
 
 </html>
