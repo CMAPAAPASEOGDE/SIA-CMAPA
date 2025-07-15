@@ -10,7 +10,8 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 }
 
 // Verificar el rol del usuario
-if (!isset($_SESSION['usuario']['rol']) || $_SESSION['usuario']['rol'] != 1) {
+$idRol = (int)($_SESSION['usuario']['idRol'] ?? 0);
+if ($idRol !== 1) {
     header("Location: acceso_denegado.php");
     exit();
 }

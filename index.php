@@ -34,7 +34,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Crear sesión
             $_SESSION['user_id'] = $row['idUsuario'];
             $_SESSION['nombre'] = $row['apodo'];
-            $_SESSION['rol'] = $row['idRol'];
+            $_SESSION['rol'] = (int)$row['idRol'];
             $_SESSION['usuario'] = $row['usuario'];
             
             // Redirección
