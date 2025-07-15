@@ -8,18 +8,24 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
 }
+
+// Verificar el rol del usuario
+$idRol = (int)($_SESSION['rol'] ?? 0);
+if (!in_array($idRol, [1, 2])) {
+    header("Location: acceso_denegado.php");
+    exit();
+}
 ?>
 
 <!DOCTYPE html>
-<html>
 
+<html>
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
-    <title>SIA About System</title>
-    <link rel="stylesheet" href="css/StyleABT.css">
+    <title>SIA Toolbox</title>
+    <link rel="stylesheet" href="css/StyleBX.css">
 </head>
-
 
 <body>
 <header>
@@ -62,51 +68,59 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 </div>
 </header>
 
-<main class="about-container">
-    <div class="about-header">
-        <img src="img/help.png" alt="Acerca de" class="about-icon">
-        <h2>ACERCA DEL SISTEMA</h2>
-    </div>
-    <p class="about-subtitle">
-        Sistema de Inventario de Almacen - <strong>CMAPA</strong><br>
-        <strong>SIA - CMAPA</strong>
-    </p>
-    <p class="about-version">
-        Version: <strong>1.3 In Development</strong>
-    </p>
-    <img src="img/tools.png" alt="Herramientas" class="about-tools">
-    <div class="about-details">
-        <p><strong>Azure:</strong> Actualizado y En Linea</p>
-        <p><strong>Version SSMS:</strong> 21</p>
-        <p><strong>Version PHP:</strong> 8.2</p>
-        <p><strong>Version HTML:</strong> 5</p>
+<main class="cajas-container">
+    <h2 class="cajas-title">CAJAS</h2>
+    <section class="cajas-scroll">
+        <div class="caja-card">
+            <img src="img/caja-icono.png" alt="Caja 1" class="caja-img" />
+            <p class="caja-clave">ABCDE FGHIJ KLMNÑO</p>
+            <a href="boxinspect.php"><button class="caja-bttn">CAJA ###</button></a>
+        </div>
+        <div class="caja-card">
+            <img src="img/caja-icono.png" alt="Caja 2" class="caja-img" />
+            <p class="caja-clave">ABCDE FGHIJ KLMNÑO</p>
+            <a href="boxinspect.php"><button class="caja-bttn">CAJA ###</button></a>
+        </div>
+        <div class="caja-card">
+            <img src="img/caja-icono.png" alt="Caja 3" class="caja-img" />
+            <p class="caja-clave">ABCDE FGHIJ KLMNÑO</p>
+            <a href="boxinspect.php"><button class="caja-bttn">CAJA ###</button></a>
+        </div>
+        <!-- Puedes seguir agregando más cajas aquí -->
+    </section>
+    <div class="cajas-actions">
+        <a href="warehouse.php"><button class="btn cancel">CANCELAR</button></a>
+        <a href="boxnewregister.php"><button class="btn confirm">REGISTRAR NUEVA CAJA</button></a>
     </div>
 </main>
 
+
 <script>
-    const toggle = document.getElementById('menu-toggle');
-    const dropdown = document.getElementById('dropdown-menu');
-    toggle.addEventListener('click', () => {
-        dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
-    });
-    window.addEventListener('click', (e) => {
-        if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
-            dropdown.style.display = 'none';
-        }
-    });
+  const toggle = document.getElementById('menu-toggle');
+  const dropdown = document.getElementById('dropdown-menu');
+  toggle.addEventListener('click', () => {
+    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+  });
+  window.addEventListener('click', (e) => {
+    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
 </script>
+
 <script>
-    const userToggle = document.getElementById('user-toggle');
-    const userDropdown = document.getElementById('user-dropdown');
-    userToggle.addEventListener('click', () => {
-        userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
-    });
-    // Cerrar el menú al hacer clic fuera
-    window.addEventListener('click', (e) => {
+  const userToggle = document.getElementById('user-toggle');
+  const userDropdown = document.getElementById('user-dropdown');
+  userToggle.addEventListener('click', () => {
+    userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+  });
+
+  // Cerrar el menú al hacer clic fuera
+  window.addEventListener('click', (e) => {
     if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
-            userDropdown.style.display = 'none';
-        }
-    });
+      userDropdown.style.display = 'none';
+    }
+  });
 </script>
 
 <script>
@@ -122,5 +136,4 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
   });
 </script>
 </body>
-
 </html>
