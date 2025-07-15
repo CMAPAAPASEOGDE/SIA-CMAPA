@@ -15,7 +15,7 @@ if ($_SESSION['usuario']['idRol'] != 1) {
     header("Location: acceso_denegado.php"); // Redirigir a página de error
     exit(); // Detener ejecución
 }
-?>
+?> 
 
 <!DOCTYPE html>
 

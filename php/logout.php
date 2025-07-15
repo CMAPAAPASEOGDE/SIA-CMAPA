@@ -25,3 +25,30 @@ session_destroy();
 header("Location: index.php?logout=1");
 exit();
 ?>
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
+    <title>SIA LOGOUT</title>
+    <link rel="stylesheet" href="css/StyleLOGOUT.css">
+</head>
+
+<body>
+  <header>
+    <img src="img/cmapa.png" />
+    <h1>Sistema de Inventario de Almacén - <strong>CMAPA</strong></h1>
+    <p>Versión 1.2</p>
+  </header>
+
+  <section class="container">
+    <h2>NOS VEMOS PRONTO</h2>
+    <form action="index.php">
+      <button type="submit">VOLVER AL INICIO DE SESION</button>
+    </form>
+  </section>
+</body>
+
+</html>
