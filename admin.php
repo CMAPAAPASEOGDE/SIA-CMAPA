@@ -10,15 +10,13 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 }
 
 // Verificar el rol del usuario
-if ($_SESSION['usuario']['idRol'] != 1) {
-    // Acción si no es administrador:
-    header("Location: acceso_denegado.php"); // Redirigir a página de error
-    exit(); // Detener ejecución
+if (!isset($_SESSION['usuario']['idRol']) || $_SESSION['usuario']['idRol'] != 1) {
+    header("Location: acceso_denegado.php");
+    exit();
 }
-?> 
+?>
 
 <!DOCTYPE html>
-
 <html>
 <head>
     <meta charset="UTF-8" />
