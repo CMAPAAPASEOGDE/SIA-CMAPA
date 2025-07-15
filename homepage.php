@@ -58,7 +58,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
         <a href="admin.html">Menu de administador</a>
         <a href="about.html">Acerca de</a>
         <a href="help.html">Ayuda</a>
-        <a href="#" onclick="logout()">Cerrar Sesion</a>
+        <a href="logout.php">Cerrar Sesion</a>
       </div>
     </div>
   </div>
@@ -78,16 +78,6 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     <a href="reports.html"><button class="card-btn">REPORTES</button></a>
   </div>
 </main>
-
-<script>
-function logout() {
-    if (confirm('¿Está seguro que desea cerrar sesión?')) {
-        // Hacer una petición al servidor para cerrar sesión
-        fetch('logout.php', { method: 'POST' })
-            .then(() => window.location.href = 'index.php');
-    }
-}
-</script>
 
 <script>
   const toggle = document.getElementById('menu-toggle');
