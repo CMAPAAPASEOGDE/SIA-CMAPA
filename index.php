@@ -21,7 +21,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
     
     // Consulta segura con parámetros
-    $sql = "SELECT idUsuario, usuario, idRol FROM usuarios WHERE usuario = ? AND contrasena = ?";
+    $sql = "SELECT idUsuario, usuario, idRol, apodo FROM usuarios WHERE usuario = ? AND contrasena = ?";
     $params = array($usuario, $contrasena);
     $stmt = sqlsrv_query($conn, $sql, $params);
     
@@ -33,7 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             
             // Crear sesión
             $_SESSION['user_id'] = $row['idUsuario'];
-            $_SESSION['nombre'] = $row['usuario'];
+            $_SESSION['nombre'] = $row['apodo'];
             $_SESSION['rol'] = $row['idRol'];
             
             // Redirección
