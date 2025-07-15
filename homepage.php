@@ -1,6 +1,10 @@
 <?php
+// Iniciar sesión
 session_start();
-if (!isset($_SESSION['user_id'])) {
+
+// Verificar si el usuario está autenticado
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
