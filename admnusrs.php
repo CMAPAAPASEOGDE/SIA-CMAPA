@@ -62,7 +62,7 @@ if ($idRol !== 1) {
         <a href="admin.php">Menu de administador</a>
         <a href="about.php">Acerca de</a>
         <a href="help.php">Ayuda</a>
-        <a href="php/logout.php">Cerrar Sesion</a>
+        <a href="logout.php">Cerrar Sesion</a>
       </div>
     </div>
 </div>
