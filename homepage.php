@@ -16,7 +16,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8" />
     <title>SIA Homepage</title>
-    <link rel="icon" type="image/png" href="img/favicon.png">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
@@ -55,10 +55,10 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
       </button>
       <div class="dropdown" id="dropdown-menu">
         <a href="homepage.php">Inicio</a>
-        <a href="mnthclsr.html">Cierre de mes</a>
-        <a href="admin.html">Menu de administador</a>
-        <a href="about.html">Acerca de</a>
-        <a href="help.html">Ayuda</a>
+        <a href="mnthclsr.php">Cierre de mes</a>
+        <a href="admin.php">Menu de administador</a>
+        <a href="about.php">Acerca de</a>
+        <a href="help.php">Ayuda</a>
         <a href="php/logout.php">Cerrar Sesion</a>
       </div>
     </div>
@@ -68,15 +68,15 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 <main class="menu">
   <div class="card">
     <img src="img/warehouse.png" alt="Almacén" />
-    <a href="warehouse.html"><button class="card-btn">MI ALMACEN</button></a>
+    <a href="warehouse.php"><button class="card-btn">MI ALMACEN</button></a>
   </div>
   <div class="card">
     <img src="img/inventory-management.png" alt="Inventario" />
-    <a href="inventory.html"><button class="card-btn">INVENTARIO</button></a>
+    <a href="inventory.php"><button class="card-btn">INVENTARIO</button></a>
   </div>
   <div class="card">
     <img src="img/documentation.png" alt="Reportes" />
-    <a href="reports.html"><button class="card-btn">REPORTES</button></a>
+    <a href="reports.php"><button class="card-btn">REPORTES</button></a>
   </div>
 </main>
 
