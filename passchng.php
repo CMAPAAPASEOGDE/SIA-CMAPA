@@ -2,60 +2,13 @@
 // Iniciar sesión
 session_start();
 
-// Solo procesar si se envió el formulario
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $userId = $_SESSION['idUsuario']; // Asegúrate que esto exista en sesión
-    $oldPass = $_POST['old_pass'];
-    $newPass = $_POST['new_pass'];
-    $confirmPass = $_POST['confirm_pass'];
-
-    // Validación básica
-    if (empty($oldPass) || empty($newPass) || empty($confirmPass)) {
-        echo "<script>alert('Por favor completa todos los campos.');</script>";
-    } elseif ($newPass !== $confirmPass) {
-        echo "<script>alert('La nueva contraseña no coincide con la confirmación.');</script>";
-    } else {
-        // Conexión a DB
-        $server = "tcp:sqlserver-sia.database.windows.net,1433";
-        $database = "db_sia";
-        $username = "cmapADMIN";
-        $passwordDB = "@siaADMN56*";
-
-        try {
-            $conn = new PDO("sqlsrv:Server=$server;Database=$database", $username, $passwordDB);
-            $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-            // Verificar contraseña anterior
-            $stmt = $conn->prepare("SELECT contrasena FROM usuarios WHERE idUsuario = :id");
-            $stmt->bindParam(':id', $userId);
-            $stmt->execute();
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($row && $row['contrasena'] === $oldPass) {
-                // Actualizar contraseña
-                $update = $conn->prepare("UPDATE usuarios SET contrasena = :nueva WHERE idUsuario = :id");
-                $update->bindParam(':nueva', $newPass);
-                $update->bindParam(':id', $userId);
-                $update->execute();
-
-                echo "<script>alert('Contraseña actualizada exitosamente.'); window.location.href='homepage.php';</script>";
-            } else {
-                echo "<script>alert('La contraseña anterior es incorrecta.');</script>";
-            }
-        } catch (PDOException $e) {
-            echo "<script>alert('Error en la base de datos: " . $e->getMessage() . "');</script>";
-        }
-    }
-}
-
-
 // Verificar si el usuario está autenticado
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
+if (!isset($_SESSION['idUsuario']) || empty($_SESSION['idUsuario'])) {
     header("Location: index.php");
     exit();
 }
 ?>
+
 
 
 <!DOCTYPE html>
@@ -157,7 +110,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 </header>
 
 <main class="pwd-container">
-  <form method="POST" action="">
+  <form id="form-pass">
     <div class="pwd-box">
         <!-- Contraseña anterior -->
         <div class="pwd-field">
@@ -175,7 +128,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
             <input type="password" id="confirm-pass" name="confirm-pass" placeholder="Confirmar Contraseña" required>
         </div>
         <!-- Botón aceptar -->
-        <button class="accept-btn" id="pwd-accept">ACEPTAR</button>
+        <button type="button" class="accept-btn" id="pwd-accept">ACEPTAR</button>
         <!-- Mensaje de resultado -->
         <p id="mensaje-resultado" class="mensaje"></p>
     </div>
