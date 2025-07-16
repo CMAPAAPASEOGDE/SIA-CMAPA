@@ -23,8 +23,8 @@ if ($idRol !== 1) {
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
-    <title>SIA Admin User Erase Search</title>
-    <link rel="stylesheet" href="css/StyleADUSERSH.css">
+    <title>SIA Admin Elements Edition Edit</title>
+    <link rel="stylesheet" href="css/StyleADEDED.css">
 </head>
 
 <body>
@@ -68,30 +68,72 @@ if ($idRol !== 1) {
 </div>
 </header>
 
-<main class="main-eliminar-usuario">
-  <div class="contenedor-titulo">
-    <h2>ELIMINAR USUARIO</h2>
-  </div>
-
-  <div class="contenedor-formulario">
-    <label for="usuario">USUARIO</label>
-    <input type="text" id="usuario" value="" />
-      <form action="php/procesar_busqueda_usuario.php" method="POST" class="botones">        
-        <a href="admnusrs.php"><button type="button" class="btn-cancelar">CANCELAR</button></a>
-        <input type="hidden" name="usuario" id="usuario-hidden">
-        <a href="#"><button class="btn-buscar">BUSCAR</button></a>
-      </form>
-  </div>
+<main class="main-container">
+    <!-- Título general -->
+    <h1 class="titulo-seccion">EDITAR ELEMENTOS</h1>
+    <!-- Panel gris -->
+    <section class="contenedor-formulario">
+        <h2 class="subtitulo">EDITAR DETALLES DE LOS ELEMENTOS</h2>
+        <form class="grid-form">
+            <!-- Fila 1 -->
+            <label>CÓDIGO
+                <input type="text" value="#" />
+            </label>
+            <label>TIPO
+                <select>
+                    <option>Herramienta</option>
+                    <option>Material</option>
+                </select>
+            </label>
+            <!-- Fila 2 -->
+            <label>NOMBRE
+                <input type="text" value="ROTOMARTILLO MILWAUKEE" />
+            </label>
+            <label>LÍNEA
+                <input type="text" value="ABCDEFGHIJKLM" />
+            </label>
+            <label>SUBLÍNEA
+                <input type="text" value="ABCDEFGHIJKLM" />
+            </label>
+            <!-- Fila 3 -->
+            <label>PROVEEDOR
+                <select>
+                    <option>Ferremaquinas</option>
+                    <option>Otro</option>
+                </select>
+            </label>
+            <label>PRECIO
+                <input type="number" step="0.01" value="9500.00" />
+            </label>
+            <label>ESTATUS
+                <select>
+                    <option>Fuera del almacén</option>
+                    <option>Punto de reorden</option>
+                    <option>En stock</option>
+                </select>
+            </label>
+            <!-- Fila 4 -->
+            <label>UNIDAD
+                <select>
+                    <option>Piezas</option>
+                    <option>Kg</option>
+                    <option>M</option>
+                </select>
+            </label>
+            <label>PUNTO REORDEN
+                <input type="number" value="1" />
+            </label>
+                <label>STOCK MÁXIMO
+                <input type="number" value="3" />
+            </label>
+        </form>
+        <!-- Botones -->
+        <div class="botones-formulario">
+            <a href="admnedt.html"><button class="boton-negro">CANCELAR</button></a>
+            <a href="admnedteder.html"><button class="boton-negro">CONFIRMAR</button></a>
+        </div>
+    </section>
 </main>
-
-<script>
-  // Copia el valor del input visible al input oculto antes de enviar
-  document.querySelector('.btn-buscar').addEventListener('click', function(e) {
-    const inputVisible = document.getElementById('usuario');
-    const inputHidden = document.getElementById('usuario-hidden');
-    inputHidden.value = inputVisible.value;
-  });
-</script>
 
 <script>
   const toggle = document.getElementById('menu-toggle');

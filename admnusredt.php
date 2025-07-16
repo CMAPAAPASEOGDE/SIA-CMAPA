@@ -2,6 +2,13 @@
 // Iniciar sesión
 session_start();
 
+if (!isset($_SESSION['editar_usuario'])) {
+    header("Location: admnusredsrch.php");
+    exit();
+}
+
+$user = $_SESSION['editar_usuario'];
+
 // Verificar si el usuario está autenticado
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     // Si no hay sesión activa, redirigir al login
@@ -23,8 +30,8 @@ if ($idRol !== 1) {
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
-    <title>SIA Admin User Erase Search</title>
-    <link rel="stylesheet" href="css/StyleADUSERSH.css">
+    <title>SIA Admin User Edit</title>
+    <link rel="stylesheet" href="css/StyleADUSED.css">
 </head>
 
 <body>
@@ -68,30 +75,62 @@ if ($idRol !== 1) {
 </div>
 </header>
 
-<main class="main-eliminar-usuario">
-  <div class="contenedor-titulo">
-    <h2>ELIMINAR USUARIO</h2>
-  </div>
-
-  <div class="contenedor-formulario">
-    <label for="usuario">USUARIO</label>
-    <input type="text" id="usuario" value="" />
-      <form action="php/procesar_busqueda_usuario.php" method="POST" class="botones">        
-        <a href="admnusrs.php"><button type="button" class="btn-cancelar">CANCELAR</button></a>
-        <input type="hidden" name="usuario" id="usuario-hidden">
-        <a href="#"><button class="btn-buscar">BUSCAR</button></a>
-      </form>
-  </div>
+<main class="main-editar-usuario">
+    <div class="contenedor-titulo">
+        <h2>EDITAR USUARIO</h2>
+    </div>
+  <form action="php/actualizar_usuario.php" method="POST">
+    <div class="formulario-usuario">
+        <div class="fila">
+            <div class="campo">
+                <label for="usuario">USUARIO</label>
+                <input type="text" id="usuario" name="usuario" value="<?= htmlspecialchars($user['usuario']) ?>" readonly />
+            </div>
+            <div class="campo">
+                <label for="tipo">TIPO DE USUARIO</label>
+                <select id="tipo" name="rol">
+                  <option value="1" <?= $user['idRol'] == 1 ? 'selected' : '' ?>>Administrador</option>
+                  <option value="2" <?= $user['idRol'] == 2 ? 'selected' : '' ?>>Almacenista</option>
+                  <option value="3" <?= $user['idRol'] == 3 ? 'selected' : '' ?>>Observador</option>
+                </select>
+            </div>
+        </div>
+        <div class="fila">
+            <div class="campo-check">
+                <label for="cambiar-contra">CONTRASEÑA</label>
+                <div class="grupo-check">
+                    <input type="checkbox" id="cambiar-contra" />
+                    <input type="password" placeholder="INGRESA LA CONTRASEÑA AQUI" disabled />
+                </div>
+            </div>
+            <div class="campo-check">
+                <label for="confirmar">CONFIRMAR CONTRASEÑA</label>
+                <div class="grupo-check">
+                    <input type="password" placeholder="INGRESA LA CONTRASEÑA AQUI" disabled />
+                </div>
+            </div>
+        </div>
+        <div class="fila">
+            <div class="campo">
+                <label for="apodo">APODO</label>
+                <input type="text" id="apodo" name="apodo" value="<?= htmlspecialchars($user['nombre']) ?>" />
+            </div>
+            <div class="campo-estatus">
+                <label>ESTATUS</label>
+                <div class="estatus-checks">
+                    <label><input type="checkbox" name="estatus" value="0" <?= $user['estatus'] == 0 ? 'checked' : '' ?> /> INACTIVO</label>
+                    <label><input type="checkbox" name="estatus" value="1" <?= $user['estatus'] == 1 ? 'checked' : '' ?> /> ACTIVO</label>
+                </div>
+            </div>
+        </div>
+        
+          <div class="botones">
+              <a href="admnusrs.php"><button type="button" class="btn-cancelar">CANCELAR</button></a>
+              <button type="submit" class="btn-confirmar">CONFIRMAR</button>
+          </div>
+    </div>
+  </form>
 </main>
-
-<script>
-  // Copia el valor del input visible al input oculto antes de enviar
-  document.querySelector('.btn-buscar').addEventListener('click', function(e) {
-    const inputVisible = document.getElementById('usuario');
-    const inputHidden = document.getElementById('usuario-hidden');
-    inputHidden.value = inputVisible.value;
-  });
-</script>
 
 <script>
   const toggle = document.getElementById('menu-toggle');
@@ -130,6 +169,25 @@ if ($idRol !== 1) {
   window.addEventListener('click', (e) => {
     if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
       notifDropdown.style.display = 'none';
+    }
+  });
+</script>
+
+<script>
+  const checkboxContra = document.getElementById('cambiar-contra');
+  const inputContra = checkboxContra.nextElementSibling;
+  const inputConfirm = document.querySelectorAll('.grupo-check input[type="password"]')[1];
+  const confirmCheckbox = inputConfirm.previousElementSibling;
+
+  checkboxContra.addEventListener('change', () => {
+    if (checkboxContra.checked) {
+      inputContra.disabled = false;
+      inputConfirm.disabled = false;
+      confirmCheckbox.disabled = false;
+    } else {
+      inputContra.disabled = true;
+      inputConfirm.disabled = true;
+      confirmCheckbox.disabled = true;
     }
   });
 </script>
