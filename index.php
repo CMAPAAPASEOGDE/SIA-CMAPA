@@ -70,7 +70,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   <header>
     <img src="img/cmapa.png" />
     <h1>Sistema de Inventario de Almacén - CMAPA</h1>
-    <p>Versión 1.2</p>
+    <p>Versión 1.3</p>
   </header>
 
   <section class="container">
