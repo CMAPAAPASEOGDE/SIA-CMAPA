@@ -199,7 +199,7 @@ header p {
   background-color: #4a4a61;
   border-radius: 8px;
   padding: 30px;
-  width: 90%;
+  width: 60%;
   max-width: 750px;
   display: grid;
   grid-template-columns: 1fr 1fr;
