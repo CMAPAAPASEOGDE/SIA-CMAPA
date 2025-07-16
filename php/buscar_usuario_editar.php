@@ -1,24 +1,41 @@
 <?php
 session_start();
-require_once 'conexion.php'; // Asegúrate que este archivo conecta correctamente a tu DB
 
-$usuario = $_POST['usuario'] ?? '';
-
-if (empty($usuario)) {
-    header("Location: ../admnusredsrcher.php"); // página de "usuario no encontrado"
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id']) || (int)$_SESSION['rol'] !== 1) {
+    header("Location: ../index.php");
     exit();
 }
 
-// Buscar el usuario en la base de datos
-$stmt = $conn->prepare("SELECT usuario, nombre, idRol, estatus FROM usuarios WHERE usuario = ?");
-$stmt->execute([$usuario]);
-$user = $stmt->fetch(PDO::FETCH_ASSOC);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $usuario = trim($_POST['usuario']);
 
-if ($user) {
-    $_SESSION['editar_usuario'] = $user;
-    header("Location: ../admnusredt.php");
-    exit();
+    // Conexión
+    $server = "tcp:sqlserver-sia.database.windows.net,1433";
+    $database = "db_sia";
+    $username = "cmapADMIN";
+    $passwordDB = "@siaADMN56*";
+
+    try {
+        $conn = new PDO("sqlsrv:Server=$server;Database=$database", $username, $passwordDB);
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        $query = $conn->prepare("SELECT * FROM usuarios WHERE usuario = :usuario");
+        $query->bindParam(':usuario', $usuario);
+        $query->execute();
+
+        if ($query->rowCount() > 0) {
+            $user = $query->fetch(PDO::FETCH_ASSOC);
+            $_SESSION['editar_usuario'] = $user;
+            header("Location: ../admnusredt.php");
+            exit();
+        } else {
+            header("Location: ../admnusredsrcher.php"); // Usuario no encontrado
+            exit();
+        }
+    } catch (PDOException $e) {
+        die("Error de conexión: " . $e->getMessage());
+    }
 } else {
-    header("Location: ../admnusredsrcher.php");
+    header("Location: ../admnusredsrch.php");
     exit();
 }
