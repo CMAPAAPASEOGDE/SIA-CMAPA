@@ -30,7 +30,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $existe = $stmt->fetchColumn();
 
         if ($existe > 0) {
-            header("Location: admnusrnwer.php");
+            header("Location: ../admnusrnwer.php");
             exit();
         }
 
@@ -43,7 +43,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt->bindParam(':rol', $rol);
         $stmt->execute();
 
-        header("Location: admnusernwcf.php");
+        header("Location: ../admnusernwcf.php");
         exit();
     } catch (PDOException $e) {
         echo "Error en base de datos: " . $e->getMessage();
