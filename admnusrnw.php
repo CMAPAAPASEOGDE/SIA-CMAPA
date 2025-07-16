@@ -96,15 +96,6 @@ if ($idRol !== 1) {
             <label>APODO</label>
             <input type="text" name="apodo" required/>
         </div>
-        <div class="campo doble">
-            <label>DAR PERMISO A SECCIÓN</label>
-            <select name="seccion">
-                <option value="0">Ninguno</option>
-                <option value="1">Mi almacen</option>
-                <option value="2">Reportes</option>
-                <option value="3">Inventario</option>
-            </select>
-        </div>
         <div class="botones-formulario">
             <a href="admnusrs.php"><button type="button" class="boton-negro">CANCELAR</button></a>
             <button class="boton-negro">CONFIRMAR</button>

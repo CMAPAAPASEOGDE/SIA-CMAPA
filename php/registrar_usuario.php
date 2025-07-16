@@ -7,7 +7,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $confirm = $_POST['confirm_password'];
     $rol = $_POST['rol'];
     $apodo = $_POST['apodo'];
-    $seccion = $_POST['seccion'];
 
     if ($password !== $confirm) {
         header("Location: ../admnusrnwer2.php");
@@ -36,13 +35,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         // Insertar nuevo usuario
-        $stmt = $conn->prepare("INSERT INTO usuarios (usuario, contrasena, apodo, idRol, idSeccion, estatus)
-                                VALUES (:usuario, :contrasena, :apodo, :rol, :seccion, 1)");
+        $stmt = $conn->prepare("INSERT INTO usuarios (usuario, contrasena, apodo, idRol, estatus)
+                                VALUES (:usuario, :contrasena, :apodo, :rol, 1)");
         $stmt->bindParam(':usuario', $usuario);
         $stmt->bindParam(':contrasena', $password); // ¡sin hash por ahora!
         $stmt->bindParam(':apodo', $apodo);
         $stmt->bindParam(':rol', $rol);
-        $stmt->bindParam(':seccion', $seccion);
         $stmt->execute();
 
         header("Location: ../admnusernwcf.php");
