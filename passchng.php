@@ -2,6 +2,53 @@
 // Iniciar sesión
 session_start();
 
+// Solo procesar si se envió el formulario
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $userId = $_SESSION['idUsuario']; // Asegúrate que esto exista en sesión
+    $oldPass = $_POST['old_pass'];
+    $newPass = $_POST['new_pass'];
+    $confirmPass = $_POST['confirm_pass'];
+
+    // Validación básica
+    if (empty($oldPass) || empty($newPass) || empty($confirmPass)) {
+        echo "<script>alert('Por favor completa todos los campos.');</script>";
+    } elseif ($newPass !== $confirmPass) {
+        echo "<script>alert('La nueva contraseña no coincide con la confirmación.');</script>";
+    } else {
+        // Conexión a DB
+        $server = "tcp:sqlserver-sia.database.windows.net,1433";
+        $database = "db_sia";
+        $username = "cmapADMIN";
+        $passwordDB = "@siaADMN56*";
+
+        try {
+            $conn = new PDO("sqlsrv:Server=$server;Database=$database", $username, $passwordDB);
+            $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+            // Verificar contraseña anterior
+            $stmt = $conn->prepare("SELECT contrasena FROM usuarios WHERE idUsuario = :id");
+            $stmt->bindParam(':id', $userId);
+            $stmt->execute();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($row && $row['contrasena'] === $oldPass) {
+                // Actualizar contraseña
+                $update = $conn->prepare("UPDATE usuarios SET contrasena = :nueva WHERE idUsuario = :id");
+                $update->bindParam(':nueva', $newPass);
+                $update->bindParam(':id', $userId);
+                $update->execute();
+
+                echo "<script>alert('Contraseña actualizada exitosamente.'); window.location.href='homepage.php';</script>";
+            } else {
+                echo "<script>alert('La contraseña anterior es incorrecta.');</script>";
+            }
+        } catch (PDOException $e) {
+            echo "<script>alert('Error en la base de datos: " . $e->getMessage() . "');</script>";
+        }
+    }
+}
+
+
 // Verificar si el usuario está autenticado
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     // Si no hay sesión activa, redirigir al login
@@ -22,32 +69,49 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 </head>
 
 <script>
-  // Toggle mostrar/ocultar contraseña
-  document.querySelectorAll('.eye-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetId = btn.dataset.target;
-      const input = document.getElementById(targetId);
-      input.type = input.type === 'password' ? 'text' : 'password';
+  document.addEventListener('DOMContentLoaded', () => {
+    const mensaje = document.getElementById('mensaje-resultado');
+
+    document.getElementById('pwd-accept').addEventListener('click', () => {
+      const oldPass = document.getElementById('old-pass').value.trim();
+      const newPass = document.getElementById('new-pass').value.trim();
+      const confirm = document.getElementById('confirm-pass').value.trim();
+
+      mensaje.style.display = 'none';
+      mensaje.className = 'mensaje';
+
+      if (!oldPass || !newPass || !confirm) {
+        mensaje.textContent = 'Completa todos los campos.';
+        mensaje.classList.add('error');
+        mensaje.style.display = 'block';
+        return;
+      }
+
+      if (newPass !== confirm) {
+        mensaje.textContent = 'Alguna de las contraseñas no coinciden. Favor de verificar los datos e intentarlo de nuevo.';
+        mensaje.classList.add('error');
+        mensaje.style.display = 'block';
+        return;
+      }
+
+      // Llamada AJAX para enviar a PHP
+      fetch('php/cambiar_password.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actual: oldPass, nueva: newPass })
+      })
+      .then(res => res.json())
+      .then(data => {
+        mensaje.textContent = data.mensaje;
+        mensaje.classList.add(data.exito ? 'ok' : 'error');
+        mensaje.style.display = 'block';
+      })
+      .catch(() => {
+        mensaje.textContent = 'Error inesperado. Intenta más tarde.';
+        mensaje.classList.add('error');
+        mensaje.style.display = 'block';
+      });
     });
-  });
-
-  // Validación básica
-  document.getElementById('pwd-accept').addEventListener('click', () => {
-    const oldPass = document.getElementById('old-pass').value.trim();
-    const newPass = document.getElementById('new-pass').value.trim();
-    const confirm = document.getElementById('confirm-pass').value.trim();
-
-    if (!oldPass || !newPass || !confirm) {
-      alert('Completa todos los campos.');
-      return;
-    }
-    if (newPass !== confirm) {
-      alert('La nueva contraseña y su confirmación no coinciden.');
-      return;
-    }
-
-    // Aquí iría tu llamada AJAX / envío de formulario
-    alert('Contraseña cambiada exitosamente.');
   });
 </script>
 
@@ -112,6 +176,8 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
         </div>
         <!-- Botón aceptar -->
         <button class="accept-btn" id="pwd-accept">ACEPTAR</button>
+        <!-- Mensaje de resultado -->
+        <p id="mensaje-resultado" class="mensaje"></p>
     </div>
   </form>
 </main>

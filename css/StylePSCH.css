@@ -251,3 +251,19 @@ header p {
 .accept-btn:hover {
   background-color: #222;
 }
+
+.mensaje {
+  margin-top: 10px;
+  text-align: center;
+  font-family: monospace;
+  font-size: 0.9rem;
+  display: none;
+}
+
+.mensaje.ok {
+  color: green;
+}
+
+.mensaje.error {
+  color: red;
+}
