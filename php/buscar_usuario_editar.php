@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($query->rowCount() > 0) {
             $user = $query->fetch(PDO::FETCH_ASSOC);
             $_SESSION['editar_usuario'] = $user;
-            header("Location: admnusredt.php");
+            header("Location: ../admnusredt.php");
             exit();
         } else {
             header("Location: ../admnusredsrcher.php"); // Usuario no encontrado
