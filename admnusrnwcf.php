@@ -17,14 +17,13 @@ if ($idRol !== 1) {
 }
 ?>
 
+
 <!DOCTYPE html>
 
 <html>
 <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
-    <title>SIA Admin Users New Users</title>
-    <link rel="stylesheet" href="css/StyleADUSNW.css">
+    <title>SIA CONFIRMATION</title>
+    <link rel="stylesheet" href="css/StyleADUSNWCF.css">
 </head>
 
 <body>
@@ -68,48 +67,58 @@ if ($idRol !== 1) {
 </div>
 </header>
 
+<article class="ft-container">
+  <div class="son-container">
+    <h2>CONFIRMACIÓN</h2>
+    <p>
+      EL USUARIO HA SIDO CREADO DE FORMA EXITOSA.
+    </p>
+    <div class="form-buttons">
+      <a href="admin.php"><button type="submit" class="btn confirm">CONFIRMAR</button></a>
+    </div>
+  </div>
+</article>
+
 <main class="main-container">
     <h1 class="titulo-seccion">NUEVO USUARIO</h1>
     <section class="formulario-usuario">
-      <form action="php/registrar_usuario.php" method="POST">
         <div class="campo doble">
             <label>USUARIO</label>
-            <input type="text" name="usuario" required/>
+            <input type="text" />
         </div>
         <div class="campo doble">
             <label>TIPO DE USUARIO</label>
-            <select name="rol" required>
-                <option value="1">Administrador</option>
-                <option value="2">Almacen General</option>
-                <option value="3">Observador</option>
+            <select>
+                <option>Administrador</option>
+                <option>Operador</option>
+                <option>Observador</option>
             </select>
         </div>
         <div class="campo doble">
             <label>CONTRASEÑA</label>
-            <input type="password" name="password" required/>
+            <input type="password" />
         </div>
         <div class="campo doble">
             <label>CONFIRMAR CONTRASEÑA</label>
-            <input type="password" name="confirm_password" required/>
+            <input type="password" />
         </div>
         <div class="campo doble">
             <label>APODO</label>
-            <input type="text" name="apodo" required/>
+            <input type="text" />
         </div>
         <div class="campo doble">
             <label>DAR PERMISO A SECCIÓN</label>
-            <select name="seccion">
-                <option value="0">Ninguno</option>
-                <option value="1">Mi almacen</option>
-                <option value="2">Reportes</option>
-                <option value="3">Inventario</option>
+            <select>
+                <option>Ninguno</option>
+                <option>Inventario</option>
+                <option>Reportes</option>
+                <option>Administración</option>
             </select>
         </div>
         <div class="botones-formulario">
-            <a href="admnusrs.php"><button type="button" class="boton-negro">CANCELAR</button></a>
+            <button class="boton-negro">CANCELAR</button>
             <button class="boton-negro">CONFIRMAR</button>
         </div>
-      </form>
     </section>
 </main>
 
