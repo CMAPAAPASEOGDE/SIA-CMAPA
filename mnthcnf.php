@@ -8,6 +8,13 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
 }
+
+// Verificar el rol del usuario
+$idRol = (int)($_SESSION['rol'] ?? 0);
+if (!in_array($idRol, [1, 2])) {
+    header("Location: acceso_denegado.php");
+    exit();
+}
 ?>
 
 <?php
