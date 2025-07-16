@@ -165,11 +165,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <img src="img/padlock.png" class="pwd-icon" alt="Lock">
             <input type="password" id="new-pass" name="new_pass" placeholder="Contraseña Nueva" required>
         </div>
-        <div class="password-strength">
-                <div class="strength-bar" id="strength-bar"></div>
-            </div>
-            <div class="strength-text" id="strength-text"></div>
-        </div>
+        
         <!-- Confirmar contraseña -->
         <div class="pwd-field">
             <img src="img/padlock.png" class="pwd-icon" alt="Lock">
@@ -178,6 +174,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <!-- Botón aceptar -->
         <button type="submit" class="accept-btn" id="pwd-accept">ACEPTAR</button>
         <!-- Mensaje de resultado -->
+         <div class="password-strength">
+                <div class="strength-bar" id="strength-bar"></div>
+            </div>
+            <div class="strength-text" id="strength-text"></div>
+        </div>
         <p id="mensaje-resultado" class="mensaje"></p>
     </div>
   </form>
