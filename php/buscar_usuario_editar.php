@@ -29,13 +29,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: admnusredt.php");
             exit();
         } else {
-            header("Location: admnusredsrcher.php"); // Usuario no encontrado
+            header("Location: ../admnusredsrcher.php"); // Usuario no encontrado
             exit();
         }
     } catch (PDOException $e) {
         die("Error de conexión: " . $e->getMessage());
     }
 } else {
-    header("Location: admnusredsrch.php");
+    header("Location: ../admnusredsrch.php");
     exit();
 }
