@@ -75,7 +75,7 @@ if ($idRol !== 1) {
       EL USUARIO NO SE HA ENCONTRADO, VERIFICA LOS DATOS E INTENTA NEUVAMENTE.
     </p>
     <div class="form-buttons">
-      <a href="admnusrers.php"><button type="submit" class="btn confirm">CONFIRMAR</button></a>
+      <a href="admnusrerssrch.php"><button type="submit" class="btn confirm">CONFIRMAR</button></a>
     </div>
   </div>
 </article>
