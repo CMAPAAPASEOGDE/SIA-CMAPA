@@ -11,7 +11,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($password !== $confirm) {
         header("Location: admnusrnwer2.php");
         exit();
-    }
+    } 
 
     // Conexión a base de datos
     $server = "tcp:sqlserver-sia.database.windows.net,1433";
