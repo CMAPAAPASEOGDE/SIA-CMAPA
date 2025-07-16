@@ -2,11 +2,6 @@
 session_start();
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['idUsuario'])) {
-    echo json_encode(['exito' => false, 'mensaje' => 'No estás autenticado.']);
-    exit();
-}
-
 $data = json_decode(file_get_contents('php://input'), true);
 $actual = $data['actual'] ?? '';
 $nueva = $data['nueva'] ?? '';
