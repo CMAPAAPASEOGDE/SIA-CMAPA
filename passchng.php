@@ -9,8 +9,6 @@ if (!isset($_SESSION['idUsuario']) || empty($_SESSION['idUsuario'])) {
 }
 ?>
 
-
-
 <!DOCTYPE html>
 <html>
 
