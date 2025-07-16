@@ -252,18 +252,103 @@ header p {
   background-color: #222;
 }
 
-.mensaje {
-  margin-top: 10px;
-  text-align: center;
-  font-family: monospace;
-  font-size: 0.9rem;
-  display: none;
-}
-
-.mensaje.ok {
-  color: green;
-}
-
-.mensaje.error {
-  color: red;
-}
+.error-message {
+            color: #e74c3c;
+            background-color: #fdecea;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .success-message {
+            color: #27ae60;
+            background-color: #e9f7ef;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .pwd-container {
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .pwd-box {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .pwd-field {
+            position: relative;
+            display: flex;
+            align-items: center;
+            border-bottom: 2px solid #3498db;
+            padding: 5px 0;
+        }
+        
+        .pwd-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+        }
+        
+        .pwd-field input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 8px 0;
+            font-size: 16px;
+            background: transparent;
+        }
+        
+        .accept-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        .accept-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .mensaje {
+            text-align: center;
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 10px;
+        }
+        
+        .password-strength {
+            margin-top: 5px;
+            height: 5px;
+            border-radius: 3px;
+            background-color: #ecf0f1;
+            overflow: hidden;
+        }
+        
+        .strength-bar {
+            height: 100%;
+            width: 0;
+            transition: width 0.3s, background-color 0.3s;
+        }
+        
+        .strength-text {
+            font-size: 12px;
+            margin-top: 3px;
+            color: #7f8c8d;
+        }
