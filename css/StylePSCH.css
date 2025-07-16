@@ -1,4 +1,4 @@
-/* ---------------  Reglas globales --------------- */
+/* ------------ Reglas globales ------------ */
 * {
   box-sizing: border-box;
 }
@@ -10,11 +10,10 @@ html {
 body {
   margin: 0;
   background-color: #ffffff;
-  color: #ffffff;
+  color: #000;
 }
 
-/* ---------------  Encabezado --------------- */
-/* -------- Encabezado -------- */
+/* ------------ Encabezado ------------ */
 header {
   background-color: #4a4c60;
   height: 50px;
@@ -23,31 +22,27 @@ header {
   padding: 0 10px;
 }
 
-/* agrupa logo + título */
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;            /* espacio entre logo y texto */
+  gap: 10px;
 }
 
-/* logo */
 .logo {
   height: 30px;
 }
 
-/* título */
 header h1 {
   margin: 0;
   font-size: 18px;
   color: #ffffff;
 }
 
-/* bloque derecho (ya lo tenías) */
 .header-right {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: auto;    /* empuja todo esto a la derecha */
+  margin-left: auto;
 }
 
 .icon-btn {
@@ -69,48 +64,13 @@ header h1 {
   transform: scale(1.05);
 }
 
-
-/* número de usuario */
 header p {
   margin: 0;
   font-size: 16px;
 }
-.dropdown {
-  position: absolute;
-  right: 0;
-  top: 40px;                      /* debajo del header */
-  background-color: #4a4c60;
-  border-radius: 8px;
-  display: none;                  /* se activa por JS */
-  flex-direction: column;
-  min-width: 160px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  z-index: 1000;
-}
 
-.dropdown a {
-  color: #ffffff;
-  padding: 10px 15px;
-  text-decoration: none;
-  font-size: 14px;
-  border-bottom: 1px solid #5c5f72;
-}
-
-.dropdown a:last-child {
-  border-bottom: none;
-}
-
-.dropdown a:hover {
-  background-color: #3a3c4d;
-}
-
-/* Contenedor y botón de usuario */
-.user-menu-container {
-  position: relative;
-}
-
-/* Menú desplegable oculto */
-.user-dropdown {
+/* ------------ Menús desplegables ------------ */
+.dropdown, .user-dropdown, .notification-dropdown {
   position: absolute;
   top: 40px;
   right: 0;
@@ -119,14 +79,25 @@ header p {
   border-radius: 8px;
   padding: 10px;
   display: none;
-  min-width: 200px;
-  font-size: 14px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 1000;
 }
 
-.user-dropdown p {
+.dropdown a, .user-dropdown p {
+  font-size: 14px;
   margin: 5px 0;
+  color: white;
+  text-decoration: none;
+}
+
+.dropdown a {
+  padding: 10px 15px;
+  display: block;
+  border-bottom: 1px solid #5c5f72;
+}
+
+.dropdown a:hover {
+  background-color: #3a3c4d;
 }
 
 .user-option {
@@ -146,129 +117,84 @@ header p {
   background-color: #222;
 }
 
-.notification-container {
-  position: relative;
-}
-
-.notification-dropdown {
-  position: absolute;
-  right: 0;
-  top: 40px;
-  background-color: #4a4c60;
-  color: white;
-  border-radius: 8px;
-  padding: 10px;
-  width: 260px;
-  display: none;
-  font-size: 13px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
-}
-
-.notification-dropdown p {
-  margin: 8px 0;
-  line-height: 1.4;
-}
-
-.notification-dropdown u {
-  text-decoration-thickness: 1px;
-}
-
-/* --- Contenedor general --- */
+/* ------------ Formulario de cambio de contraseña ------------ */
 .pwd-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 50px);   /* resta la altura del header */
+  min-height: calc(100vh - 50px);
   padding: 40px 20px;
 }
 
-/* --- Caja gris --- */
 .pwd-box {
   background-color: #4a4c60;
-  padding: 35px 40px;
-  border-radius: 8px;
+  padding: 30px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 350px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  width: 100%;
-  max-width: 340px;
+  gap: 15px;
 }
 
-/* --- Cada fila de entrada --- */
+/* Campo individual */
 .pwd-field {
-  position: relative;
   display: flex;
   align-items: center;
-  background-color: #d8d8d8;
+  background-color: #dcdcdc;
   border-radius: 5px;
+  padding: 8px 10px;
 }
 
 .pwd-icon {
-  height: 18px;
-  margin: 0 8px;
+  width: 20px;
+  margin-right: 10px;
 }
 
 .pwd-field input {
   flex: 1;
   border: none;
-  background: transparent;
-  font-family: monospace;
-  padding: 10px 35px 10px 0; /* deja espacio al icono-ojo */
-  font-size: 14px;
   outline: none;
+  background: transparent;
+  font-size: 14px;
+  font-family: monospace;
 }
 
-.eye-btn {
-  position: absolute;
-  right: 5px;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.eye-btn img {
-  height: 18px;
-  opacity: 0.7;
-}
-
-.eye-btn:hover img {
-  opacity: 1;
-}
-
-/* --- Botón aceptar --- */
+/* Botón aceptar */
 .accept-btn {
-  background-color: black;
+  background-color: #3498db;
   color: white;
   border: none;
-  padding: 8px 0;
-  font-family: monospace;
-  font-size: 14px;
+  padding: 12px;
+  border-radius: 5px;
   cursor: pointer;
-  transition: background 0.2s;
+  font-size: 16px;
+  font-weight: bold;
+  transition: background-color 0.3s;
 }
 
 .accept-btn:hover {
-  background-color: #222;
+  background-color: #2980b9;
 }
 
-.error-message {
-            color: #e74c3c;
-            background-color: #fdecea;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        .success-message {
-            color: #27ae60;
-            background-color: #e9f7ef;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            text-align: center;
-            font-weight: bold;
-        }
-        
+/* Mensajes */
+.mensaje {
+  display: none;
+  text-align: center;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.mensaje.ok {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.mensaje.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
