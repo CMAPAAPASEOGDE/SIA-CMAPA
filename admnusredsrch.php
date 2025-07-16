@@ -72,15 +72,14 @@ if ($idRol !== 1) {
   <div class="contenedor-titulo">
     <h2>EDITAR USUARIO</h2>
   </div>
-  <form action="php/buscar_usuario_editar.php" method="POST">
-    <div class="contenedor-formulario">
+
+  <form action="php/buscar_usuario_editar.php" method="POST" class="contenedor-formulario">
       <label for="usuario">USUARIO</label>
       <input type="text" id="usuario" name="usuario" required/>
       <div class="botones">
         <a href="admnusrs.php"><button type="button" class="btn-cancelar">CANCELAR</button></a>
         <button type="submit" class="btn-buscar">BUSCAR</button>
       </div>
-    </div>
   </form>
 </main>
 
