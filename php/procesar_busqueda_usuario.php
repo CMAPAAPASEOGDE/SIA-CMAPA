@@ -19,7 +19,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST['usuario'])) {
         $conn = new PDO("sqlsrv:Server=$server;Database=$database", $username, $passwordDB);
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        $stmt = $conn->prepare("SELECT idUsuario, usuario, rol, apodo FROM usuarios WHERE usuario = :usuario");
+        $stmt = $conn->prepare("SELECT idUsuario, usuario, idRol, apodo FROM usuarios WHERE usuario = :usuario");
         $stmt->bindParam(':usuario', $usuario);
         $stmt->execute();
 
