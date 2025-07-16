@@ -23,8 +23,8 @@ if ($idRol !== 1) {
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
-    <title>SIA Admin User Erase Search</title>
-    <link rel="stylesheet" href="css/StyleADUSERSH.css">
+    <title>SIA WARNING</title>
+    <link rel="stylesheet" href="css/StyleADUSERSHER.css">
 </head>
 
 <body>
@@ -68,6 +68,18 @@ if ($idRol !== 1) {
 </div>
 </header>
 
+<article class="ft-container">
+  <div class="son-container">
+    <h2>ADVERTENCIA</h2>
+    <p>
+      EL USUARIO NO SE HA ENCONTRADO, VERIFICA LOS DATOS E INTENTA NEUVAMENTE.
+    </p>
+    <div class="form-buttons">
+      <a href="admnusrers.php"><button type="submit" class="btn confirm">CONFIRMAR</button></a>
+    </div>
+  </div>
+</article>
+
 <main class="main-eliminar-usuario">
   <div class="contenedor-titulo">
     <h2>ELIMINAR USUARIO</h2>
@@ -75,23 +87,14 @@ if ($idRol !== 1) {
 
   <div class="contenedor-formulario">
     <label for="usuario">USUARIO</label>
-    <input type="text" id="usuario" value="" />
-      <form action="php/procesar_busqueda_usuario.php" method="POST" class="botones">
-        <input type="hidden" name="usuario" id="usuario-hidden">
-        <a href="admnusrs.php"><button class="btn-cancelar">CANCELAR</button></a>
-        <a href="#"><button class="btn-buscar">BUSCAR</button></a>
-      </form>
+    <input type="text" id="usuario" value="00005" />
+
+    <div class="botones">
+      <button class="btn-cancelar">CANCELAR</button>
+      <button class="btn-buscar">BUSCAR</button>
+    </div>
   </div>
 </main>
-
-<script>
-  // Copia el valor del input visible al input oculto antes de enviar
-  document.querySelector('.btn-buscar').addEventListener('click', function(e) {
-    const inputVisible = document.getElementById('usuario');
-    const inputHidden = document.getElementById('usuario-hidden');
-    inputHidden.value = inputVisible.value;
-  });
-</script>
 
 <script>
   const toggle = document.getElementById('menu-toggle');

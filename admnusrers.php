@@ -23,8 +23,8 @@ if ($idRol !== 1) {
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
-    <title>SIA Admin User Erase Search</title>
-    <link rel="stylesheet" href="css/StyleADUSERSH.css">
+    <title>SIA Admin User Erase</title>
+    <link rel="stylesheet" href="css/StyleADUSER.css">
 </head>
 
 <body>
@@ -69,29 +69,39 @@ if ($idRol !== 1) {
 </header>
 
 <main class="main-eliminar-usuario">
-  <div class="contenedor-titulo">
-    <h2>ELIMINAR USUARIO</h2>
-  </div>
-
-  <div class="contenedor-formulario">
-    <label for="usuario">USUARIO</label>
-    <input type="text" id="usuario" value="" />
-      <form action="php/procesar_busqueda_usuario.php" method="POST" class="botones">
-        <input type="hidden" name="usuario" id="usuario-hidden">
-        <a href="admnusrs.php"><button class="btn-cancelar">CANCELAR</button></a>
-        <a href="#"><button class="btn-buscar">BUSCAR</button></a>
-      </form>
-  </div>
+    <div class="contenedor-titulo">
+        <h2>ELIMINAR USUARIO</h2>
+    </div>
+    <div class="formulario-eliminar">
+        <div class="fila">
+            <div class="campo">
+                <label for="usuario">USUARIO</label>
+                <input type="text" id="usuario" value="<?= $_SESSION['usr_eliminar']['usuario'] ?? '' ?>" readonly />
+            </div>
+            <div class="campo">
+                <label for="tipo">TIPO DE USUARIO</label>
+                <input type="text" id="tipo" value="<?= $_SESSION['usr_eliminar']['rol'] ?? '' ?>" readonly />
+            </div>
+        </div>
+        <div class="fila">
+            <div class="campo">
+                <label for="apodo">APODO</label>
+                <input type="text" id="apodo" value="<?= $_SESSION['usr_eliminar']['apodo'] ?? '' ?>" readonly />
+            </div>
+            <p class="nota">
+                RECUERDA: Si no es necesario eliminar al usuario, podemos cambiar su estatus a inactivo en “EDITAR USUARIO”
+            </p>
+        </div>
+        <div class="botones">
+          <form action="php/eliminar_usuario.php" method="POST">
+            <a href="admnusrs.php"><button class="btn-cancelar">CANCELAR</button></a>
+            <input type="hidden" name="idUsuario" value="<?= $_SESSION['usr_eliminar']['idUsuario'] ?>">
+            <button type="submit" class="btn-eliminar">ELIMINAR</button>
+          </form>
+        </div>
+    </div>
 </main>
 
-<script>
-  // Copia el valor del input visible al input oculto antes de enviar
-  document.querySelector('.btn-buscar').addEventListener('click', function(e) {
-    const inputVisible = document.getElementById('usuario');
-    const inputHidden = document.getElementById('usuario-hidden');
-    inputHidden.value = inputVisible.value;
-  });
-</script>
 
 <script>
   const toggle = document.getElementById('menu-toggle');
