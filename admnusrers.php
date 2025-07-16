@@ -93,8 +93,8 @@ if ($idRol !== 1) {
             </p>
         </div>
         <div class="botones">
+          <a href="admnusrs.php"><button class="btn-cancelar">CANCELAR</button></a>
           <form action="php/eliminar_usuario.php" method="POST">
-            <a href="admnusrs.php"><button class="btn-cancelar">CANCELAR</button></a>
             <input type="hidden" name="idUsuario" value="<?= $_SESSION['usr_eliminar']['idUsuario'] ?>">
             <button type="submit" class="btn-eliminar">ELIMINAR</button>
           </form>
