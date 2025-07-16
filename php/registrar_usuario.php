@@ -9,7 +9,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $apodo = $_POST['apodo'];
 
     if ($password !== $confirm) {
-        header("Location: admnusrnwer2.php");
+        header("Location: ../admnusrnwer2.php");
         exit();
     } 
 
