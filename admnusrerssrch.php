@@ -76,9 +76,9 @@ if ($idRol !== 1) {
   <div class="contenedor-formulario">
     <label for="usuario">USUARIO</label>
     <input type="text" id="usuario" value="" />
-      <form action="php/procesar_busqueda_usuario.php" method="POST" class="botones">
-        <input type="hidden" name="usuario" id="usuario-hidden">
+      <form action="php/procesar_busqueda_usuario.php" method="POST" class="botones">        
         <a href="admnusrs.php"><button class="btn-cancelar">CANCELAR</button></a>
+        <input type="hidden" name="usuario" id="usuario-hidden">
         <a href="#"><button class="btn-buscar">BUSCAR</button></a>
       </form>
   </div>
