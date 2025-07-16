@@ -43,7 +43,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt->bindParam(':rol', $rol);
         $stmt->execute();
 
-        header("Location: ../admnusernwcf.php");
+        header("Location: ../admnusrnwcf.php");
         exit();
     } catch (PDOException $e) {
         echo "Error en base de datos: " . $e->getMessage();
