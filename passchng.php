@@ -1,3 +1,15 @@
+<?php
+// Iniciar sesión
+session_start();
+
+// Verificar si el usuario está autenticado
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    // Si no hay sesión activa, redirigir al login
+    header("Location: index.php");
+    exit();
+}
+?>
+
 <!DOCTYPE html>
 <html>
 
@@ -7,53 +19,6 @@
     <title>SIA Password Change</title>
     <link rel="stylesheet" href="css/StylePSCH.css">
 </head>
-
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const mensaje = document.getElementById('mensaje-resultado');
-
-    document.getElementById('pwd-accept').addEventListener('click', () => {
-      const oldPass = document.getElementById('old-pass').value.trim();
-      const newPass = document.getElementById('new-pass').value.trim();
-      const confirm = document.getElementById('confirm-pass').value.trim();
-
-      mensaje.style.display = 'none';
-      mensaje.className = 'mensaje';
-
-      if (!oldPass || !newPass || !confirm) {
-        mensaje.textContent = 'Completa todos los campos.';
-        mensaje.classList.add('error');
-        mensaje.style.display = 'block';
-        return;
-      }
-
-      if (newPass !== confirm) {
-        mensaje.textContent = 'Alguna de las contraseñas no coinciden. Favor de verificar los datos e intentarlo de nuevo.';
-        mensaje.classList.add('error');
-        mensaje.style.display = 'block';
-        return;
-      }
-
-      // Llamada AJAX para enviar a PHP
-      fetch('php/cambiar_password.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actual: oldPass, nueva: newPass })
-      })
-      .then(res => res.json())
-      .then(data => {
-        mensaje.textContent = data.mensaje;
-        mensaje.classList.add(data.exito ? 'ok' : 'error');
-        mensaje.style.display = 'block';
-      })
-      .catch(() => {
-        mensaje.textContent = 'Error inesperado. Intenta más tarde.';
-        mensaje.classList.add('error');
-        mensaje.style.display = 'block';
-      });
-    });
-  });
-</script>
 
 <body>
 <header>
