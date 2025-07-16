@@ -195,6 +195,10 @@ header p {
 }
 
 /* Formulario */
+form {
+  width: 200px;
+}
+
 .formulario-usuario {
   background-color: #4a4a61;
   border-radius: 8px;
