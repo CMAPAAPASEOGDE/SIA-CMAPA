@@ -77,7 +77,7 @@ if ($idRol !== 1) {
       <label for="usuario">USUARIO</label>
       <input type="text" id="usuario" name="usuario" required/>
       <div class="botones">
-        <a href="admnusrs.php"><button class="btn-cancelar">CANCELAR</button></a>
+        <a href="admnusrs.php"><button type="button" class="btn-cancelar">CANCELAR</button></a>
         <button type="submit" class="btn-buscar">BUSCAR</button>
       </div>
     </div>
