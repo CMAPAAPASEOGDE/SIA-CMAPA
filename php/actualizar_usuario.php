@@ -1,50 +1,94 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id']) || (int)$_SESSION['rol'] !== 1) {
-    header("Location: index.php");
+
+// Verificar permisos
+if (!isset($_SESSION['user_id']) || (int)$_SESSION['rol'] !== 1) {
+    header("Location: ../index.php");
     exit();
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Recoger datos del formulario
+    $idUsuario = (int)$_POST['idUsuario'];
     $usuario = $_POST['usuario'];
     $rol = (int)$_POST['rol'];
-    $nombre = $_POST['apodo'];
-    $estatus = isset($_POST['estatus']) ? 1 : 0;
-    $password = isset($_POST['password']) ? $_POST['password'] : null;
-    $confirm = isset($_POST['confirm']) ? $_POST['confirm'] : null;
+    $apodo = $_POST['apodo'];
+    $estatus = (int)$_POST['estatus'];
+    $cambiarContra = isset($_POST['cambiar_contra']) && $_POST['cambiar_contra'] == '1';
 
-    if ($password && $password !== $confirm) {
-        header("Location: admnusredtfail.php");
+    // Conexión a la base de datos
+    $serverName = "sqlserver-sia.database.windows.net";
+    $connectionOptions = array(
+        "Database" => "db_sia",
+        "Uid" => "cmapADMIN",
+        "PWD" => "@siaADMN56*",
+        "Encrypt" => true,
+        "TrustServerCertificate" => false
+    );
+
+    $conn = sqlsrv_connect($serverName, $connectionOptions);
+
+    if ($conn === false) {
+        $_SESSION['error_actualizacion'] = "Error de conexión: " . print_r(sqlsrv_errors(), true);
+        header("Location: ../admnusredt.php");
         exit();
     }
-
-    $server = "tcp:sqlserver-sia.database.windows.net,1433";
-    $database = "db_sia";
-    $username = "cmapADMIN";
-    $passwordDB = "@siaADMN56*";
 
     try {
-        $conn = new PDO("sqlsrv:Server=$server;Database=$database", $username, $passwordDB);
-        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        // Si se quiere cambiar la contraseña
+        if ($cambiarContra) {
+            $password = $_POST['password'] ?? '';
+            $confirm = $_POST['confirm_password'] ?? '';
 
-        if ($password) {
-            $query = $conn->prepare("UPDATE usuarios SET nombre = :nombre, idRol = :rol, estatus = :estatus, contrasena = :contrasena WHERE usuario = :usuario");
-            $query->bindParam(':contrasena', $password); // puedes usar password_hash() si quieres usar hash
+            if (empty($password)) {
+                $_SESSION['error_actualizacion'] = "Debe ingresar una nueva contraseña";
+                header("Location: ../admnusredt.php");
+                exit();
+            }
+
+            if ($password !== $confirm) {
+                $_SESSION['error_actualizacion'] = "Las contraseñas no coinciden";
+                header("Location: ../admnusredt.php");
+                exit();
+            }
+
+            // Guardar la contraseña como texto plano
+            $sql = "UPDATE usuarios 
+                    SET apodo = ?, idRol = ?, estatus = ?, contrasena = ?, contrasena_sal = NULL
+                    WHERE idUsuario = ?";
+            $params = array($apodo, $rol, $estatus, $password, $idUsuario);
         } else {
-            $query = $conn->prepare("UPDATE usuarios SET nombre = :nombre, idRol = :rol, estatus = :estatus WHERE usuario = :usuario");
+            $sql = "UPDATE usuarios 
+                    SET apodo = ?, idRol = ?, estatus = ?
+                    WHERE idUsuario = ?";
+            $params = array($apodo, $rol, $estatus, $idUsuario);
         }
 
-        $query->bindParam(':nombre', $nombre);
-        $query->bindParam(':rol', $rol);
-        $query->bindParam(':estatus', $estatus);
-        $query->bindParam(':usuario', $usuario);
-        $query->execute();
+        $stmt = sqlsrv_query($conn, $sql, $params);
+
+        if ($stmt === false) {
+            $errors = sqlsrv_errors();
+            $_SESSION['error_actualizacion'] = "Error al actualizar: " . $errors[0]['message'];
+            header("Location: ../admnusredt.php");
+            exit();
+        }
+
+        // Actualizar datos de sesión si es el mismo usuario
+        if ($_SESSION['user_id'] == $idUsuario) {
+            $_SESSION['nombre'] = $apodo;
+            $_SESSION['rol'] = $rol;
+        }
 
         unset($_SESSION['editar_usuario']);
-        header("Location: admnusredtcf.php");
+        header("Location: ../admnusredtcf.php");
         exit();
-    } catch (PDOException $e) {
-        echo "Error de conexión: " . $e->getMessage();
-        exit();
+
+    } finally {
+        sqlsrv_close($conn);
     }
+
+} else {
+    header("Location: ../admnusredsrch.php");
+    exit();
 }
+?>

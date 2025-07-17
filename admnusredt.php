@@ -1,5 +1,4 @@
 <?php
-// Iniciar sesión
 session_start();
 
 if (!isset($_SESSION['editar_usuario'])) {
@@ -9,18 +8,17 @@ if (!isset($_SESSION['editar_usuario'])) {
 
 $user = $_SESSION['editar_usuario'];
 
-// Verificar si el usuario está autenticado
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
+// Verificar permisos
+if (!isset($_SESSION['user_id']) || (int)$_SESSION['rol'] !== 1) {
     header("Location: index.php");
     exit();
 }
 
-// Verificar el rol del usuario
-$idRol = (int)($_SESSION['rol'] ?? 0);
-if ($idRol !== 1) {
-    header("Location: acceso_denegado.php");
-    exit();
+// Manejar errores de actualización
+$error = '';
+if (isset($_SESSION['error_actualizacion'])) {
+    $error = $_SESSION['error_actualizacion'];
+    unset($_SESSION['error_actualizacion']);
 }
 ?>
 
@@ -76,10 +74,16 @@ if ($idRol !== 1) {
 </header>
 
 <main class="main-editar-usuario">
-    <div class="contenedor-titulo">
-        <h2>EDITAR USUARIO</h2>
-    </div>
+  <div class="contenedor-titulo">
+    <h2>EDITAR USUARIO</h2>
+  </div>
+
+  <?php if (!empty($error)): ?>
+    <div class="error-message"><?= $error ?></div>
+  <?php endif; ?>
+
   <form action="php/actualizar_usuario.php" method="POST">
+    <input type="hidden" name="idUsuario" value="<?= $user['idUsuario'] ?>">
     <div class="formulario-usuario">
         <div class="fila">
             <div class="campo">
@@ -99,27 +103,27 @@ if ($idRol !== 1) {
             <div class="campo-check">
                 <label for="cambiar-contra">CONTRASEÑA</label>
                 <div class="grupo-check">
-                    <input type="checkbox" id="cambiar-contra" />
-                    <input type="password" placeholder="INGRESA LA CONTRASEÑA AQUI" disabled />
+                    <input type="checkbox" id="cambiar-contra" name="cambiar_contra" value="1" />
+                    <input type="password" name="password" placeholder="Nueva contraseña" disabled />
                 </div>
             </div>
             <div class="campo-check">
                 <label for="confirmar">CONFIRMAR CONTRASEÑA</label>
                 <div class="grupo-check">
-                    <input type="password" placeholder="INGRESA LA CONTRASEÑA AQUI" disabled />
+                    <input type="password" name="confirm_password" placeholder="Confirmar nueva contraseña" disabled />
                 </div>
             </div>
         </div>
         <div class="fila">
             <div class="campo">
                 <label for="apodo">APODO</label>
-                <input type="text" id="apodo" name="apodo" value="<?= htmlspecialchars($user['nombre']) ?>" />
+                <input type="text" id="apodo" name="apodo" value="<?= htmlspecialchars($user['apodo']) ?>" />
             </div>
             <div class="campo-estatus">
                 <label>ESTATUS</label>
                 <div class="estatus-checks">
-                    <label><input type="checkbox" name="estatus" value="0" <?= $user['estatus'] == 0 ? 'checked' : '' ?> /> INACTIVO</label>
-                    <label><input type="checkbox" name="estatus" value="1" <?= $user['estatus'] == 1 ? 'checked' : '' ?> /> ACTIVO</label>
+                    <label><input type="radio" name="estatus" value="0" <?= $user['estatus'] == 0 ? 'checked' : '' ?> /> INACTIVO</label>
+                    <label><input type="radio" name="estatus" value="1" <?= $user['estatus'] == 1 ? 'checked' : '' ?> /> ACTIVO</label>
                 </div>
             </div>
         </div>
@@ -131,6 +135,19 @@ if ($idRol !== 1) {
     </div>
   </form>
 </main>
+
+<script>
+  // Habilitar campos de contraseña cuando se marca el checkbox
+  const checkboxContra = document.getElementById('cambiar-contra');
+  const inputsContra = document.querySelectorAll('input[type="password"]');
+  
+  checkboxContra.addEventListener('change', () => {
+    inputsContra.forEach(input => {
+        input.disabled = !checkboxContra.checked;
+        if (!checkboxContra.checked) input.value = '';
+    });
+  });
+</script
 
 <script>
   const toggle = document.getElementById('menu-toggle');

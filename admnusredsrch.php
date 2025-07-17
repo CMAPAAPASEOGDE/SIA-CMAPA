@@ -73,6 +73,11 @@ if ($idRol !== 1) {
     <h2>EDITAR USUARIO</h2>
   </div>
 
+  <?php if (isset($_SESSION['error_busqueda'])): ?>
+    <div class="error-message"><?= $_SESSION['error_busqueda'] ?></div>
+    <?php unset($_SESSION['error_busqueda']); ?>
+  <?php endif; ?>
+
   <form action="php/buscar_usuario_editar.php" method="POST" class="contenedor-formulario">
       <label for="usuario">USUARIO</label>
       <input type="text" id="usuario" name="usuario" required/>
