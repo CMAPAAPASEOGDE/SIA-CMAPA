@@ -21,7 +21,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
     
     // Consulta segura con parámetros
-    $sql = "SELECT idUsuario, usuario, idRol, apodo FROM usuarios WHERE usuario = ? AND contrasena = ?";
+    $sql = "SELECT idUsuario, usuario, idRol, apodo FROM usuarios WHERE usuario = ? AND contrasena = ? AND estatus=1";
     $params = array($usuario, $contrasena);
     $stmt = sqlsrv_query($conn, $sql, $params);
     
@@ -41,7 +41,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             header("Location: homepage.php");
             exit();
         } else {
-            $error = "Credenciales inválidas";
+            $error = "Credenciales inválidas o cuenta inactiva, si el problema persiste contacte al administrador del sistema";
         }
     }
     
