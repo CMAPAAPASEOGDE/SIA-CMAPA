@@ -8,6 +8,52 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
 }
+
+// Conectar a la base de datos
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = array(
+    "Database" => "db_sia",
+    "Uid" => "cmapADMIN",
+    "PWD" => "@siaADMN56*",
+    "Encrypt" => true,
+    "TrustServerCertificate" => false
+);
+
+$conn = sqlsrv_connect($serverName, $connectionOptions);
+
+if ($conn === false) {
+    die("Error de conexión: " . print_r(sqlsrv_errors(), true));
+}
+
+// Consulta para obtener datos del inventario
+$sql = "SELECT 
+            p.codigo, 
+            p.descripcion, 
+            p.linea, 
+            p.sublinea, 
+            i.cantidadActual AS cantidad, 
+            p.unidad, 
+            p.precio, 
+            p.puntoReorden, 
+            p.stockMaximo, 
+            p.tipo,
+            CASE 
+                WHEN i.cantidadActual = 0 THEN 'Fuera de stock'
+                WHEN i.cantidadActual <= p.puntoReorden THEN 'Bajo stock'
+                WHEN i.cantidadActual >= p.stockMaximo THEN 'Sobre stock'
+                ELSE 'En stock'
+            END AS estado
+        FROM Productos p
+        INNER JOIN Inventario i ON p.idCodigo = i.idCodigo";
+
+$stmt = sqlsrv_query($conn, $sql);
+
+if ($stmt === false) {
+    die("Error en la consulta: " . print_r(sqlsrv_errors(), true));
+}
+
+// Obtener el rol del usuario
+$idRol = (int)$_SESSION['rol'];
 ?>
 
 <!DOCTYPE html>
@@ -63,6 +109,56 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 
 <main class="inventory-container">
     <h2 class="inventory-title">INVENTARIO</h2>
+
+    <!-- Filtros y búsqueda -->
+    <div class="inventory-filters">
+        <div class="filter-group">
+            <label for="search">Buscar:</label>
+            <div class="search-box">
+                <input type="text" id="search" placeholder="Código, descripción...">
+                <button onclick="filterTable()">Buscar</button>
+            </div>
+        </div>
+        
+        <div class="filter-group">
+            <label for="linea">Línea:</label>
+            <select id="linea" onchange="filterTable()">
+                <option value="">Todas</option>
+                <?php
+                // Obtener líneas únicas
+                $sqlLineas = "SELECT DISTINCT linea FROM Productos";
+                $stmtLineas = sqlsrv_query($conn, $sqlLineas);
+                
+                if ($stmtLineas) {
+                    while ($row = sqlsrv_fetch_array($stmtLineas, SQLSRV_FETCH_ASSOC)) {
+                        echo '<option value="' . htmlspecialchars($row['linea']) . '">' . htmlspecialchars($row['linea']) . '</option>';
+                    }
+                }
+                ?>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="tipo">Tipo:</label>
+            <select id="tipo" onchange="filterTable()">
+                <option value="">Todos</option>
+                <option value="Material">Material</option>
+                <option value="Herramienta">Herramienta</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="estado">Estado:</label>
+            <select id="estado" onchange="filterTable()">
+                <option value="">Todos</option>
+                <option value="En stock">En stock</option>
+                <option value="Bajo stock">Bajo stock</option>
+                <option value="Fuera de stock">Fuera de stock</option>
+                <option value="Sobre stock">Sobre stock</option>
+            </select>
+        </div>
+    </div>
+
     <div class="inventory-table-wrapper">
         <table class="inventory-table">
             <thead>
@@ -81,75 +177,61 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>1230000001</td>
-                    <td>Tornillos 1/4</td>
-                    <td>XXXXXXXX</td>
-                    <td>XXXXXXXX</td>
-                    <td>50</td>
-                    <td>Piezas</td>
-                    <td>$5.00</td>
-                    <td>10</td>
-                    <td>50</td>
-                    <td>Material</td>
-                    <td><span class="estado green">En stock</span></td>
-                </tr>
-                <tr>
-                    <td>1230000002</td>
-                    <td>Taladro Makita</td>
-                    <td>XXXXXXXX</td>
-                    <td>XXXXXXXX</td>
-                    <td>1</td>
-                    <td>Piezas</td>
-                    <td>$545.00</td>
-                    <td>1</td>
-                    <td>5</td>
-                    <td>Herramienta</td>
-                    <td><span class="estado green">En Almacén</span></td>
-                </tr>
-                <tr>
-                    <td>1230000003</td>
-                    <td>Cinchos varios</td>
-                    <td>XXXXXXXX</td>
-                    <td>XXXXXXXX</td>
-                    <td>0</td>
-                    <td>Piezas</td>
-                    <td>******</td>
-                    <td>5</td>
-                    <td>60</td>
-                    <td>Material</td>
-                    <td><span class="estado red">Fuera de stock</span></td>
-                </tr>
-                <tr>
-                    <td>1230000004</td>
-                    <td>Bulto Cal 20KG</td>
-                    <td>XXXXXXXX</td>
-                    <td>XXXXXXXX</td>
-                    <td>50</td>
-                    <td>Piezas</td>
-                    <td>******</td>
-                    <td>5</td>
-                    <td>40</td>
-                    <td>Material</td>
-                    <td><span class="estado green-bright">SOBRE STOCK</span></td>
-                </tr>
-                <tr>
-                    <td>1230000005</td>
-                    <td>Generador de Gasolina B-Power</td>
-                    <td>XXXXXXXX</td>
-                    <td>XXXXXXXX</td>
-                    <td>1</td>
-                    <td>Piezas</td>
-                    <td>******</td>
-                    <td>0</td>
-                    <td>1</td>
-                    <td>Herramienta</td>
-                    <td><span class="estado yellow">FUERA DE ALMACEN</span></td>
-                </tr>
-                <!-- Más registros... -->
+                <?php
+                if ($stmt) {
+                    while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                        $cantidad = $row['cantidad'];
+                        $puntoReorden = $row['puntoReorden'];
+                        $stockMaximo = $row['stockMaximo'];
+                        
+                        // Determinar clase CSS para el estado
+                        $estadoClass = '';
+                        if ($row['estado'] == 'Fuera de stock') {
+                            $estadoClass = 'red';
+                        } elseif ($row['estado'] == 'Bajo stock') {
+                            $estadoClass = 'yellow';
+                        } elseif ($row['estado'] == 'Sobre stock') {
+                            $estadoClass = 'green-bright';
+                        } else {
+                            $estadoClass = 'green';
+                        }
+                        
+                        // Clase para cantidad baja
+                        $cantidadClass = ($cantidad <= $puntoReorden) ? 'low-stock' : (($cantidad >= $stockMaximo) ? 'high-stock' : '');
+                        
+                        // Ocultar precio si el usuario es Almacenista (idRol = 2)
+                        $precio = ($idRol === 2) ? '<span class="censored">******</span>' : '$' . number_format($row['precio'], 2);
+                        
+                        echo "<tr>
+                                <td>{$row['codigo']}</td>
+                                <td>{$row['descripcion']}</td>
+                                <td>{$row['linea']}</td>
+                                <td>{$row['sublinea']}</td>
+                                <td class='{$cantidadClass}'>{$cantidad}</td>
+                                <td>{$row['unidad']}</td>
+                                <td>{$precio}</td>
+                                <td>{$puntoReorden}</td>
+                                <td>{$stockMaximo}</td>
+                                <td>{$row['tipo']}</td>
+                                <td><span class='estado {$estadoClass}'>{$row['estado']}</span></td>
+                              </tr>";
+                    }
+                } else {
+                    echo "<tr><td colspan='11'>No se encontraron registros</td></tr>";
+                }
+                ?>
             </tbody>
         </table>
     </div>
+
+  <div class="pagination">
+    <button onclick="changePage(1)">1</button>
+    <button onclick="changePage(2)">2</button>
+    <button onclick="changePage(3)" class="active">3</button>
+    <button onclick="changePage(4)">4</button>
+    <button onclick="changePage(5)">5</button>
+  </div>
+
 </main>
 
 
@@ -193,5 +275,50 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     }
   });
 </script>
+
+<script>
+  // Filtrado de la tabla
+  function filterTable() {
+    const searchText = document.getElementById('search').value.toLowerCase();
+    const linea = document.getElementById('linea').value;
+    const tipo = document.getElementById('tipo').value;
+    const estado = document.getElementById('estado').value;
+    
+    const table = document.getElementById('inventory-table');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+      const cells = rows[i].getElementsByTagName('td');
+      const show = 
+        (searchText === '' || 
+          cells[0].textContent.toLowerCase().includes(searchText) || 
+          cells[1].textContent.toLowerCase().includes(searchText)) &&
+        (linea === '' || cells[2].textContent === linea) &&
+        (tipo === '' || cells[9].textContent === tipo) &&
+        (estado === '' || cells[10].textContent.includes(estado));
+        
+      rows[i].style.display = show ? '' : 'none';
+    }
+  }
+  
+  // Cambiar página (simulado)
+  function changePage(page) {
+    const buttons = document.querySelectorAll('.pagination button');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Simular carga de datos de la página seleccionada
+    console.log('Cargando página', page);
+  }
+  
+  // Inicializar la tabla
+  document.addEventListener('DOMContentLoaded', filterTable);
+</script>
+
+<?php
+// Cerrar conexión a la base de datos
+sqlsrv_free_stmt($stmt);
+sqlsrv_close($conn);
+?>
 </body>
 </html>
