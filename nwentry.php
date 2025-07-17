@@ -15,13 +15,36 @@ if (!in_array($idRol, [1, 2])) {
     header("Location: acceso_denegado.php");
     exit();
 }
-?>
 
-<?php
-  // Obtener fecha actual en formato DD/MM/AAAA
-  $fecha_actual = date('d/m/Y');
-?>
+// Obtener proveedores para el dropdown
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = array(
+    "Database" => "db_sia",
+    "Uid" => "cmapADMIN",
+    "PWD" => "@siaADMN56*",
+    "Encrypt" => true,
+    "TrustServerCertificate" => false
+);
 
+$conn = sqlsrv_connect($serverName, $connectionOptions);
+$proveedores = [];
+
+if ($conn !== false) {
+    $sql = "SELECT idProveedor, razonSocial FROM Proveedores";
+    $stmt = sqlsrv_query($conn, $sql);
+    
+    if ($stmt !== false) {
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $proveedores[] = $row;
+        }
+    }
+    sqlsrv_free_stmt($stmt);
+    sqlsrv_close($conn);
+}
+
+// Obtener fecha actual en formato YYYY-MM-DD (formato de input date)
+$fecha_actual = date('Y-m-d');
+?>
 
 <!DOCTYPE html>
 
@@ -80,75 +103,117 @@ if (!in_array($idRol, [1, 2])) {
         <a href="exstentry.php"><button class="tab new-bttn">ENTRADA EXISTENTE</button></a>
         <button class="tab">ENTRADA NUEVA</button>
     </div>
-    <form class="entrada-form">
+
+    <div class="success-message" id="success-message">
+        ¡Producto registrado exitosamente! Redirigiendo...
+    </div>
+
+    <form class="entrada-form" id="entrada-form" method="POST" action="php/procesar_entrada.php">
         <div class="entrada-row">
             <div class="entrada-col">
-                <label>ASIGNAR CÓDIGO</label>
-                <input type="text" value="ABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789" />
+                <label>ASIGNAR CÓDIGO <span style="color:red;">*</span></label>
+                <input type="text" name="codigo" id="codigo" required pattern="[A-Z0-9]{1,20}" title="Solo letras mayúsculas y números (máx 20 caracteres)" />
+                <div class="form-error" id="codigo-error">Código inválido</div>
             </div>
             <div class="entrada-col">
-                <label>FECHA</label>
-                <input type="date" value=<?php echo $fecha_actual; ?> />
+                <label>FECHA <span style="color:red;">*</span></label>
+                <input type="date" name="fecha" id="fecha" value="<?= $fecha_actual ?>" required/>
+                <div class="form-error" id="fecha-error">Fecha inválida</div>
             </div>
         </div>
         <div class="entrada-row">
             <div class="entrada-col full">
-                <label>NOMBRE/DESCRIPCIÓN</label>
-                <input type="text" value="" />
+                <label>NOMBRE/DESCRIPCIÓN <span style="color:red;">*</span></label>
+                <input type="text" name="descripcion" id="descripcion" required />
+                <div class="form-error" id="descripcion-error">Descripción requerida</div>
             </div>
             <div class="entrada-col">
-                <label>TIPO</label>
-                <select>
-                    <option>Materiales</option>
-                    <option>Herramientas</option>
+                <label>TIPO <span style="color:red;">*</span></label>
+                <select name="tipo" id="tipo" required>
+                    <option value="">Seleccionar...</option>
+                    <option value="Material">Material</option>
+                    <option value="Herramienta">Herramienta</option>
                 </select>
+                <div class="form-error" id="tipo-error">Tipo requerido</div>
             </div>
         </div>
         <div class="entrada-row">
             <div class="entrada-col">
-                <label>LÍNEA</label>
-                <select>
-                    <option>ABCDE</option>
+                <label>LÍNEA <span style="color:red;">*</span></label>
+                <select name="linea" id="linea" required>
+                    <option value="">Seleccionar...</option>
+                    <option value="Construcción">Construcción</option>
+                    <option value="Electricidad">Electricidad</option>
+                    <option value="Fontanería">Fontanería</option>
+                    <option value="Herramientas">Herramientas</option>
+                    <option value="Materiales">Materiales</option>
                 </select>
+                <div class="form-error" id="linea-error">Línea requerida</div>
             </div>
             <div class="entrada-col">
-                <label>SUBLÍNEA</label>
-                <select>
-                    <option>ABCDE</option>
+                <label>SUBLÍNEA <span style="color:red;">*</span></label>
+                <select name="sublinea" id="sublinea" required>
+                    <option value="">Seleccionar...</option>
+                    <option value="Acero">Acero</option>
+                    <option value="Cemento">Cemento</option>
+                    <option value="Herramientas Manuales">Herramientas Manuales</option>
+                    <option value="Herramientas Eléctricas">Herramientas Eléctricas</option>
+                    <option value="Tuberías">Tuberías</option>
+                    <option value="Cables">Cables</option>
                 </select>
+                <div class="form-error" id="sublinea-error">Sublínea requerida</div>
             </div>
             <div class="entrada-col">
-                <label>UNIDAD</label>
-                <select>
-                    <option>PIEZAS</option>
+                <label>UNIDAD <span style="color:red;">*</span></label>
+                <select name="unidad" id="unidad" required>
+                    <option value="">Seleccionar...</option>
+                    <option value="Piezas">Piezas</option>
+                    <option value="Kg">Kilogramos</option>
+                    <option value="L">Litros</option>
+                    <option value="m">Metros</option>
+                    <option value="m²">Metros cuadrados</option>
+                    <option value="m³">Metros cúbicos</option>
                 </select>
+                <div class="form-error" id="unidad-error">Unidad requerida</div>
             </div>
         </div>
         <div class="entrada-row">
             <div class="entrada-col full">
-                <label>PROVEEDOR</label>
-                <select>
-                    <option>FERREMAQUINAS</option>
+                <label>PROVEEDOR <span style="color:red;">*</span></label>
+                <select name="proveedor" id="proveedor" required>
+                    <option value="">Seleccionar...</option>
+                    <?php foreach ($proveedores as $proveedor): ?>
+                        <option value="<?= $proveedor['idProveedor'] ?>"><?= htmlspecialchars($proveedor['nombre']) ?></option>
+                    <?php endforeach; ?>
                 </select>
+                <div class="form-error" id="proveedor-error">Proveedor requerido</div>
             </div>
         </div>
         <div class="entrada-row">
             <div class="entrada-col">
-                <label>PRECIO UNITARIO</label>
-                <input type="number" value="0" />
+                <label>CANTIDAD <span style="color:red;">*</span></label>
+                <input type="number" name="cantidad" id="cantidad" min="1" required />
+                <div class="form-error" id="cantidad-error">Cantidad inválida</div>
+            </div>
+            <div class="entrada-col">
+                <label>PRECIO UNITARIO <span style="color:red;">*</span></label>
+                <input type="number" name="precio" id="precio" min="0.01" step="0.01" required />
+                <div class="form-error" id="precio-error">Precio inválido</div>
             </div>
             <div class="entrada-col">
                 <label>STOCK MÁXIMO</label>
-                <input type="number" value="0" />
+                <input type="number" name="stockMaximo" id="stockMaximo" min="0" />
+                <div class="form-error" id="stockMaximo-error">Valor inválido</div>
             </div>
             <div class="entrada-col">
                 <label>PUNTO DE REORDEN</label>
-                <input type="number" value="0" />
+                <input type="number" name="puntoReorden" id="puntoReorden" min="0" />
+                <div class="form-error" id="puntoReorden-error">Valor inválido</div>
             </div>
         </div>
         <div class="entrada-actions">
             <a href="warehouse.php"><button type="button" class="btn cancel">CANCELAR</button></a>
-            <a href="#"><button type="button" class="btn confirm">CONFIRMAR</button></a>
+            <button type="submit" class="btn confirm">CONFIRMAR</button>
         </div>
     </form>
 </main>
@@ -193,6 +258,74 @@ if (!in_array($idRol, [1, 2])) {
       notifDropdown.style.display = 'none';
     }
   });
+</script>
+
+<script>
+   // Validación del formulario
+  const form = document.getElementById('entrada-form');
+  const codigoInput = document.getElementById('codigo');
+  
+  // Convertir código a mayúsculas automáticamente
+  codigoInput.addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+  });
+  
+  // Validar formulario antes de enviar
+  form.addEventListener('submit', function(e) {
+    let valid = true;
+    
+    // Validar campos requeridos
+    const requiredInputs = form.querySelectorAll('input[required], select[required]');
+    requiredInputs.forEach(input => {
+      if (!input.value.trim()) {
+        showError(input, 'Este campo es obligatorio');
+        valid = false;
+      }
+    });
+    
+    // Validar cantidad
+    const cantidad = document.getElementById('cantidad');
+    if (cantidad.value <= 0) {
+      showError(cantidad, 'La cantidad debe ser mayor a 0');
+      valid = false;
+    }
+    
+    // Validar precio
+    const precio = document.getElementById('precio');
+    if (precio.value <= 0) {
+      showError(precio, 'El precio debe ser mayor a 0');
+      valid = false;
+    }
+    
+    // Validar stock máximo y punto de reorden
+    const stockMaximo = document.getElementById('stockMaximo');
+    const puntoReorden = document.getElementById('puntoReorden');
+    
+    if (stockMaximo.value && puntoReorden.value) {
+      if (parseInt(stockMaximo.value) <= parseInt(puntoReorden.value)) {
+        showError(stockMaximo, 'Stock máximo debe ser mayor que punto de reorden');
+        valid = false;
+      }
+    }
+    
+    if (!valid) {
+      e.preventDefault();
+    }
+  });
+  
+  // Función para mostrar errores
+  function showError(input, message) {
+    const errorElement = document.getElementById(`${input.id}-error`);
+    errorElement.textContent = message;
+    errorElement.style.display = 'block';
+    input.classList.add('input-error');
+    
+    // Remover el error después de 3 segundos
+    setTimeout(() => {
+      errorElement.style.display = 'none';
+      input.classList.remove('input-error');
+    }, 3000);
+  }
 </script>
 </body>
 </html>
