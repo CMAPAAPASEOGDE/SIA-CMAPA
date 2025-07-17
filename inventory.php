@@ -223,15 +223,6 @@ $idRol = (int)$_SESSION['rol'];
             </tbody>
         </table>
     </div>
-
-  <div class="pagination">
-    <button onclick="changePage(1)">1</button>
-    <button onclick="changePage(2)">2</button>
-    <button onclick="changePage(3)" class="active">3</button>
-    <button onclick="changePage(4)">4</button>
-    <button onclick="changePage(5)">5</button>
-  </div>
-
 </main>
 
 
