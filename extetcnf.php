@@ -11,26 +11,20 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 
 // Verificar el rol del usuario
 $idRol = (int)($_SESSION['rol'] ?? 0);
-if ($idRol !== 1) {
+if (!in_array($idRol, [1, 2])) {
     header("Location: acceso_denegado.php");
     exit();
 }
 ?>
 
-<?php
-  // Obtener fecha actual en formato DD/MM/AAAA
-  $fecha_actual = date('d/m/Y');
-?>
-
-
 <!DOCTYPE html>
 
 <html>
 <head>
-    <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
-    <title>SIA Admin Elements Edition Entry</title>
-    <link rel="stylesheet" href="css/StyleADEDET.css">
+    <meta charset="UTF-8" />
+    <title>SIA CONFIRMATION</title>
+    <link rel="stylesheet" href="css/StyleEXETCF.css">
 </head>
 
 <body>
@@ -74,49 +68,64 @@ if ($idRol !== 1) {
 </div>
 </header>
 
-<main class="main-container">
-    <h1 class="titulo-seccion">EDITAR ELEMENTOS</h1>
-    <div class="contenedor-formulario">
-        <h2 class="subtitulo">AÑADIR ELEMENTOS</h2>
-        <label for="codigo">CÓDIGO</label>
-        <select id="codigo" class="input-ancho-grande">
-            <option></option>
-        </select>
-        <div class="grupo-campos">
-            <div>
-                <label for="nombre">NOMBRE</label>
-                <input type="text" id="nombre" placeholder="#">
-            </div>
-            <div>
-                <label for="linea">LÍNEA</label>
-                <input type="text" id="linea" placeholder="#">
-            </div>
-            <div>
-                <label for="sublinea">SUBLÍNEA</label>
-                <input type="text" id="sublinea" placeholder="#">
-            </div>
-        </div>
-        <div class="grupo-campos">
-            <div>
-                <label for="proveedor">PROVEEDOR</label>
-                <select id="proveedor">
-                    <option></option>
+<article class="ft-container">
+  <div class="son-container">
+    <h2>CONFIRMACIÓN</h2>
+    <p>
+      LA ENTRADA SE HA REGISTRADO EXITOSAMENTE
+    </p>
+    <div class="form-buttons">
+      <a href="warehouse.php"><button type="button" class="btn confirm">CONFIRMAR</button></a>
+    </div>
+  </div>
+</article>
+
+<main class="entrada-container">
+    <div class="entrada-title">
+        <h2>ENTRADAS</h2>
+    </div>
+    <section class="entrada-tabs">
+        <button class="active-tab">ENTRADA EXISTENTE</button>
+        <button>ENTRADA NUEVA</button>
+    </section>
+    <form class="entrada-form">
+        <div class="entrada-row">
+            <div class="entrada-col">
+                <label for="codigo">CÓDIGO</label>
+                <select id="codigo">
                 </select>
             </div>
-            <div>
-                <label for="cantidad">CANTIDAD</label>
-                <input type="number" id="cantidad" value="0">
-            </div>
-            <div>
-                <label for="fecha">FECHA DE REGISTRO</label>
-                <input type="date" id="fecha" value="">
+            <div class="entrada-col">
+                <label for="fecha">FECHA</label>
+                <input type="date" id="fecha" value="" />
             </div>
         </div>
-        <div class="botones-formulario">
-            <a href="admnedt.php"><button type="button" class="boton-negro">CANCELAR</button></a>
-            <button class="boton-negro">CONFIRMAR</button>
+        <div class="entrada-row">
+            <label>DESCRIPCIÓN</label>
+            <input type="text" value="" />
+            <label>TIPO</label>
+            <input type="text" value="" />
         </div>
-    </div>
+        <div class="entrada-row">
+            <label>LINEA</label>
+            <input type="text" value="" />
+            <label>SUBLINEA</label>
+            <input type="text" value="" />
+            <label>UNIDAD</label>
+            <input type="text" value="" />
+        </div>
+        <div class="entrada-row">
+            <label>CANTIDAD</label>
+            <input type="number" value="" />
+            <label>PROVEEDOR</label>
+            <select>
+            </select>
+        </div>
+        <div class="entrada-buttons">
+            <button type="button">CANCELAR</button>
+            <button type="submit">CONFIRMAR</button>
+        </div>
+    </form>
 </main>
 
 <script>

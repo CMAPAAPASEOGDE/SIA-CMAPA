@@ -1,20 +1,45 @@
 <?php
-// Iniciar sesión
 session_start();
 
-// Verificar si el usuario está autenticado
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
 
-// Verificar el rol del usuario
 $idRol = (int)($_SESSION['rol'] ?? 0);
 if (!in_array($idRol, [1, 2])) {
     header("Location: acceso_denegado.php");
     exit();
 }
+
+// Conexión a la base de datos
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = array(
+    "Database" => "db_sia",
+    "Uid" => "cmapADMIN",
+    "PWD" => "@siaADMN56*",
+    "Encrypt" => true,
+    "TrustServerCertificate" => false
+);
+$conn = sqlsrv_connect($serverName, $connectionOptions);
+
+// Obtener productos
+$productos = [];
+$tsqlProductos = "SELECT idCodigo, codigo, descripcion, tipo, linea, sublinea, unidad FROM Productos";
+$stmtProd = sqlsrv_query($conn, $tsqlProductos);
+while ($row = sqlsrv_fetch_array($stmtProd, SQLSRV_FETCH_ASSOC)) {
+    $productos[] = $row;
+}
+
+// Obtener proveedores
+$proveedores = [];
+$tsqlProv = "SELECT idProveedor, razonSocial FROM Proveedores";
+$stmtProv = sqlsrv_query($conn, $tsqlProv);
+while ($row = sqlsrv_fetch_array($stmtProv, SQLSRV_FETCH_ASSOC)) {
+    $proveedores[] = $row;
+}
+
+$fecha_actual = date('Y-m-d');
 ?>
 
 <!DOCTYPE html>
@@ -76,48 +101,76 @@ if (!in_array($idRol, [1, 2])) {
         <button class="active-tab">ENTRADA EXISTENTE</button>
         <a href="nwentry.php"><button class="new-bttn">ENTRADA NUEVA</button></a>
     </section>
-    <form class="entrada-form">
+
+    <form class="entrada-form" action="php/registrar_entrada_existente.php" method="POST">
         <div class="entrada-row">
             <div class="entrada-col">
-                <label for="codigo">CÓDIGO</label>
-                <select id="codigo">
-                    <option>ABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789</option>
+                <label for="idCodigo">CÓDIGO</label>
+                <select name="idCodigo" id="codigo" required onchange="llenarCampos()">
+                    <option value="">Seleccione</option>
+                    <?php foreach ($productos as $producto): ?>
+                        <option value="<?= $producto['idCodigo'] ?>" 
+                                data-descripcion="<?= $producto['descripcion'] ?>"
+                                data-tipo="<?= $producto['tipo'] ?>"
+                                data-linea="<?= $producto['linea'] ?>"
+                                data-sublinea="<?= $producto['sublinea'] ?>"
+                                data-unidad="<?= $producto['unidad'] ?>">
+                            <?= htmlspecialchars($producto['codigo']) ?>
+                        </option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             <div class="entrada-col">
                 <label for="fecha">FECHA</label>
-                <input type="date" id="fecha" value="" />
+                <input type="date" id="fecha" name="fecha" value="<?= $fecha_actual ?>" readonly />
             </div>
         </div>
+
         <div class="entrada-row">
             <label>DESCRIPCIÓN</label>
-            <input type="text" value="" />
+            <input type="text" id="descripcion" readonly />
             <label>TIPO</label>
-            <input type="text" value="" />
+            <input type="text" id="tipo" readonly />
         </div>
         <div class="entrada-row">
             <label>LINEA</label>
-            <input type="text" value="" />
+            <input type="text" id="linea" readonly />
             <label>SUBLINEA</label>
-            <input type="text" value="" />
+            <input type="text" id="sublinea" readonly />
             <label>UNIDAD</label>
-            <input type="text" value="" />
+            <input type="text" id="unidad" readonly />
         </div>
         <div class="entrada-row">
-            <label>CANTIDAD</label>
-            <input type="number" value="" />
-            <label>PROVEEDOR</label>
-            <select>
-                <option>FERREMAQUINAS</option>
+            <label for="cantidad">CANTIDAD</label>
+            <input type="number" name="cantidad" required min="1" />
+            <label for="idProveedor">PROVEEDOR</label>
+            <select name="idProveedor" required>
+                <option value="">Seleccione</option>
+                <?php foreach ($proveedores as $prov): ?>
+                    <option value="<?= $prov['idProveedor'] ?>"><?= htmlspecialchars($prov['razonSocial']) ?></option>
+                <?php endforeach; ?>
             </select>
         </div>
+
         <div class="entrada-buttons">
             <a href="warehouse.php"><button type="button">CANCELAR</button></a>
-            <a href="#"><button type="button">CONFIRMAR</button></a>
+            <button type="submit">CONFIRMAR</button>
         </div>
     </form>
 </main>
 
+<script>
+function llenarCampos() {
+    const select = document.getElementById("codigo");
+    const option = select.options[select.selectedIndex];
+
+    document.getElementById("descripcion").value = option.getAttribute("data-descripcion") || "";
+    document.getElementById("tipo").value = option.getAttribute("data-tipo") || "";
+    document.getElementById("linea").value = option.getAttribute("data-linea") || "";
+    document.getElementById("sublinea").value = option.getAttribute("data-sublinea") || "";
+    document.getElementById("unidad").value = option.getAttribute("data-unidad") || "";
+}
+</script>
 
 <script>
   const toggle = document.getElementById('menu-toggle');
