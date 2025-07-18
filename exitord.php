@@ -123,12 +123,14 @@ while ($row = sqlsrv_fetch_array($stmtOp, SQLSRV_FETCH_ASSOC)) {
     <div class="salida-row">
       <div class="salida-col full">
         <label>RESPONSABLE OPERATIVO</label>
-        <select name="idOperador" required>
-          <option value="">Seleccionar...</option>
-          <?php foreach ($operadores as $op): ?>
-            <option value="<?= $op['idOperador'] ?>"><?= htmlspecialchars($op['nombreCompleto']) ?></option>
-          <?php endforeach; ?>
-        </select>
+        <div class="salida-col full">
+          <select name="idOperador" required>
+            <option value="">Seleccionar...</option>
+            <?php foreach ($operadores as $op): ?>
+              <option value="<?= $op['idOperador'] ?>"><?= htmlspecialchars($op['nombreCompleto']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
       </div>
     </div>
 
