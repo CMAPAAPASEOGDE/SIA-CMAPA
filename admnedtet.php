@@ -1,27 +1,45 @@
 <?php
-// Iniciar sesión
 session_start();
-
-// Verificar si el usuario está autenticado
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
-
-// Verificar el rol del usuario
 $idRol = (int)($_SESSION['rol'] ?? 0);
 if ($idRol !== 1) {
     header("Location: acceso_denegado.php");
     exit();
 }
-?>
 
-<?php
-  // Obtener fecha actual en formato DD/MM/AAAA
-  $fecha_actual = date('d/m/Y');
-?>
+// Conexión
+$serverName = "sqlserver-sia.database.windows.net";
+$connOpts = [
+    "Database" => "db_sia",
+    "Uid" => "cmapADMIN",
+    "PWD" => "@siaADMN56*",
+    "Encrypt" => true,
+    "TrustServerCertificate" => false
+];
+$conn = sqlsrv_connect($serverName, $connOpts);
+if ($conn === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
 
+// Obtener productos
+$productos = [];
+$sqlProd = "SELECT idCodigo, codigo FROM Productos ORDER BY codigo";
+$resProd = sqlsrv_query($conn, $sqlProd);
+while ($row = sqlsrv_fetch_array($resProd, SQLSRV_FETCH_ASSOC)) {
+    $productos[] = $row;
+}
+
+// Obtener proveedores
+$proveedores = [];
+$sqlProv = "SELECT idProveedor, razonSocial FROM Proveedores ORDER BY razonSocial";
+$resProv = sqlsrv_query($conn, $sqlProv);
+while ($row = sqlsrv_fetch_array($resProv, SQLSRV_FETCH_ASSOC)) {
+    $proveedores[] = $row;
+}
+?>
 
 <!DOCTYPE html>
 
@@ -31,6 +49,20 @@ if ($idRol !== 1) {
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
     <title>SIA Admin Elements Edition Entry</title>
     <link rel="stylesheet" href="css/StyleADEDET.css">
+<script>
+function cargarDatosProducto() {
+  const idCodigo = document.getElementById('codigo').value;
+  if (!idCodigo) return;
+
+  fetch(`php/obtener_datos_producto.php?id=${idCodigo}`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('nombre').value = data.descripcion || '';
+      document.getElementById('linea').value = data.linea || '';
+      document.getElementById('sublinea').value = data.sublinea || '';
+    });
+}
+</script>
 </head>
 
 <body>
@@ -76,48 +108,59 @@ if ($idRol !== 1) {
 
 <main class="main-container">
     <h1 class="titulo-seccion">EDITAR ELEMENTOS</h1>
-    <div class="contenedor-formulario">
+    <form class="contenedor-formulario" method="POST" action="php/registrar_admnedet.php">
         <h2 class="subtitulo">AÑADIR ELEMENTOS</h2>
+
         <label for="codigo">CÓDIGO</label>
-        <select id="codigo" class="input-ancho-grande">
-            <option></option>
+        <select id="codigo" class="input-ancho-grande" name="idCodigo" onchange="cargarDatosProducto()" required>
+            <option value="">Seleccionar...</option>
+            <?php foreach ($productos as $p): ?>
+                <option value="<?= $p['idCodigo'] ?>"><?= htmlspecialchars($p['codigo']) ?></option>
+            <?php endforeach; ?>
         </select>
+
         <div class="grupo-campos">
             <div>
                 <label for="nombre">NOMBRE</label>
-                <input type="text" id="nombre" placeholder="#">
+                <input type="text" id="nombre" name="nombre" placeholder="#" readonly>
             </div>
             <div>
                 <label for="linea">LÍNEA</label>
-                <input type="text" id="linea" placeholder="#">
+                <input type="text" id="linea" name="linea" placeholder="#" readonly>
             </div>
             <div>
                 <label for="sublinea">SUBLÍNEA</label>
-                <input type="text" id="sublinea" placeholder="#">
+                <input type="text" id="sublinea" name="sublinea" placeholder="#" readonly>
             </div>
         </div>
+
         <div class="grupo-campos">
             <div>
                 <label for="proveedor">PROVEEDOR</label>
-                <select id="proveedor">
-                    <option></option>
+                <select id="proveedor" name="idProveedor" required>
+                    <option value="">Seleccionar...</option>
+                    <?php foreach ($proveedores as $prov): ?>
+                        <option value="<?= $prov['idProveedor'] ?>"><?= htmlspecialchars($prov['razonSocial']) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             <div>
                 <label for="cantidad">CANTIDAD</label>
-                <input type="number" id="cantidad" value="0">
+                <input type="number" id="cantidad" name="cantidad" min="1" value="1" required>
             </div>
             <div>
                 <label for="fecha">FECHA DE REGISTRO</label>
-                <input type="date" id="fecha" value="">
+                <input type="date" id="fecha" name="fecha" value="<?= date('Y-m-d') ?>" required>
             </div>
         </div>
+
         <div class="botones-formulario">
             <a href="admnedt.php"><button type="button" class="boton-negro">CANCELAR</button></a>
-            <button class="boton-negro">CONFIRMAR</button>
+            <button type="submit" class="boton-negro">CONFIRMAR</button>
         </div>
-    </div>
+    </form>
 </main>
+
 
 <script>
   const toggle = document.getElementById('menu-toggle');
