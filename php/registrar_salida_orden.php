@@ -1,7 +1,6 @@
 <?php
 session_start();
 
-// Verifica que el usuario haya iniciado sesión
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../index.php");
     exit();
@@ -27,45 +26,42 @@ if ($conn === false) {
 }
 
 // Obtener valores generales
-$rpu = $_POST['rpu'] ?? '';
-$orden = $_POST['orden'] ?? '';
+$rpu = $_POST['rpuUsuario'] ?? '';
+$orden = $_POST['numeroOrden'] ?? '';
 $comentarios = $_POST['comentarios'] ?? '';
 $idOperador = (int) ($_POST['idOperador'] ?? 0);
 $fecha = date('Y-m-d H:i:s');
 
 // Validaciones generales
-if (strlen($rpu) !== 12 || !is_numeric($rpu) || empty($orden) || $idOperador === 0) {
+if (strlen($rpu) !== 12 || !ctype_digit($rpu) || empty($orden) || $idOperador === 0) {
     header("Location: ../exitorder.php");
     exit();
 }
 
-// Obtener arrays de productos
-$idCodigos = $_POST['idCodigo'] ?? [];
-$cantidades = $_POST['cantidad'] ?? [];
-
-if (count($idCodigos) === 0 || count($cantidades) === 0 || count($idCodigos) !== count($cantidades)) {
+// Obtener los elementos de salida
+$elementos = $_POST['elementos'] ?? [];
+if (empty($elementos) || !is_array($elementos)) {
     header("Location: ../exitorder.php");
     exit();
 }
 
-// Procesar cada elemento
-foreach ($idCodigos as $i => $idCodigo) {
-    $idCodigo = (int) $idCodigo;
-    $cantidad = (int) $cantidades[$i];
+foreach ($elementos as $el) {
+    $idCodigo = (int) ($el['idCodigo'] ?? 0);
+    $cantidad = (int) ($el['cantidad'] ?? 0);
 
     if ($idCodigo === 0 || $cantidad <= 0) {
         header("Location: ../exitorder.php");
         exit();
     }
 
-    // Verificar inventario
+    // Verificar stock actual
     $sqlCheck = "SELECT cantidadActual FROM Inventario WHERE idCodigo = ?";
-    $stmtCheck = sqlsrv_query($conn, [$sqlCheck, [$idCodigo]]);
+    $stmtCheck = sqlsrv_query($conn, $sqlCheck, [$idCodigo]);
     if ($stmtCheck === false) die(print_r(sqlsrv_errors(), true));
 
     $row = sqlsrv_fetch_array($stmtCheck, SQLSRV_FETCH_ASSOC);
     if (!$row || $row['cantidadActual'] < $cantidad) {
-        header("Location: ../exitorder2.php"); // No hay stock suficiente
+        header("Location: ../exitorder2.php");
         exit();
     }
 
@@ -84,7 +80,6 @@ foreach ($idCodigos as $i => $idCodigo) {
     if ($stmtUpdate === false) die(print_r(sqlsrv_errors(), true));
 }
 
-// Todo correcto
+// Redirigir a confirmación
 header("Location: ../exitordcnf.php");
 exit();
-?>
