@@ -97,6 +97,10 @@ while ($row = sqlsrv_fetch_array($stmtOp, SQLSRV_FETCH_ASSOC)) {
 
 <main class="salida-container">
   <h2 class="salida-title">SALIDAS</h2>
+  <div class="salida-tabs">
+    <button class="tab activo">SALIDA CON ORDEN</button>
+    <a href="exitnoord.php"><button class="tab new-bttn">SALIDA SIN ORDEN (USO INTERNO)</button></a>
+  </div>
   <form class="salida-form" action="php/registrar_salida_orden.php" method="POST">
     <div class="salida-row">
       <div class="salida-col">
