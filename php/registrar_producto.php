@@ -49,7 +49,7 @@ if (sqlsrv_fetch($stmt_check)) {
 }
 
 // Insertar nuevo producto
-$sql_insert = "INSERT INTO Productos (codigo, descripcion, tipo, linea, sublinea, unidad, precio, stockMaximo, puntoReorden,)
+$sql_insert = "INSERT INTO Productos (codigo, descripcion, tipo, linea, sublinea, unidad, precio, stockMaximo, puntoReorden)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 $params_insert = array(
