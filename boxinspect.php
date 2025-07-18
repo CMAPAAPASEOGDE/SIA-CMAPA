@@ -1,20 +1,54 @@
 <?php
-// Iniciar sesión
 session_start();
 
-// Verificar si el usuario está autenticado
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
 
-// Verificar el rol del usuario
 $idRol = (int)($_SESSION['rol'] ?? 0);
 if (!in_array($idRol, [1, 2])) {
     header("Location: acceso_denegado.php");
     exit();
 }
+
+// Obtener el ID de la caja desde la URL
+$idCaja = isset($_GET['idCaja']) ? intval($_GET['idCaja']) : 0;
+if ($idCaja <= 0) {
+    header("Location: boxes.php");
+    exit();
+}
+
+// Conectar a la BD
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = [
+    "Database" => "db_sia",
+    "Uid" => "cmapADMIN",
+    "PWD" => "@siaADMN56*",
+    "Encrypt" => true,
+    "TrustServerCertificate" => false
+];
+$conn = sqlsrv_connect($serverName, $connectionOptions);
+if ($conn === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+// Obtener el nombre del operador y número de caja
+$sqlCaja = "SELECT C.numeroCaja, O.nombre AS nombreOperador 
+            FROM CajaRegistro C
+            INNER JOIN Operativo O ON C.idOperador = O.idOperador
+            WHERE C.idCaja = ?";
+$stmtCaja = sqlsrv_query($conn, $sqlCaja, [$idCaja]);
+$datosCaja = sqlsrv_fetch_array($stmtCaja, SQLSRV_FETCH_ASSOC);
+$numeroCaja = $datosCaja['numeroCaja'] ?? '---';
+$nombreOperador = $datosCaja['nombreOperador'] ?? 'SIN OPERADOR';
+
+// Obtener contenido de la caja
+$sqlContenido = "SELECT cc.idCodigo, p.nombre AS descripcion, cc.cantidad
+                 FROM CajaContenido cc
+                 INNER JOIN Productos p ON cc.idCodigo = p.idCodigo
+                 WHERE cc.idCaja = ?";
+$stmtContenido = sqlsrv_query($conn, $sqlContenido, [$idCaja]);
 ?>
 
 <!DOCTYPE html>
@@ -70,45 +104,39 @@ if (!in_array($idRol, [1, 2])) {
 
 <main class="caja-gestion-container">
     <div class="caja-gestion-title">
-        <h2>CAJAS</h2>
-        <div class="caja-numero">CAJA 001</div>
+        <h2>CAJA</h2>
+        <div class="caja-numero">CAJA <?= htmlspecialchars($numeroCaja) ?></div>
     </div>
     <section class="responsable-section">
         <label for="responsable">RESPONSABLE</label>
-        <input type="text" id="responsable" value="">
-        <a href="#"><button class="btn-secundario">CAMBIAR RESPONSABLE</button></a>
+        <input type="text" id="responsable" value="<?= htmlspecialchars($nombreOperador) ?>" readonly>
+        <?php if ($idRol === 1): ?>
+            <a href="cambiar_responsable.php?idCaja=<?= $idCaja ?>"><button class="btn-secundario">CAMBIAR RESPONSABLE</button></a>
+        <?php endif; ?>
     </section>
+
     <section class="elementos-section">
         <div class="elementos-header">
             <span>CÓDIGO</span>
             <span>CONTENIDO</span>
             <span>CANTIDAD</span>
         </div>
-        <div class="elemento-row">
-            <input type="text" value="">
-            <input type="text" value="">
-            <div class="cantidad-control">
-                <input type="number" value="0" min="0">
+        <?php while ($row = sqlsrv_fetch_array($stmtContenido, SQLSRV_FETCH_ASSOC)): ?>
+            <div class="elemento-row">
+                <input type="text" value="<?= htmlspecialchars($row['idCodigo']) ?>" readonly>
+                <input type="text" value="<?= htmlspecialchars($row['descripcion']) ?>" readonly>
+                <div class="cantidad-control">
+                    <input type="number" value="<?= htmlspecialchars($row['cantidad']) ?>" readonly>
+                </div>
             </div>
-        </div>
-        <div class="elemento-row">
-            <input type="text" value="">
-            <input type="text" value="">
-            <div class="cantidad-control">
-                <input type="number" value="0" min="0">
-            </div>
-        </div>
-        <div class="elemento-row">
-            <input type="text" value="">
-            <input type="text" value="">
-            <div class="cantidad-control">
-                <input type="number" value="0" min="0">
-            </div>
-        </div>
+        <?php endwhile; ?>
     </section>
+
     <div class="caja-gestion-actions">
-        <button class="btn-secundario">AÑADIR NUEVO ELEMENTO</button>
-        <a href="#"><button class="btn-secundario">BORRAR LA CAJA</button></a>
+        <a href="añadir_elemento_caja.php?idCaja=<?= $idCaja ?>"><button class="btn-secundario">AÑADIR NUEVO ELEMENTO</button></a>
+        <?php if ($idRol === 1): ?>
+            <a href="eliminar_caja.php?idCaja=<?= $idCaja ?>"><button class="btn-secundario">BORRAR LA CAJA</button></a>
+        <?php endif; ?>
         <a href="boxes.php"><button class="btn">CANCELAR</button></a>
         <a href="#"><button class="btn">CONFIRMAR</button></a>
     </div>
