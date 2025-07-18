@@ -1,19 +1,39 @@
 <?php
-// Iniciar sesión
 session_start();
 
-// Verificar si el usuario está autenticado
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
 
-// Verificar el rol del usuario
 $idRol = (int)($_SESSION['rol'] ?? 0);
 if (!in_array($idRol, [1, 2])) {
     header("Location: acceso_denegado.php");
     exit();
+}
+
+// Conexión a la base de datos
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = [
+    "Database" => "db_sia",
+    "Uid" => "cmapADMIN",
+    "PWD" => "@siaADMN56*",
+    "Encrypt" => true,
+    "TrustServerCertificate" => false
+];
+$conn = sqlsrv_connect($serverName, $connectionOptions);
+if ($conn === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+// Obtener cajas y nombres de operadores, excluyendo caja 000
+$sql = "SELECT C.numeroCaja, O.nombreCompleto AS nombreOperador, C.idCaja
+        FROM CajaRegistro C
+        INNER JOIN Operativo O ON C.idOperador = O.idOperador
+        WHERE C.numeroCaja <> '000'";
+$result = sqlsrv_query($conn, $sql);
+if ($result === false) {
+    die(print_r(sqlsrv_errors(), true));
 }
 ?>
 
@@ -71,22 +91,15 @@ if (!in_array($idRol, [1, 2])) {
 <main class="cajas-container">
     <h2 class="cajas-title">CAJAS</h2>
     <section class="cajas-scroll">
-        <div class="caja-card">
-            <img src="img/caja-icono.png" alt="Caja 1" class="caja-img" />
-            <p class="caja-clave">ABCDE FGHIJ KLMNÑO</p>
-            <a href="boxinspect.php"><button class="caja-bttn">CAJA ###</button></a>
-        </div>
-        <div class="caja-card">
-            <img src="img/caja-icono.png" alt="Caja 2" class="caja-img" />
-            <p class="caja-clave">ABCDE FGHIJ KLMNÑO</p>
-            <a href="boxinspect.php"><button class="caja-bttn">CAJA ###</button></a>
-        </div>
-        <div class="caja-card">
-            <img src="img/caja-icono.png" alt="Caja 3" class="caja-img" />
-            <p class="caja-clave">ABCDE FGHIJ KLMNÑO</p>
-            <a href="boxinspect.php"><button class="caja-bttn">CAJA ###</button></a>
-        </div>
-        <!-- Puedes seguir agregando más cajas aquí -->
+        <?php while ($row = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)): ?>
+            <div class="caja-card">
+                <img src="img/caja-icono.png" alt="Caja <?= htmlspecialchars($row['numeroCaja']) ?>" class="caja-img" />
+                <p class="caja-clave"><?= htmlspecialchars($row['nombreOperador']) ?></p>
+                <a href="boxinspect.php?idCaja=<?= urlencode($row['idCaja']) ?>">
+                    <button class="caja-bttn">CAJA <?= htmlspecialchars($row['numeroCaja']) ?></button>
+                </a>
+            </div>
+        <?php endwhile; ?>
     </section>
     <div class="cajas-actions">
         <a href="warehouse.php"><button class="btn cancel">CANCELAR</button></a>
