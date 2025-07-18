@@ -30,7 +30,7 @@ if ($conn === false) {
 $sql = "SELECT C.numeroCaja, O.nombreCompleto AS nombreOperador, C.idCaja
         FROM CajaRegistro C
         INNER JOIN Operativo O ON C.idOperador = O.idOperador
-        WHERE C.numeroCaja <> '000'";
+        WHERE C.numeroCaja <> '0000'";
 $result = sqlsrv_query($conn, $sql);
 if ($result === false) {
     die(print_r(sqlsrv_errors(), true));
