@@ -291,6 +291,7 @@ header p {
   cursor: pointer;
   flex: 1;
   margin: 5px;
+  width: 60px;
 }
 
 .btn:hover {
