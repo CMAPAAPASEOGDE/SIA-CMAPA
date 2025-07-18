@@ -96,23 +96,17 @@ if (!in_array($idRol, [1, 2])) {
         <div class="entrada-row">
             <div class="entrada-col">
                 <label>ASIGNAR CÓDIGO</label>
-                <input type="text" value="ABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789" />
-            </div>
-            <div class="entrada-col">
-                <label>FECHA</label>
-                <input type="date" value="2025-04-30" />
+                <input type="text" value="" />
             </div>
         </div>
         <div class="entrada-row">
             <div class="entrada-col full">
                 <label>NOMBRE/DESCRIPCIÓN</label>
-                <input type="text" value="TORNILLOS 1/4" />
+                <input type="text" value="" />
             </div>
             <div class="entrada-col">
                 <label>TIPO</label>
                 <select>
-                    <option>Materiales</option>
-                    <option>Herramientas</option>
                 </select>
             </div>
         </div>
@@ -120,42 +114,31 @@ if (!in_array($idRol, [1, 2])) {
             <div class="entrada-col">
                 <label>LÍNEA</label>
                 <select>
-                    <option>ABCDE</option>
                 </select>
             </div>
             <div class="entrada-col">
                 <label>SUBLÍNEA</label>
                 <select>
-                    <option>ABCDE</option>
                 </select>
             </div>
             <div class="entrada-col">
                 <label>UNIDAD</label>
                 <select>
-                    <option>PIEZAS</option>
-                </select>
-            </div>
-        </div>
-        <div class="entrada-row">
-            <div class="entrada-col full">
-                <label>PROVEEDOR</label>
-                <select>
-                    <option>FERREMAQUINAS</option>
                 </select>
             </div>
         </div>
         <div class="entrada-row">
             <div class="entrada-col">
                 <label>PRECIO UNITARIO</label>
-                <input type="number" value="6.00" />
+                <input type="number" value="" />
             </div>
             <div class="entrada-col">
                 <label>STOCK MÁXIMO</label>
-                <input type="number" value="60" />
+                <input type="number" value="" />
             </div>
             <div class="entrada-col">
                 <label>PUNTO DE REORDEN</label>
-                <input type="number" value="5" />
+                <input type="number" value="" />
             </div>
         </div>
         <div class="entrada-actions">
