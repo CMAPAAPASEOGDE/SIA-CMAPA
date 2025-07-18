@@ -15,6 +15,33 @@ if (!in_array($idRol, [1, 2])) {
     header("Location: acceso_denegado.php");
     exit();
 }
+
+// Incluir conexión
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = array(
+    "Database" => "db_sia",
+    "Uid" => "cmapADMIN",
+    "PWD" => "@siaADMN56*",
+    "Encrypt" => true,
+    "TrustServerCertificate" => false
+);
+$conn = sqlsrv_connect($serverName, $connectionOptions);
+
+// Obtener productos
+$productos = [];
+$queryProd = "SELECT idCodigo, codigo, descripcion FROM Productos";
+$stmtProd = sqlsrv_query($conn, $queryProd);
+while ($row = sqlsrv_fetch_array($stmtProd, SQLSRV_FETCH_ASSOC)) {
+    $productos[] = $row;
+}
+
+// Obtener operadores
+$operadores = [];
+$queryOp = "SELECT idOperador, nombreCompleto FROM Operativo";
+$stmtOp = sqlsrv_query($conn, $queryOp);
+while ($row = sqlsrv_fetch_array($stmtOp, SQLSRV_FETCH_ASSOC)) {
+    $operadores[] = $row;
+}
 ?>
 
 <!DOCTYPE html>
@@ -69,68 +96,94 @@ if (!in_array($idRol, [1, 2])) {
 </header>
 
 <main class="salida-container">
-    <h2 class="salida-title">SALIDAS</h2>
-    <div class="salida-tabs">
-        <button class="tab activo">SALIDA CON ORDEN</button>
-        <a href="exitnoord.php"><button class="tab new-bttn">SALIDA SIN ORDEN (USO INTERNO)</button></a>
+  <h2 class="salida-title">SALIDAS</h2>
+  <form class="salida-form" action="php/registrar_salida_orden.php" method="POST">
+    <div class="salida-row">
+      <div class="salida-col">
+        <label>NÚMERO DE ORDEN</label>
+        <input type="text" name="numeroOrden" required />
+      </div>
+      <div class="salida-col">
+        <label>RPU DEL USUARIO</label>
+        <input type="text" name="rpuUsuario" pattern="\d{12}" title="Debe contener exactamente 12 dígitos" required />
+      </div>
+      <div class="salida-col">
+        <label>FECHA</label>
+        <input type="date" name="fecha" value="<?= date('Y-m-d') ?>" readonly />
+      </div>
     </div>
-    <form class="salida-form">
-        <div class="salida-row">
-            <div class="salida-col">
-                <label>NÚMERO DE ORDEN</label>
-                <input type="text" value="0" />
-            </div>
-            <div class="salida-col">
-                <label>RPU DEL USUARIO</label>
-                <input type="text" value="0" />
-            </div>
-            <div class="salida-col">
-                <label>FECHA</label>
-                <input type="date" value="" />
-            </div>
-        </div>
-        <div class="salida-row">
-            <div class="salida-col full">
-                <label>COMENTARIOS</label>
-                <textarea rows="5"></textarea>
-            </div>
-        </div>
-        <div class="salida-row">
-            <div class="salida-col full">
-                <label>RESPONSABLE OPERATIVO</label>
-                <input type="text" value="" />
-            </div>
-        </div>
-        <div class="salida-items">
-            <h3 class="items-title">ELEMENTOS EN LA ORDEN</h3>
-            <div class="salida-row item">
-                <input type="text" placeholder="CÓDIGO" value="" />
-                <input type="text" placeholder="NOMBRE" value="" />
-                <input type="number" placeholder="CANTIDAD" value="0" />
-            </div>
-            <div class="salida-row item">
-                <input type="text" placeholder="CÓDIGO" value="" />
-                <input type="text" placeholder="NOMBRE" value="" />
-                <input type="number" placeholder="CANTIDAD" value="0" />
-            </div>
-            <div class="salida-row item">
-                <input type="text" placeholder="CÓDIGO" value="" />
-                <input type="text" placeholder="NOMBRE" value="" />
-                <input type="number" placeholder="CANTIDAD" value="0" />
-            </div>
-            <div class="salida-row item">
-                <input type="text" placeholder="CÓDIGO" value="" />
-                <input type="text" placeholder="NOMBRE" value="" />
-                <input type="number" placeholder="CANTIDAD" value="0" />
-            </div>
-        </div>
-        <div class="salida-actions">
-            <a href="warehouse.php"><button type="button" class="btn cancel">CANCELAR</button></a>
-            <button type="button" class="btn add">AÑADIR ELEMENTOS</button>
-            <a href="#"><button type="button" class="btn confirm">CONFIRMAR SALIDA</button></a>
-        </div>
-    </form>
+
+    <div class="salida-row">
+      <div class="salida-col full">
+        <label>COMENTARIOS</label>
+        <textarea name="comentarios" rows="5" required></textarea>
+      </div>
+    </div>
+
+    <div class="salida-row">
+      <div class="salida-col full">
+        <label>RESPONSABLE OPERATIVO</label>
+        <select name="idOperador" required>
+          <option value="">Seleccionar...</option>
+          <?php foreach ($operadores as $op): ?>
+            <option value="<?= $op['idOperador'] ?>"><?= htmlspecialchars($op['nombreCompleto']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+    </div>
+
+    <div class="salida-items" id="salida-items">
+      <h3 class="items-title">ELEMENTOS EN LA ORDEN</h3>
+
+      <div class="salida-row item">
+        <select name="elementos[0][idCodigo]" class="codigo-select" onchange="cargarNombre(this)">
+          <option value="">Seleccionar código</option>
+          <?php foreach ($productos as $prod): ?>
+            <option value="<?= $prod['idCodigo'] ?>" data-nombre="<?= htmlspecialchars($prod['descripcion']) ?>">
+              <?= htmlspecialchars($prod['codigo']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+        <input type="text" name="elementos[0][nombre]" placeholder="NOMBRE" readonly />
+        <input type="number" name="elementos[0][cantidad]" placeholder="CANTIDAD" min="1" required />
+      </div>
+    </div>
+
+    <div class="salida-actions">
+      <a href="warehouse.php"><button type="button" class="btn cancel">CANCELAR</button></a>
+      <button type="button" class="btn add" onclick="agregarElemento()">AÑADIR ELEMENTO</button>
+      <button type="submit" class="btn confirm">CONFIRMAR SALIDA</button>
+    </div>
+  </form>
 </main>
+
+<script>
+let contador = 1;
+const productos = <?= json_encode($productos) ?>;
+
+function cargarNombre(select) {
+  const nombreInput = select.nextElementSibling;
+  const selectedOption = select.options[select.selectedIndex];
+  nombreInput.value = selectedOption.getAttribute('data-nombre') || "";
+}
+
+function agregarElemento() {
+  const container = document.getElementById('salida-items');
+  const nuevo = document.createElement('div');
+  nuevo.className = "salida-row item";
+  nuevo.innerHTML = `
+    <select name="elementos[${contador}][idCodigo]" class="codigo-select" onchange="cargarNombre(this)">
+      <option value="">Seleccionar código</option>
+      ${productos.map(p => `<option value="${p.idCodigo}" data-nombre="${p.descripcion}">${p.codigo}</option>`).join('')}
+    </select>
+    <input type="text" name="elementos[${contador}][nombre]" placeholder="NOMBRE" readonly />
+    <input type="number" name="elementos[${contador}][cantidad]" placeholder="CANTIDAD" min="1" required />
+  `;
+  container.appendChild(nuevo);
+  contador++;
+}
+</script>
+
 
 <script>
   const toggle = document.getElementById('menu-toggle');
