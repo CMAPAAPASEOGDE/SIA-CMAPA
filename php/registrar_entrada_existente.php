@@ -60,7 +60,7 @@ if ($nuevaCantidad > $stockMaximo) {
 }
 
 // 2. Registrar entrada
-$sqlEntrada = "INSERT INTO Entradas (idCodigo, idProveedor, cantidad, fechaEntrada)
+$sqlEntrada = "INSERT INTO Entradas (idCodigo, idProveedor, cantidad, fecha)
                VALUES (?, ?, ?, ?)";
 $paramsEntrada = array($idCodigo, $idProveedor, $cantidad, $fecha);
 $stmtEntrada = sqlsrv_query($conn, $sqlEntrada, $paramsEntrada);
