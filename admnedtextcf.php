@@ -1,37 +1,20 @@
 <?php
+// Iniciar sesión
 session_start();
 
+// Verificar si el usuario está autenticado
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
 
+// Verificar el rol del usuario
 $idRol = (int)($_SESSION['rol'] ?? 0);
 if ($idRol !== 1) {
     header("Location: acceso_denegado.php");
     exit();
 }
-
-// Conexión
-$serverName = "sqlserver-sia.database.windows.net";
-$connectionOptions = [
-    "Database" => "db_sia",
-    "Uid" => "cmapADMIN",
-    "PWD" => "@siaADMN56*",
-    "Encrypt" => true,
-    "TrustServerCertificate" => false
-];
-$conn = sqlsrv_connect($serverName, $connectionOptions);
-
-// Obtener productos
-$productos = [];
-$sql = "SELECT idCodigo, codigo, descripcion, linea, sublinea FROM Productos";
-$stmt = sqlsrv_query($conn, $sql);
-while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    $productos[] = $row;
-}
-
-$fecha_actual = date('Y-m-d');
 ?>
 
 <!DOCTYPE html>
@@ -40,8 +23,8 @@ $fecha_actual = date('Y-m-d');
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
-    <title>SIA Admin Elements Edition Exits</title>
-    <link rel="stylesheet" href="css/StyleADEDEX.css">
+    <title>SIA CONFIRMATION</title>
+    <link rel="stylesheet" href="css/StyleADEDEXCF.css">
 </head>
 
 <body>
@@ -85,63 +68,56 @@ $fecha_actual = date('Y-m-d');
 </div>
 </header>
 
-<main class="main-container">
-  <h1 class="titulo-seccion">SALIDA SIN RESTRICCIONES</h1>
-  <form class="contenedor-formulario" action="php/registrar_salida_admin.php" method="POST">
-    <label for="codigo">CÓDIGO</label>
-    <select name="idCodigo" id="codigo" class="input-ancho-grande" required onchange="completarDatos(this)">
-      <option value="">Seleccionar...</option>
-      <?php foreach ($productos as $p): ?>
-        <option value="<?= $p['idCodigo'] ?>"
-          data-nombre="<?= htmlspecialchars($p['descripcion']) ?>"
-          data-linea="<?= htmlspecialchars($p['linea']) ?>"
-          data-sublinea="<?= htmlspecialchars($p['sublinea']) ?>">
-          <?= htmlspecialchars($p['codigo']) ?>
-        </option>
-      <?php endforeach; ?>
-    </select>
+<article class="ft-container">
+  <div class="son-container">
+    <h2>CONFIRMACIÓN</h2>
+    <p>
+      LOS ELEMENTOS SE HAN ELIMINADO CORRECTAMENTE Y YA SE PUEDEN VER REFLEJADOS EN EL INVENTARIO.
+    </p>
+    <div class="form-buttons">
+      <a href="admin.php"><button type="submit" class="btn confirm">CONFIRMAR</button></a>
+    </div>
+  </div>
+</article>
 
+<main class="main-container">
+  <h1 class="titulo-seccion">EDITAR ELEMENTOS</h1>
+  <div class="contenedor-formulario">
+    <h2 class="subtitulo">ELIMINAR ELEMENTOS</h2>
+    <label for="codigo">CÓDIGO</label>
+    <select id="codigo" class="input-ancho-grande">
+      <option></option>
+    </select>
     <div class="grupo-campos">
       <div>
         <label for="nombre">NOMBRE</label>
-        <input type="text" id="nombre" readonly>
+        <input type="text" id="nombre" placeholder="">
       </div>
       <div>
         <label for="linea">LÍNEA</label>
-        <input type="text" id="linea" readonly>
+        <input type="text" id="linea" placeholder="">
       </div>
       <div>
         <label for="sublinea">SUBLÍNEA</label>
-        <input type="text" id="sublinea" readonly>
+        <input type="text" id="sublinea" placeholder="">
       </div>
     </div>
-
     <div class="grupo-campos">
       <div>
         <label for="cantidad">CANTIDAD</label>
-        <input type="number" name="cantidad" id="cantidad" required min="1">
+        <input type="number" id="cantidad" value="">
       </div>
       <div>
         <label for="fecha">FECHA DE REGISTRO</label>
-        <input type="date" name="fecha" id="fecha" value="<?= $fecha_actual ?>" required>
+        <input type="date" id="fecha" value="">
       </div>
     </div>
-
     <div class="botones-formulario">
-      <a href="admnedt.php"><button type="button" class="boton-negro">CANCELAR</button></a>
-      <button type="submit" class="boton-negro">CONFIRMAR</button>
+      <button class="boton-negro">CANCELAR</button>
+      <button class="boton-negro">CONFIRMAR</button>
     </div>
-  </form>
+  </div>
 </main>
-
-<script>
-function completarDatos(select) {
-  const option = select.options[select.selectedIndex];
-  document.getElementById('nombre').value = option.dataset.nombre || '';
-  document.getElementById('linea').value = option.dataset.linea || '';
-  document.getElementById('sublinea').value = option.dataset.sublinea || '';
-}
-</script>
 
 <script>
   const toggle = document.getElementById('menu-toggle');
