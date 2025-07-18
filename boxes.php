@@ -95,9 +95,7 @@ if ($result === false) {
             <div class="caja-card">
                 <img src="img/caja-icono.png" alt="Caja <?= htmlspecialchars($row['numeroCaja']) ?>" class="caja-img" />
                 <p class="caja-clave"><?= htmlspecialchars($row['nombreOperador']) ?></p>
-                <a href="boxinspect.php?idCaja=<?= urlencode($row['idCaja']) ?>">
-                    <button class="caja-bttn">CAJA <?= htmlspecialchars($row['numeroCaja']) ?></button>
-                </a>
+                <a href="boxinspect.php?idCaja=<?= $row['idCaja'] ?>"><button class="caja-bttn">CAJA <?= htmlspecialchars($row['numeroCaja']) ?></button></a>
             </div>
         <?php endwhile; ?>
     </section>
