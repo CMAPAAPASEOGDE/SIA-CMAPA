@@ -1,34 +1,19 @@
 <?php
+// Iniciar sesión
 session_start();
 
+// Verificar si el usuario está autenticado
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
 
+// Verificar el rol del usuario
 $idRol = (int)($_SESSION['rol'] ?? 0);
 if (!in_array($idRol, [1, 2])) {
     header("Location: acceso_denegado.php");
     exit();
-}
-
-// Obtener productos desde la BD
-$serverName = "sqlserver-sia.database.windows.net";
-$connectionOptions = [
-    "Database" => "db_sia",
-    "Uid" => "cmapADMIN",
-    "PWD" => "@siaADMN56*",
-    "Encrypt" => true,
-    "TrustServerCertificate" => false
-];
-$conn = sqlsrv_connect($serverName, $connectionOptions);
-if (!$conn) die(print_r(sqlsrv_errors(), true));
-
-$productos = [];
-$queryProd = "SELECT idCodigo, codigo, descripcion FROM Productos";
-$stmt = sqlsrv_query($conn, $queryProd);
-while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    $productos[] = $row;
 }
 ?>
 
@@ -36,10 +21,10 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 
 <html>
 <head>
-    <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
-    <title>SIA Exit Without Order</title>
-    <link rel="stylesheet" href="css/StyleETNOOD.css">
+    <meta charset="UTF-8" />
+    <title>SIA WARNING</title>
+    <link rel="stylesheet" href="css/StyleETNOODER2.css">
 </head>
 
 <body>
@@ -83,84 +68,60 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 </div>
 </header>
 
+<article class="ft-container">
+  <div class="son-container">
+    <h2>ADVERTENCIA</h2>
+    <p>
+      ALGUN ELEMENTO DE LA LISTA NO SE ENCUENTRA EN STOCK, VERIFICA LOS DATOS E INTENTALO NUEVAMENTE.
+    </p>
+    <div class="form-buttons">
+      <a href="exitnoord.php"><button type="submit" class="btn confirm">CONFIRMAR</button></a>
+    </div>
+  </div>
+</article>
+
 <main class="salida-container">
     <h2 class="salida-title">SALIDAS</h2>
     <div class="salida-tabs">
-        <a href="exitord.php"><button class="tab new-bttn">SALIDA CON ORDEN</button></a>
+        <button class="tab">SALIDA CON ORDEN</button>
         <button class="tab activo">SALIDA SIN ORDEN (USO INTERNO)</button>
     </div>
-    <form class="salida-form" action="php/registrar_salida_noorden.php" method="POST">
+    <form class="salida-form">
         <div class="salida-row">
             <div class="salida-col">
                 <label>ÁREA QUE SOLICITA</label>
-                <input type="text" name="areaSolicitante" required />
+                <input type="text" value="" />
             </div>
             <div class="salida-col">
                 <label>QUIÉN SOLICITA</label>
-                <input type="text" name="encargadoArea" required />
+                <input type="text" value="" />
             </div>
             <div class="salida-col">
                 <label>FECHA</label>
-                <input type="date" name="fecha" value="<?= date('Y-m-d') ?>" readonly />
+                <input type="date" value="" />
             </div>
         </div>
         <div class="salida-row">
             <div class="salida-col full">
                 <label>COMENTARIOS</label>
-                <textarea name="comentarios" rows="5" required></textarea>
+                <textarea rows="3"></textarea>
             </div>
         </div>
-
-        <div class="salida-items" id="salida-items">
-            <h3 class="items-title">ELEMENTOS</h3>
+        <div class="salida-items">
+            <h3 class="items-title">ELEMENTOS EN LA ORDEN</h3>
             <div class="salida-row item">
-                <select name="elementos[0][idCodigo]" class="codigo-select" onchange="cargarNombre(this)">
-                    <option value="">Seleccionar código</option>
-                    <?php foreach ($productos as $prod): ?>
-                        <option value="<?= $prod['idCodigo'] ?>" data-nombre="<?= htmlspecialchars($prod['descripcion']) ?>">
-                            <?= htmlspecialchars($prod['codigo']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <input type="text" name="elementos[0][nombre]" placeholder="NOMBRE" readonly />
-                <input type="number" name="elementos[0][cantidad]" placeholder="CANTIDAD" min="1" required />
+                <input type="text" placeholder="CÓDIGO" value="" />
+                <input type="text" placeholder="NOMBRE" value="" />
+                <input type="number" placeholder="CANTIDAD" value="" />
             </div>
         </div>
-
         <div class="salida-actions">
-            <a href="warehouse.php"><button type="button" class="btn cancel">CANCELAR</button></a>
-            <button type="button" class="btn add" onclick="agregarElemento()">AÑADIR ELEMENTOS</button>
+            <button type="button" class="btn cancel">CANCELAR</button>
+            <button type="button" class="btn add">AÑADIR ELEMENTOS</button>
             <button type="submit" class="btn confirm">CONFIRMAR SALIDA</button>
         </div>
     </form>
 </main>
-
-<script>
-let contador = 1;
-const productos = <?= json_encode($productos) ?>;
-
-function cargarNombre(select) {
-    const nombreInput = select.nextElementSibling;
-    const selectedOption = select.options[select.selectedIndex];
-    nombreInput.value = selectedOption.getAttribute('data-nombre') || "";
-}
-
-function agregarElemento() {
-    const container = document.getElementById('salida-items');
-    const nuevo = document.createElement('div');
-    nuevo.className = "salida-row item";
-    nuevo.innerHTML = `
-        <select name="elementos[${contador}][idCodigo]" class="codigo-select" onchange="cargarNombre(this)">
-            <option value="">Seleccionar código</option>
-            ${productos.map(p => `<option value="${p.idCodigo}" data-nombre="${p.descripcion}">${p.codigo}</option>`).join('')}
-        </select>
-        <input type="text" name="elementos[${contador}][nombre]" placeholder="NOMBRE" readonly />
-        <input type="number" name="elementos[${contador}][cantidad]" placeholder="CANTIDAD" min="1" required />
-    `;
-    container.appendChild(nuevo);
-    contador++;
-}
-</script>
 
 <script>
   const toggle = document.getElementById('menu-toggle');
@@ -201,6 +162,6 @@ function agregarElemento() {
       notifDropdown.style.display = 'none';
     }
   });
-</script>
+</script>  
 </body>
 </html>
