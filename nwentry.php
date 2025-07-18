@@ -106,13 +106,14 @@ if (!in_array($idRol, [1, 2])) {
             <div class="entrada-col">
                 <label>LÍNEA</label>
                 <select name="linea" required>
-                    <option value=""></option>
+                    <option value="Herramientas">Herramientas</option>
                 </select>
             </div>
             <div class="entrada-col">
                 <label>SUBLÍNEA</label>
                 <select name="sublinea" required>
-                    <option value=""></option>
+                    <option value="Manuales">Manuales</option>
+                    <option value="Electricas">Electricas</option>
                 </select>
             </div>
             <div class="entrada-col">
