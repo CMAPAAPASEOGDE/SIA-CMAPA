@@ -33,7 +33,7 @@ $fecha = date('Y-m-d H:i:s');
 $idCaja = 1;
 $ubicacion = "Almacen";
 
-// 1. Obtener cantidad actual e info del producto
+// 1. Obtener info del producto e inventario
 $sqlProducto = "SELECT P.stockMaximo, ISNULL(I.cantidadActual, 0) AS cantidadActual
                 FROM Productos P
                 LEFT JOIN Inventario I ON P.idCodigo = I.idCodigo
@@ -49,11 +49,11 @@ if (!$row) {
     exit();
 }
 
-$stockMaximo = (int)$row['stockMaximo'];
+$stockMaximo = $row['stockMaximo'] ?? 0;  // Evita nulls
 $cantidadActual = (int)$row['cantidadActual'];
 $nuevaCantidad = $cantidad + $cantidadActual;
 
-if ($nuevaCantidad > $stockMaximo) {
+if ($stockMaximo > 0 && $nuevaCantidad > $stockMaximo) {
     // Excede el stock máximo permitido
     header("Location: ../exteterr.php");
     exit();
@@ -68,15 +68,15 @@ if ($stmtEntrada === false) {
     die(print_r(sqlsrv_errors(), true));
 }
 
-// 3. Actualizar inventario
+// 3. Verificar si ya existe en Inventario
 $sqlCheckInv = "SELECT 1 FROM Inventario WHERE idCodigo = ?";
-$stmtCheck = sqlsrv_query($conn, array($idCodigo));
+$stmtCheck = sqlsrv_query($conn, $sqlCheckInv, array($idCodigo));
 if ($stmtCheck === false) {
     die(print_r(sqlsrv_errors(), true));
 }
 
 if (sqlsrv_fetch($stmtCheck)) {
-    // Actualizar
+    // Ya existe → actualizar
     $sqlUpdate = "UPDATE Inventario 
                   SET cantidadActual = ?, ultimaActualizacion = ?, idCaja = ?, ubicacion = ?
                   WHERE idCodigo = ?";
@@ -86,7 +86,7 @@ if (sqlsrv_fetch($stmtCheck)) {
         die(print_r(sqlsrv_errors(), true));
     }
 } else {
-    // Insertar
+    // No existe → insertar
     $sqlInsertInv = "INSERT INTO Inventario (idCodigo, idCaja, cantidadActual, ubicacion, ultimaActualizacion)
                      VALUES (?, ?, ?, ?, ?)";
     $paramsInsert = array($idCodigo, $idCaja, $cantidad, $ubicacion, $fecha);
@@ -96,6 +96,7 @@ if (sqlsrv_fetch($stmtCheck)) {
     }
 }
 
-// 4. Redirigir a confirmación
+// 4. Confirmación
 header("Location: ../extetcnf.php");
 exit();
+?>
