@@ -275,6 +275,7 @@ header p {
 .entrada-actions {
   justify-content: center;
   margin-top: 15px;
+  margin-left: 100px;
 }
 
 .btn .entrada-actions {
