@@ -273,7 +273,6 @@ header p {
 }
 
 .entrada-actions {
-  display: flex;
   justify-content: center;
   margin-top: 15px;
 }
@@ -291,7 +290,6 @@ header p {
   cursor: pointer;
   flex: 1;
   margin: 5px;
-  width: 60px;
 }
 
 .btn:hover {
