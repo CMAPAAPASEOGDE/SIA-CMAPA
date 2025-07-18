@@ -48,13 +48,15 @@ if (sqlsrv_fetch($stmt_check)) {
     exit();
 }
 
+$estatus = 1;
+
 // Insertar nuevo producto
-$sql_insert = "INSERT INTO Productos (codigo, descripcion, tipo, linea, sublinea, unidad, precio, stockMaximo, puntoReorden)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+$sql_insert = "INSERT INTO Productos (codigo, descripcion, tipo, linea, sublinea, unidad, precio, stockMaximo, puntoReorden, estatus)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 $params_insert = array(
     $codigo, $descripcion, $tipo, $linea, $sublin, $unidad,
-    $precio, $stockmax, $reorden
+    $precio, $stockmax, $reorden, $estatus
 );
 
 $stmt_insert = sqlsrv_query($conn, $sql_insert, $params_insert);
