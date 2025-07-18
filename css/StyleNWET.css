@@ -278,6 +278,10 @@ header p {
   margin-top: 15px;
 }
 
+.btn .entrada-actions {
+  width: 60px;
+}
+
 .btn {
   background-color: black;
   color: white;
