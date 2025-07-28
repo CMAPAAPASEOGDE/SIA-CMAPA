@@ -218,13 +218,11 @@ if ($stmtContenido === false) {
                 echo '<div class="error-container">No se encontraron elementos en esta caja</div>';
             }
             ?>
-            
+
             <div class="nuevos-elementos" id="nuevos-elementos">
               <!-- Aquí se añadirán dinámicamente nuevos campos -->
             </div>
-        </section>
-
-        
+        </section>     
 
         <div class="caja-gestion-actions">
             <button type="button" class="btn-secundario" onclick="agregarElemento()">AÑADIR NUEVO ELEMENTO</button>
