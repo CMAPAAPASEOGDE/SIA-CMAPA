@@ -35,6 +35,51 @@ if ($conn === false) {
     die("Error de conexión: " . print_r(sqlsrv_errors(), true));
 }
 
+// Procesar cambio de responsable
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['accion'] === 'cambiar_responsable' && $idRol === 1) {
+    $nuevoId = intval($_POST['nuevo_responsable'] ?? 0);
+    if ($nuevoId > 0) {
+        $updateSQL = "UPDATE CajaRegistro SET idOperador = ? WHERE idCaja = ?";
+        $stmtUpdate = sqlsrv_query($conn, $updateSQL, [$nuevoId, $idCaja]);
+        if ($stmtUpdate) {
+            echo "<script>alert('Responsable actualizado correctamente'); location.href='boxinspect.php?idCaja=$idCaja';</script>";
+            exit();
+        } else {
+            echo "<script>alert('Error al actualizar responsable');</script>";
+        }
+    }
+}
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['confirmar'])) {
+    $elementos = $_POST['elementos'] ?? [];
+
+    foreach ($elementos as $elem) {
+        $idCodigo = intval($elem['idCodigo'] ?? 0);
+        $cantidad = intval($elem['cantidad'] ?? 0);
+
+        if ($idCodigo > 0 && $cantidad >= 0) {
+            // Verificar si ya existe ese idCodigo en esa caja
+            $checkSql = "SELECT COUNT(*) AS total FROM CajaContenido WHERE idCaja = ? AND idCodigo = ?";
+            $checkStmt = sqlsrv_query($conn, $checkSql, [$idCaja, $idCodigo]);
+            $checkRow = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
+
+            if ($checkRow['total'] > 0) {
+                // Actualizar cantidad
+                $updateSql = "UPDATE CajaContenido SET cantidad = ? WHERE idCaja = ? AND idCodigo = ?";
+                sqlsrv_query($conn, $updateSql, [$cantidad, $idCaja, $idCodigo]);
+            } else {
+                // Insertar nuevo registro
+                $insertSql = "INSERT INTO CajaContenido (idCaja, idCodigo, cantidad) VALUES (?, ?, ?)";
+                sqlsrv_query($conn, $insertSql, [$idCaja, $idCodigo, $cantidad]);
+            }
+        }
+    }
+
+    header("Location: boxinspect.php?idCaja=" . $idCaja);
+    exit();
+}
+
+
 // Obtener el nombre del operador y número de caja
 $sqlCaja = "SELECT C.numeroCaja, O.nombreCompleto AS nombreOperador 
             FROM CajaRegistro C
@@ -125,47 +170,107 @@ if ($stmtContenido === false) {
         <h2>CAJA</h2>
         <div class="caja-numero">CAJA <?= htmlspecialchars($numeroCaja) ?></div>
     </div>
-    <section class="responsable-section">
-        <label for="responsable">RESPONSABLE</label>
-        <input type="text" id="responsable" value="<?= htmlspecialchars($nombreOperador) ?>" readonly>
-        <?php if ($idRol === 1): ?>
-            <a href="cambiar_responsable.php?idCaja=<?= $idCaja ?>"><button class="btn-secundario">CAMBIAR RESPONSABLE</button></a>
-        <?php endif; ?>
-    </section>
 
-    <section class="elementos-section">
-        <div class="elementos-header">
-            <span>CÓDIGO</span>
-            <span>CONTENIDO</span>
-            <span>CANTIDAD</span>
-        </div>
-        <?php 
-        if (sqlsrv_has_rows($stmtContenido)) {
-            while ($row = sqlsrv_fetch_array($stmtContenido, SQLSRV_FETCH_ASSOC)): 
-        ?>
-            <div class="elemento-row">
-                <input type="text" value="<?= htmlspecialchars($row['idCodigo']) ?>" readonly>
-                <input type="text" value="<?= htmlspecialchars($row['descripcion']) ?>" readonly>
-                <input type="number" value="<?= htmlspecialchars($row['cantidad']) ?>" readonly>
+<section class="responsable-section">
+    <label for="responsable">RESPONSABLE</label>
+    <input type="text" id="responsable" value="<?= htmlspecialchars($nombreOperador) ?>" readonly>
+
+    <?php if ($idRol === 1): ?>
+        <form method="POST" class="cambiar-responsable-form">
+            <select name="nuevo_responsable" required>
+                <option value="">Seleccionar nuevo responsable</option>
+                <?php
+                $stmtOp = sqlsrv_query($conn, "SELECT idOperador, nombreCompleto FROM Operativo");
+                while ($op = sqlsrv_fetch_array($stmtOp, SQLSRV_FETCH_ASSOC)) {
+                    echo '<option value="'.$op['idOperador'].'">'.htmlspecialchars($op['nombreCompleto']).'</option>';
+                }
+                ?>
+            </select>
+            <button type="submit" name="accion" value="cambiar_responsable" class="btn-secundario">CAMBIAR RESPONSABLE</button>
+        </form>
+    <?php endif; ?>
+</section>
+
+    <form method="POST">
+        <section class="elementos-section" id="elementos-container">
+            <div class="elementos-header">
+                <span>CÓDIGO</span>
+                <span>CONTENIDO</span>
+                <span>CANTIDAD</span>
             </div>
-        <?php 
-            endwhile;
-        } else {
-            echo '<div class="error-container">No se encontraron elementos en esta caja</div>';
-        }
-        ?>
-    </section>
 
-    <div class="caja-gestion-actions">
-        <a href="añadir_elemento_caja.php?idCaja=<?= $idCaja ?>"><button class="btn-secundario">AÑADIR NUEVO ELEMENTO</button></a>
-        <?php if ($idRol === 1): ?>
-            <a href="eliminar_caja.php?idCaja=<?= $idCaja ?>"><button class="btn-secundario">BORRAR LA CAJA</button></a>
-        <?php endif; ?>
-        <a href="boxes.php"><button class="btn">CANCELAR</button></a>
-        <a href="#"><button class="btn">CONFIRMAR</button></a>
-    </div>
+            <!-- Elementos ya existentes en la caja -->
+            <?php 
+            $index = 0;
+            if (sqlsrv_has_rows($stmtContenido)) {
+                while ($row = sqlsrv_fetch_array($stmtContenido, SQLSRV_FETCH_ASSOC)): 
+            ?>
+                <div class="elemento-row">
+                    <input type="hidden" name="elementos[<?= $index ?>][idCodigo]" value="<?= htmlspecialchars($row['idCodigo']) ?>" />
+                    <input type="text" value="<?= htmlspecialchars($row['idCodigo']) ?>" readonly>
+                    <input type="text" value="<?= htmlspecialchars($row['descripcion']) ?>" readonly>
+                    <input type="number" name="elementos[<?= $index ?>][cantidad]" value="<?= htmlspecialchars($row['cantidad']) ?>" min="0" />
+                </div>
+            <?php 
+                $index++;
+                endwhile;
+            } else {
+                echo '<div class="error-container">No se encontraron elementos en esta caja</div>';
+            }
+            ?>
+        </section>
+
+        <div class="nuevos-elementos" id="nuevos-elementos">
+            <!-- Aquí se añadirán dinámicamente nuevos campos -->
+        </div>
+
+        <div class="caja-gestion-actions">
+            <button type="button" class="btn-secundario" onclick="agregarElemento()">AÑADIR NUEVO ELEMENTO</button>
+            <?php if ($idRol === 1): ?>
+                <a href="eliminar_caja.php?idCaja=<?= $idCaja ?>"><button type="button" class="btn-secundario">BORRAR LA CAJA</button></a>
+            <?php endif; ?>
+            <a href="boxes.php"><button type="button" class="btn">CANCELAR</button></a>
+            <button type="submit" class="btn" name="confirmar">CONFIRMAR</button>
+        </div>
+    </form>
 </main>
 
+<script>
+let contador = <?= $index ?>;
+
+function agregarElemento() {
+    const contenedor = document.getElementById('nuevos-elementos');
+    const nuevoDiv = document.createElement('div');
+    nuevoDiv.classList.add('elemento-row');
+
+    nuevoDiv.innerHTML = `
+        <select name="elementos[${contador}][idCodigo]" onchange="cargarNombre(this)" class="codigo-select">
+            <option value="">Seleccionar código</option>
+            <?php
+            $sqlProductos = "SELECT idCodigo, codigo, descripcion FROM Productos";
+            $stmtProds = sqlsrv_query($conn, $sqlProductos);
+            while ($prod = sqlsrv_fetch_array($stmtProds, SQLSRV_FETCH_ASSOC)) {
+                $id = htmlspecialchars($prod['idCodigo']);
+                $cod = htmlspecialchars($prod['codigo']);
+                $desc = htmlspecialchars($prod['descripcion']);
+                echo "<option value='$id' data-descripcion=\"$desc\">$cod</option>";
+            }
+            ?>
+        </select>
+        <input type="text" name="elementos[${contador}][nombre]" placeholder="NOMBRE" readonly>
+        <input type="number" name="elementos[${contador}][cantidad]" placeholder="CANTIDAD" min="1" required>
+    `;
+
+    contenedor.appendChild(nuevoDiv);
+    contador++;
+}
+
+function cargarNombre(select) {
+    const descripcion = select.options[select.selectedIndex].getAttribute('data-descripcion');
+    const inputNombre = select.nextElementSibling;
+    inputNombre.value = descripcion;
+}
+</script>
 
 <script>
   const toggle = document.getElementById('menu-toggle');

@@ -309,3 +309,14 @@ header p {
     background-color: #c4c4c4;
     transform: scale(1.01);
 }
+
+.cantidad-control {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.cantidad-control button.btn-mini {
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
