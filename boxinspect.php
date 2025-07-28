@@ -15,7 +15,9 @@ if (!in_array($idRol, [1, 2])) {
 // Obtener el ID de la caja desde la URL
 $idCaja = isset($_GET['idCaja']) ? intval($_GET['idCaja']) : 0;
 if ($idCaja <= 0) {
-    header("Location: boxes.php");
+    // Registrar el error y redirigir
+    error_log("ID de caja inválido: " . $_GET['idCaja']);
+    header("Location: boxes.php?error=invalid_id");
     exit();
 }
 
@@ -30,25 +32,41 @@ $connectionOptions = [
 ];
 $conn = sqlsrv_connect($serverName, $connectionOptions);
 if ($conn === false) {
-    die(print_r(sqlsrv_errors(), true));
+    die("Error de conexión: " . print_r(sqlsrv_errors(), true));
 }
 
 // Obtener el nombre del operador y número de caja
-$sqlCaja = "SELECT C.numeroCaja, O.nombre AS nombreOperador 
+$sqlCaja = "SELECT C.numeroCaja, O.nombreCompleto AS nombreOperador 
             FROM CajaRegistro C
             INNER JOIN Operativo O ON C.idOperador = O.idOperador
             WHERE C.idCaja = ?";
-$stmtCaja = sqlsrv_query($conn, $sqlCaja, [$idCaja]);
+$params = [$idCaja];
+$stmtCaja = sqlsrv_query($conn, $sqlCaja, $params);
+
+if ($stmtCaja === false) {
+    die("Error al obtener datos de caja: " . print_r(sqlsrv_errors(), true));
+}
+
 $datosCaja = sqlsrv_fetch_array($stmtCaja, SQLSRV_FETCH_ASSOC);
+
+if (!$datosCaja) {
+    header("Location: boxes.php?error=caja_not_found");
+    exit();
+}
+
 $numeroCaja = $datosCaja['numeroCaja'] ?? '---';
 $nombreOperador = $datosCaja['nombreOperador'] ?? 'SIN OPERADOR';
 
 // Obtener contenido de la caja
-$sqlContenido = "SELECT cc.idCodigo, p.nombre AS descripcion, cc.cantidad
+$sqlContenido = "SELECT cc.idCodigo, p.descripcion, cc.cantidad
                  FROM CajaContenido cc
-                 INNER JOIN Productos p ON cc.idCodigo = p.idCodigo
+                 INNER JOIN Productos p ON cc.idCodigo = p.codigo
                  WHERE cc.idCaja = ?";
-$stmtContenido = sqlsrv_query($conn, $sqlContenido, [$idCaja]);
+$stmtContenido = sqlsrv_query($conn, $sqlContenido, $params);
+
+if ($stmtContenido === false) {
+    die("Error al obtener contenido: " . print_r(sqlsrv_errors(), true));
+}
 ?>
 
 <!DOCTYPE html>
@@ -121,15 +139,21 @@ $stmtContenido = sqlsrv_query($conn, $sqlContenido, [$idCaja]);
             <span>CONTENIDO</span>
             <span>CANTIDAD</span>
         </div>
-        <?php while ($row = sqlsrv_fetch_array($stmtContenido, SQLSRV_FETCH_ASSOC)): ?>
+        <?php 
+        if (sqlsrv_has_rows($stmtContenido)) {
+            while ($row = sqlsrv_fetch_array($stmtContenido, SQLSRV_FETCH_ASSOC)): 
+        ?>
             <div class="elemento-row">
                 <input type="text" value="<?= htmlspecialchars($row['idCodigo']) ?>" readonly>
                 <input type="text" value="<?= htmlspecialchars($row['descripcion']) ?>" readonly>
-                <div class="cantidad-control">
-                    <input type="number" value="<?= htmlspecialchars($row['cantidad']) ?>" readonly>
-                </div>
+                <input type="number" value="<?= htmlspecialchars($row['cantidad']) ?>" readonly>
             </div>
-        <?php endwhile; ?>
+        <?php 
+            endwhile;
+        } else {
+            echo '<div class="error-container">No se encontraron elementos en esta caja</div>';
+        }
+        ?>
     </section>
 
     <div class="caja-gestion-actions">

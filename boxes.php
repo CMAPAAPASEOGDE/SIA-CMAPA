@@ -101,7 +101,7 @@ if ($result === false) {
     </section>
     <div class="cajas-actions">
         <a href="warehouse.php"><button class="btn cancel">CANCELAR</button></a>
-        <a href="boxnewregister.php"><button class="btn confirm">REGISTRAR NUEVA CAJA</button></a>
+        <a href="<?php echo $_SERVER['PHP_SELF']; ?>?idCaja=<?= $row['idCaja'] ?>"><button class="btn confirm">REGISTRAR NUEVA CAJA</button></a>
     </div>
 </main>
 
