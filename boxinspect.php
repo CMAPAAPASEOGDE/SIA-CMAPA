@@ -60,7 +60,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['confirmar'])) {
 
     $elementos = $_POST['elementos'] ?? [];
     $diferencias = []; // Para almacenar cambios en cantidades
+    $errorStock = false;
+    $idCodigoError = 0;
 
+    // Primera pasada: Verificar disponibilidad de stock
     foreach ($elementos as $elem) {
         $idCodigo = intval($elem['idCodigo'] ?? 0);
         $cantidad = intval($elem['cantidad'] ?? 0);
@@ -69,38 +72,83 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['confirmar'])) {
             $cantidadAnterior = $contenidoActual[$idCodigo] ?? 0;
             $diferencia = $cantidad - $cantidadAnterior;
 
-            // Almacenar diferencia para actualizar inventario
-            if ($diferencia != 0) {
-                $diferencias[$idCodigo] = ($diferencias[$idCodigo] ?? 0) + $diferencia;
-            }
-
-            // Verificar si ya existe en la caja
-            $checkSql = "SELECT COUNT(*) AS total FROM CajaContenido WHERE idCaja = ? AND idCodigo = ?";
-            $checkStmt = sqlsrv_query($conn, $checkSql, [$idCaja, $idCodigo]);
-            $checkRow = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
-
-            if ($checkRow['total'] > 0) {
-                // Actualizar cantidad
-                $updateSql = "UPDATE CajaContenido SET cantidad = ? WHERE idCaja = ? AND idCodigo = ?";
-                sqlsrv_query($conn, $updateSql, [$cantidad, $idCaja, $idCodigo]);
-            } else {
-                // Insertar nuevo registro
-                $insertSql = "INSERT INTO CajaContenido (idCaja, idCodigo, cantidad) VALUES (?, ?, ?)";
-                sqlsrv_query($conn, $insertSql, [$idCaja, $idCodigo, $cantidad]);
+            // Solo verificar stock cuando se agregan productos (diferencia positiva)
+            if ($diferencia > 0) {
+                // Verificar stock disponible
+                $sqlStock = "SELECT CantidadActual FROM Inventario WHERE idCodigo = ?";
+                $stmtStock = sqlsrv_query($conn, $sqlStock, [$idCodigo]);
+                $rowStock = sqlsrv_fetch_array($stmtStock, SQLSRV_FETCH_ASSOC);
+                
+                if (!$rowStock || $rowStock['CantidadActual'] < $diferencia) {
+                    $errorStock = true;
+                    $idCodigoError = $idCodigo;
+                    break;
+                }
             }
         }
     }
 
-    // Actualizar inventario con las diferencias
-    foreach ($diferencias as $idCodigo => $diferencia) {
-        $updateInventario = "UPDATE Inventario 
-                             SET cantidad = cantidad - ? 
-                             WHERE idCodigo = ?";
-        sqlsrv_query($conn, $updateInventario, [$diferencia, $idCodigo]);
+        // Si hay error de stock, redirigir
+    if ($errorStock) {
+        header("Location: boxinspecter.php?idCaja=" . $idCaja . "&error=stock&idCodigo=" . $idCodigoError);
+        exit();
     }
 
-    header("Location: boxinspect.php?idCaja=" . $idCaja);
-    exit();
+        // Iniciar transacción para operaciones atómicas
+    sqlsrv_begin_transaction($conn);
+
+    try {
+        // Segunda pasada: Procesar cambios
+        foreach ($elementos as $elem) {
+            $idCodigo = intval($elem['idCodigo'] ?? 0);
+            $cantidad = intval($elem['cantidad'] ?? 0);
+
+            if ($idCodigo > 0 && $cantidad >= 0) {
+                $cantidadAnterior = $contenidoActual[$idCodigo] ?? 0;
+                $diferencia = $cantidad - $cantidadAnterior;
+
+                // Almacenar diferencia para actualizar inventario
+                if ($diferencia != 0) {
+                    $diferencias[$idCodigo] = ($diferencias[$idCodigo] ?? 0) + $diferencia;
+                }
+
+                // Verificar si ya existe en la caja
+                $checkSql = "SELECT COUNT(*) AS total FROM CajaContenido WHERE idCaja = ? AND idCodigo = ?";
+                $checkStmt = sqlsrv_query($conn, $checkSql, [$idCaja, $idCodigo]);
+                $checkRow = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
+
+                if ($checkRow['total'] > 0) {
+                    // Actualizar cantidad
+                    $updateSql = "UPDATE CajaContenido SET cantidad = ? WHERE idCaja = ? AND idCodigo = ?";
+                    sqlsrv_query($conn, $updateSql, [$cantidad, $idCaja, $idCodigo]);
+                } else {
+                    // Insertar nuevo registro
+                    $insertSql = "INSERT INTO CajaContenido (idCaja, idCodigo, cantidad) VALUES (?, ?, ?)";
+                    sqlsrv_query($conn, $insertSql, [$idCaja, $idCodigo, $cantidad]);
+                }
+            }
+        }
+        // Actualizar inventario con las diferencias
+        foreach ($diferencias as $idCodigo => $diferencia) {
+            // Actualizar CantidadActual en Inventario
+            $updateInventario = "UPDATE Inventario 
+                                SET CantidadActual = CantidadActual - ? 
+                                WHERE idCodigo = ?";
+            sqlsrv_query($conn, $updateInventario, [$diferencia, $idCodigo]);
+        }
+
+        // Confirmar todas las operaciones
+        sqlsrv_commit($conn);
+        
+        // Redirigir a página de confirmación
+        header("Location: boxinspectcnf.php?idCaja=" . $idCaja);
+        exit();
+
+    } catch (Exception $e) {
+        // Revertir todas las operaciones en caso de error
+        sqlsrv_rollback($conn);
+        die("Error: " . $e->getMessage());
+    }
 }
 
 
