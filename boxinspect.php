@@ -105,7 +105,7 @@ $nombreOperador = $datosCaja['nombreOperador'] ?? 'SIN OPERADOR';
 // Obtener contenido de la caja
 $sqlContenido = "SELECT cc.idCodigo, p.descripcion, cc.cantidad
                  FROM CajaContenido cc
-                 INNER JOIN Productos p ON cc.idCodigo = p.codigo
+                 INNER JOIN Productos p ON cc.idCodigo = p.idCodigo
                  WHERE cc.idCaja = ?";
 $stmtContenido = sqlsrv_query($conn, $sqlContenido, $params);
 
@@ -202,19 +202,22 @@ if ($stmtContenido === false) {
             <!-- Elementos ya existentes en la caja -->
             <?php 
             $index = 0;
-            if (sqlsrv_has_rows($stmtContenido)) {
-                while ($row = sqlsrv_fetch_array($stmtContenido, SQLSRV_FETCH_ASSOC)): 
-            ?>
+            $elementosEncontrados = false;
+
+            while ($row = sqlsrv_fetch_array($stmtContenido, SQLSRV_FETCH_ASSOC)) {
+                $elementosEncontrados = true;
+                ?>
                 <div class="elemento-row">
                     <input type="hidden" name="elementos[<?= $index ?>][idCodigo]" value="<?= htmlspecialchars($row['idCodigo']) ?>" />
                     <input type="text" value="<?= htmlspecialchars($row['idCodigo']) ?>" readonly>
                     <input type="text" value="<?= htmlspecialchars($row['descripcion']) ?>" readonly>
                     <input type="number" name="elementos[<?= $index ?>][cantidad]" value="<?= htmlspecialchars($row['cantidad']) ?>" min="0" />
                 </div>
-            <?php 
+                <?php
                 $index++;
-                endwhile;
-            } else {
+            }
+
+            if (!$elementosEncontrados) {
                 echo '<div class="error-container">No se encontraron elementos en esta caja</div>';
             }
             ?>
