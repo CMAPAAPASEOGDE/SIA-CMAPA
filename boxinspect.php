@@ -15,7 +15,6 @@ if (!in_array($idRol, [1, 2])) {
 // Obtener el ID de la caja desde la URL
 $idCaja = isset($_GET['idCaja']) ? intval($_GET['idCaja']) : 0;
 if ($idCaja <= 0) {
-    // Registrar el error y redirigir
     error_log("ID de caja inválido: " . $_GET['idCaja']);
     header("Location: boxes.php?error=invalid_id");
     exit();
@@ -51,14 +50,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['accion'] === 'cambiar_respo
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['confirmar'])) {
+    // Obtener contenido actual ANTES de los cambios
+    $contenidoActual = [];
+    $sqlActual = "SELECT idCodigo, cantidad FROM CajaContenido WHERE idCaja = ?";
+    $stmtActual = sqlsrv_query($conn, $sqlActual, [$idCaja]);
+    while ($fila = sqlsrv_fetch_array($stmtActual, SQLSRV_FETCH_ASSOC)) {
+        $contenidoActual[$fila['idCodigo']] = $fila['cantidad'];
+    }
+
     $elementos = $_POST['elementos'] ?? [];
+    $diferencias = []; // Para almacenar cambios en cantidades
 
     foreach ($elementos as $elem) {
         $idCodigo = intval($elem['idCodigo'] ?? 0);
         $cantidad = intval($elem['cantidad'] ?? 0);
 
         if ($idCodigo > 0 && $cantidad >= 0) {
-            // Verificar si ya existe ese idCodigo en esa caja
+            $cantidadAnterior = $contenidoActual[$idCodigo] ?? 0;
+            $diferencia = $cantidad - $cantidadAnterior;
+
+            // Almacenar diferencia para actualizar inventario
+            if ($diferencia != 0) {
+                $diferencias[$idCodigo] = ($diferencias[$idCodigo] ?? 0) + $diferencia;
+            }
+
+            // Verificar si ya existe en la caja
             $checkSql = "SELECT COUNT(*) AS total FROM CajaContenido WHERE idCaja = ? AND idCodigo = ?";
             $checkStmt = sqlsrv_query($conn, $checkSql, [$idCaja, $idCodigo]);
             $checkRow = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
@@ -73,6 +89,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['confirmar'])) {
                 sqlsrv_query($conn, $insertSql, [$idCaja, $idCodigo, $cantidad]);
             }
         }
+    }
+
+    // Actualizar inventario con las diferencias
+    foreach ($diferencias as $idCodigo => $diferencia) {
+        $updateInventario = "UPDATE Inventario 
+                             SET cantidad = cantidad - ? 
+                             WHERE idCodigo = ?";
+        sqlsrv_query($conn, $updateInventario, [$diferencia, $idCodigo]);
     }
 
     header("Location: boxinspect.php?idCaja=" . $idCaja);
@@ -102,8 +126,8 @@ if (!$datosCaja) {
 $numeroCaja = $datosCaja['numeroCaja'] ?? '---';
 $nombreOperador = $datosCaja['nombreOperador'] ?? 'SIN OPERADOR';
 
-// Obtener contenido de la caja
-$sqlContenido = "SELECT cc.idCodigo, p.descripcion, cc.cantidad
+// Obtener contenido de la caja (con código de producto)
+$sqlContenido = "SELECT cc.idCodigo, p.codigo AS codigoProducto, p.descripcion, cc.cantidad
                  FROM CajaContenido cc
                  INNER JOIN Productos p ON cc.idCodigo = p.idCodigo
                  WHERE cc.idCaja = ?";
@@ -209,7 +233,7 @@ if ($stmtContenido === false) {
                 ?>
                 <div class="elemento-row">
                     <input type="hidden" name="elementos[<?= $index ?>][idCodigo]" value="<?= htmlspecialchars($row['idCodigo']) ?>" />
-                    <input type="text" value="<?= htmlspecialchars($row['idCodigo']) ?>" readonly>
+                    <input type="text" value="<?= htmlspecialchars($row['codigoProducto']) ?>" readonly>
                     <input type="text" value="<?= htmlspecialchars($row['descripcion']) ?>" readonly>
                     <input type="number" name="elementos[<?= $index ?>][cantidad]" value="<?= htmlspecialchars($row['cantidad']) ?>" min="0" />
                 </div>
