@@ -1,19 +1,115 @@
 <?php
-// Iniciar sesión
 session_start();
 
-// Verificar si el usuario está autenticado
+// Verificar sesión y rol
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
 
-// Verificar el rol del usuario
 $idRol = (int)($_SESSION['rol'] ?? 0);
 if (!in_array($idRol, [1, 2])) {
     header("Location: acceso_denegado.php");
     exit();
+}
+
+// Conexión a la base de datos
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = [
+    "Database" => "db_sia",
+    "Uid" => "cmapADMIN",
+    "PWD" => "@siaADMN56*",
+    "Encrypt" => true,
+    "TrustServerCertificate" => false
+];
+$conn = sqlsrv_connect($serverName, $connectionOptions);
+if ($conn === false) {
+    die("Error de conexión: " . print_r(sqlsrv_errors(), true));
+}
+
+// Inicializar variables
+$operativos = [];
+$proximoNumero = '0001';
+$fechaActual = date('Y-m-d');
+
+// Obtener operativos disponibles
+$sqlOperativos = "SELECT idOperador, nombreCompleto FROM Operativo";
+$stmtOperativos = sqlsrv_query($conn, $sqlOperativos);
+if ($stmtOperativos) {
+    while ($row = sqlsrv_fetch_array($stmtOperativos, SQLSRV_FETCH_ASSOC)) {
+        $operativos[] = $row;
+    }
+}
+
+// Obtener el próximo número de caja disponible
+$sqlMaxCaja = "SELECT MAX(CAST(numeroCaja AS INT)) AS maxCaja FROM CajaRegistro WHERE numeroCaja <> '0000'";
+$stmtMaxCaja = sqlsrv_query($conn, $sqlMaxCaja);
+if ($stmtMaxCaja) {
+    $row = sqlsrv_fetch_array($stmtMaxCaja, SQLSRV_FETCH_ASSOC);
+    if ($row && $row['maxCaja'] !== null) {
+        $proximoNumero = str_pad($row['maxCaja'] + 1, 4, '0', STR_PAD_LEFT);
+    }
+}
+
+// Procesar el formulario cuando se envía
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $idOperador = (int)($_POST['idOperador'] ?? 0);
+    $autoriza = trim($_POST['autoriza'] ?? '');
+    
+    // Validar datos
+    if ($idOperador <= 0) {
+        $_SESSION['error'] = "Debe seleccionar un responsable operativo válido";
+        header("Location: boxnwreger.php");
+        exit();
+    } 
+    
+    if (empty($autoriza)) {
+        $_SESSION['error'] = "El campo 'Autoriza' es obligatorio";
+        header("Location: boxnwreger.php");
+        exit();
+    }
+    
+    // Verificar si el operador ya tiene caja asignada
+    $sqlCheck = "SELECT COUNT(*) AS total 
+                 FROM CajaRegistro 
+                 WHERE idOperador = ? 
+                 AND numeroCaja <> '0000'";
+    $paramsCheck = [$idOperador];
+    $stmtCheck = sqlsrv_query($conn, $sqlCheck, $paramsCheck);
+    $rowCheck = sqlsrv_fetch_array($stmtCheck, SQLSRV_FETCH_ASSOC);
+    
+    if ($rowCheck && $rowCheck['total'] > 0) {
+        $_SESSION['error'] = "El operador seleccionado ya tiene una caja asignada";
+        header("Location: boxnwreger.php");
+        exit();
+    }
+    
+    // Insertar nueva caja
+    $sqlInsert = "INSERT INTO CajaRegistro (numeroCaja, idOperador, fechaRegistro, autoriza) 
+                  VALUES (?, ?, ?, ?)";
+    $params = [$proximoNumero, $idOperador, $fechaActual, $autoriza];
+    $stmtInsert = sqlsrv_query($conn, $sqlInsert, $params);
+    
+    if ($stmtInsert) {
+        // Obtener ID de la nueva caja
+        $sqlId = "SELECT SCOPE_IDENTITY() AS idCaja";
+        $stmtId = sqlsrv_query($conn, $sqlId);
+        $rowId = sqlsrv_fetch_array($stmtId, SQLSRV_FETCH_ASSOC);
+        $idCaja = $rowId['idCaja'];
+        
+        // Redirigir a página de confirmación
+        $_SESSION['nueva_caja'] = [
+            'numeroCaja' => $proximoNumero,
+            'fechaRegistro' => $fechaActual,
+            'autoriza' => $autoriza
+        ];
+        header("Location: boxnwregcnf.php?idCaja=$idCaja");
+        exit();
+    } else {
+        $_SESSION['error'] = "Error al registrar la caja: " . print_r(sqlsrv_errors(), true);
+        header("Location: boxnwreger.php");
+        exit();
+    }
 }
 ?>
 
@@ -25,6 +121,17 @@ if (!in_array($idRol, [1, 2])) {
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
     <title>SIA Toolbox New Register</title>
     <link rel="stylesheet" href="css/StyleBXNR.css">
+    <style>
+        .error-message {
+            color: #ff0000;
+            background-color: #ffecec;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
 </head>
 
 <body>
@@ -73,18 +180,32 @@ if (!in_array($idRol, [1, 2])) {
         <h2>CAJAS</h2>
         <p class="subtitulo">REGISTRO NUEVO</p>
     </div>
-    <form class="caja-registro-form">
-        <label for="responsable">RESPONSABLE OPERATIVO</label>
-        <input type="text" id="responsable" value="">
+    
+    <?php if (!empty($error)): ?>
+        <div class="error-message"><?= htmlspecialchars($error) ?></div>
+    <?php endif; ?>
+    
+    <form method="POST" class="caja-registro-form">
+        <label for="idOperador">RESPONSABLE OPERATIVO</label>
+        <select id="idOperador" name="idOperador" required>
+            <option value="">Seleccionar responsable</option>
+            <?php foreach ($operativos as $op): ?>
+                <option value="<?= $op['idOperador'] ?>"><?= htmlspecialchars($op['nombreCompleto']) ?></option>
+            <?php endforeach; ?>
+        </select>
+        
         <label for="fecha">FECHA DE REGISTRO</label>
-        <input type="date" id="fecha" value="">
+        <input type="date" id="fecha" name="fecha" value="<?= $fechaActual ?>" readonly>
+        
         <label for="caja">ASIGNACIÓN DE CAJA</label>
-        <input type="text" id="caja" value="">
-        <label for="autoriza">AUTORIZO</label>
-        <input type="text" id="autoriza" value="">
+        <input type="text" id="caja" name="caja" value="<?= $proximoNumero ?>" readonly>
+        
+        <label for="autoriza">AUTORIZA</label>
+        <input type="text" id="autoriza" name="autoriza" required>
+        
         <div class="registro-actions">
             <a href="boxes.php"><button type="button" class="btn">CANCELAR</button></a>
-            <a href="#"><button type="button" class="btn">CONFIRMAR</button></a>
+            <button type="submit" class="btn">CONFIRMAR</button>
         </div>
     </form>
 </main>
