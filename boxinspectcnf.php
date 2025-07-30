@@ -75,7 +75,7 @@ if (!in_array($idRol, [1, 2])) {
       MODIFICACIÓN REALIZADA DE FORMA EXITOSA.
     </p>
     <div class="form-buttons">
-      <a href="boxes.html"><button type="submit" class="btn confirm">CONFIRMAR</button></a>
+      <a href="boxes.php"><button type="submit" class="btn confirm">CONFIRMAR</button></a>
     </div>
   </div>
 </article>
