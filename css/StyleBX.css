@@ -265,3 +265,25 @@ header p {
   background-color: #222;
   transform: scale(1.01);
 }
+
+.success-message {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 10px;
+    text-align: center;
+    border-radius: 5px;
+    margin: 15px auto;
+    max-width: 600px;
+    font-weight: bold;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    text-align: center;
+    border-radius: 5px;
+    margin: 15px auto;
+    max-width: 600px;
+    font-weight: bold;
+}

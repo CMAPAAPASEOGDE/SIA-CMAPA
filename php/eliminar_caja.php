@@ -1,16 +1,25 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id']) || (int)$_SESSION['rol'] !== 1) {
+
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     header("Location: index.php");
+    exit();
+}
+
+$idRol = (int)($_SESSION['rol'] ?? 0);
+if ($idRol !== 1) { // Solo administradores pueden eliminar
+    header("Location: acceso_denegado.php");
     exit();
 }
 
 $idCaja = isset($_GET['idCaja']) ? intval($_GET['idCaja']) : 0;
 if ($idCaja <= 0) {
+    $_SESSION['error'] = "ID de caja inválido";
     header("Location: boxes.php");
     exit();
 }
 
+// Conectar a la BD
 $serverName = "sqlserver-sia.database.windows.net";
 $connectionOptions = [
     "Database" => "db_sia",
@@ -21,18 +30,61 @@ $connectionOptions = [
 ];
 $conn = sqlsrv_connect($serverName, $connectionOptions);
 if ($conn === false) {
-    die(print_r(sqlsrv_errors(), true));
+    die("Error de conexión: " . print_r(sqlsrv_errors(), true));
 }
 
-// Eliminar contenido primero
-sqlsrv_query($conn, "DELETE FROM CajaContenido WHERE idCaja = ?", [$idCaja]);
-// Luego eliminar el registro
-$sql = "DELETE FROM CajaRegistro WHERE idCaja = ?";
-$stmt = sqlsrv_query($conn, $sql, [$idCaja]);
+// Iniciar transacción
+sqlsrv_begin_transaction($conn);
 
-if ($stmt) {
-    header("Location: boxes.php?deleted=1");
+try {
+    // 1. Obtener contenido de la caja para devolver al inventario
+    $sqlGetContents = "SELECT idCodigo, cantidad FROM CajaContenido WHERE idCaja = ?";
+    $params = [$idCaja];
+    $stmtContents = sqlsrv_query($conn, $sqlGetContents, $params);
+    
+    if ($stmtContents === false) {
+        throw new Exception("Error al obtener contenido: " . print_r(sqlsrv_errors(), true));
+    }
+    
+    // 2. Devolver productos al inventario
+    while ($row = sqlsrv_fetch_array($stmtContents, SQLSRV_FETCH_ASSOC)) {
+        $updateInv = "UPDATE Inventario 
+                     SET CantidadActual = CantidadActual + ? 
+                     WHERE idCodigo = ?";
+        $paramsInv = [$row['cantidad'], $row['idCodigo']];
+        $stmtUpdate = sqlsrv_query($conn, $updateInv, $paramsInv);
+        
+        if ($stmtUpdate === false) {
+            throw new Exception("Error al actualizar inventario: " . print_r(sqlsrv_errors(), true));
+        }
+    }
+    
+    // 3. Eliminar contenido de la caja
+    $sqlDeleteContents = "DELETE FROM CajaContenido WHERE idCaja = ?";
+    $stmtDeleteContents = sqlsrv_query($conn, $sqlDeleteContents, $params);
+    
+    if ($stmtDeleteContents === false) {
+        throw new Exception("Error al eliminar contenido: " . print_r(sqlsrv_errors(), true));
+    }
+    
+    // 4. Eliminar la caja
+    $sqlDeleteBox = "DELETE FROM CajaRegistro WHERE idCaja = ?";
+    $stmtDeleteBox = sqlsrv_query($conn, $sqlDeleteBox, $params);
+    
+    if ($stmtDeleteBox === false) {
+        throw new Exception("Error al eliminar caja: " . print_r(sqlsrv_errors(), true));
+    }
+    
+    // Confirmar todas las operaciones
+    sqlsrv_commit($conn);
+    
+    $_SESSION['success'] = "Caja eliminada correctamente";
+    header("Location: boxes.php");
     exit();
-} else {
-    die(print_r(sqlsrv_errors(), true));
+
+} catch (Exception $e) {
+    sqlsrv_rollback($conn);
+    $_SESSION['error'] = $e->getMessage();
+    header("Location: boxinspect.php?idCaja=" . $idCaja);
+    exit();
 }

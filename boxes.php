@@ -12,6 +12,17 @@ if (!in_array($idRol, [1, 2])) {
     exit();
 }
 
+// Mostrar mensajes de éxito/error
+if (isset($_SESSION['success'])) {
+    echo '<div class="success-message">' . htmlspecialchars($_SESSION['success']) . '</div>';
+    unset($_SESSION['success']);
+}
+
+if (isset($_SESSION['error'])) {
+    echo '<div class="error-message">' . htmlspecialchars($_SESSION['error']) . '</div>';
+    unset($_SESSION['error']);
+}
+
 // Conexión a la base de datos
 $serverName = "sqlserver-sia.database.windows.net";
 $connectionOptions = [

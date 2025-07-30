@@ -301,9 +301,12 @@ if ($stmtContenido === false) {
 
         <div class="caja-gestion-actions">
             <button type="button" class="btn-secundario" onclick="agregarElemento()">AÑADIR NUEVO ELEMENTO</button>
-            <?php if ($idRol === 1): ?>
-                <a href="eliminar_caja.php?idCaja=<?= $idCaja ?>"><button type="button" class="btn-secundario">BORRAR LA CAJA</button></a>
-            <?php endif; ?>
+                <?php if ($idRol === 1): ?>
+                    <button type="button" class="btn-secundario" 
+                            onclick="confirmarEliminacion(<?= $idCaja ?>)">
+                        BORRAR LA CAJA
+                    </button>
+                <?php endif; ?>
             <a href="boxes.php"><button type="button" class="btn">CANCELAR</button></a>
             <button type="submit" class="btn" name="confirmar">CONFIRMAR</button>
         </div>
@@ -386,6 +389,14 @@ function cargarNombre(select) {
       notifDropdown.style.display = 'none';
     }
   });
+</script>
+
+<script>
+function confirmarEliminacion(idCaja) {
+    if (confirm("¿Estás seguro de que deseas eliminar esta caja? Esta acción no se puede deshacer.")) {
+        window.location.href = "eliminar_caja.php?idCaja=" + idCaja;
+    }
+}
 </script>
 </body>
 </html>
