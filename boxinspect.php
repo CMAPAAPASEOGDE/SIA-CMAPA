@@ -15,7 +15,7 @@ if (!in_array($idRol, [1, 2])) {
 // Obtener el ID de la caja desde la URL
 $idCaja = isset($_GET['idCaja']) ? intval($_GET['idCaja']) : 0;
 if ($idCaja <= 0) {
-    error_log("ID de caja inválido: " . $_GET['idCaja']);
+    error_log("ID de caja inválido: " . ($_GET['idCaja'] ?? 'N/A'));
     header("Location: boxes.php?error=invalid_id");
     exit();
 }
@@ -34,93 +34,96 @@ if ($conn === false) {
     die("Error de conexión: " . print_r(sqlsrv_errors(), true));
 }
 
-// Procesar cambio de responsable
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['accion'] === 'cambiar_responsable' && $idRol === 1) {
-    $nuevoId = intval($_POST['nuevo_responsable'] ?? 0);
-    if ($nuevoId > 0) {
-        $updateSQL = "UPDATE CajaRegistro SET idOperador = ? WHERE idCaja = ?";
-        $stmtUpdate = sqlsrv_query($conn, $updateSQL, [$nuevoId, $idCaja]);
-        if ($stmtUpdate) {
-            echo "<script>alert('Responsable actualizado correctamente'); location.href='boxinspect.php?idCaja=$idCaja';</script>";
-            exit();
-        } else {
-            echo "<script>alert('Error al actualizar responsable');</script>";
-        }
-    }
-}
-
-// Procesar eliminación de la caja (embebido)
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['accion']) && $_POST['accion'] === 'eliminar_caja' && $idRol === 1) {
-    // Iniciar transacción
-    sqlsrv_begin_transaction($conn);
-    try {
-        // Eliminar contenido de la caja
-        $deleteContenido = "DELETE FROM CajaContenido WHERE idCaja = ?";
-        sqlsrv_query($conn, $deleteContenido, [$idCaja]);
-
-        // Eliminar registro de la caja
-        $deleteCaja = "DELETE FROM CajaRegistro WHERE idCaja = ?";
-        sqlsrv_query($conn, $deleteCaja, [$idCaja]);
-
-        sqlsrv_commit($conn);
-        header("Location: boxes.php?msg=caja_eliminada");
-        exit();
-    } catch (Exception $e) {
-        sqlsrv_rollback($conn);
-        echo "<script>alert('Error al eliminar la caja: " . $e->getMessage() . "');</script>";
-    }
-}
-
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['confirmar'])) {
-    // Obtener contenido actual ANTES de los cambios
-    $contenidoActual = [];
-    $sqlActual = "SELECT idCodigo, cantidad FROM CajaContenido WHERE idCaja = ?";
-    $stmtActual = sqlsrv_query($conn, $sqlActual, [$idCaja]);
-    while ($fila = sqlsrv_fetch_array($stmtActual, SQLSRV_FETCH_ASSOC)) {
-        $contenidoActual[$fila['idCodigo']] = $fila['cantidad'];
-    }
-
-    $elementos = $_POST['elementos'] ?? [];
-    $diferencias = []; // Para almacenar cambios en cantidades
-    $errorStock = false;
-    $idCodigoError = 0;
-
-    // Primera pasada: Verificar disponibilidad de stock
-    foreach ($elementos as $elem) {
-        $idCodigo = intval($elem['idCodigo'] ?? 0);
-        $cantidad = intval($elem['cantidad'] ?? 0);
-
-        if ($idCodigo > 0 && $cantidad >= 0) {
-            $cantidadAnterior = $contenidoActual[$idCodigo] ?? 0;
-            $diferencia = $cantidad - $cantidadAnterior;
-
-            // Solo verificar stock cuando se agregan productos (diferencia positiva)
-            if ($diferencia > 0) {
-                // Verificar stock disponible
-                $sqlStock = "SELECT CantidadActual FROM Inventario WHERE idCodigo = ?";
-                $stmtStock = sqlsrv_query($conn, $sqlStock, [$idCodigo]);
-                $rowStock = sqlsrv_fetch_array($stmtStock, SQLSRV_FETCH_ASSOC);
-                
-                if (!$rowStock || $rowStock['CantidadActual'] < $diferencia) {
-                    $errorStock = true;
-                    $idCodigoError = $idCodigo;
-                    break;
-                }
+// Manejar todas las acciones POST en un solo lugar
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    
+    // 1. Cambio de responsable
+    if (isset($_POST['accion']) && $_POST['accion'] === 'cambiar_responsable' && $idRol === 1) {
+        $nuevoId = intval($_POST['nuevo_responsable'] ?? 0);
+        if ($nuevoId > 0) {
+            $updateSQL = "UPDATE CajaRegistro SET idOperador = ? WHERE idCaja = ?";
+            $stmtUpdate = sqlsrv_query($conn, $updateSQL, [$nuevoId, $idCaja]);
+            if ($stmtUpdate) {
+                echo "<script>alert('Responsable actualizado correctamente'); location.href='boxinspect.php?idCaja=$idCaja';</script>";
+                exit();
+            } else {
+                echo "<script>alert('Error al actualizar responsable');</script>";
             }
         }
     }
-
-        // Si hay error de stock, redirigir
-    if ($errorStock) {
-        header("Location: boxinspecter.php?idCaja=" . $idCaja . "&error=stock&idCodigo=" . $idCodigoError);
-        exit();
+    
+    // 2. Eliminación de caja
+    elseif (isset($_POST['accion']) && $_POST['accion'] === 'eliminar_caja' && $idRol === 1) {
+        sqlsrv_begin_transaction($conn);
+        try {
+            // Obtener elementos para devolver al inventario
+            $sqlGetItems = "SELECT idCodigo, cantidad FROM CajaContenido WHERE idCaja = ?";
+            $stmtGetItems = sqlsrv_query($conn, $sqlGetItems, [$idCaja]);
+            
+            if ($stmtGetItems === false) {
+                throw new Exception("Error al obtener contenido: " . print_r(sqlsrv_errors(), true));
+            }
+            
+            // Devolver productos al inventario
+            while ($item = sqlsrv_fetch_array($stmtGetItems, SQLSRV_FETCH_ASSOC)) {
+                $updateInventario = "UPDATE Inventario 
+                                    SET CantidadActual = CantidadActual + ? 
+                                    WHERE idCodigo = ?";
+                $params = [$item['cantidad'], $item['idCodigo']];
+                $stmtUpdate = sqlsrv_query($conn, $updateInventario, $params);
+                
+                if ($stmtUpdate === false) {
+                    throw new Exception("Error al actualizar inventario: " . print_r(sqlsrv_errors(), true));
+                }
+            }
+            
+            // Eliminar contenido de la caja
+            $deleteContenido = "DELETE FROM CajaContenido WHERE idCaja = ?";
+            $stmtDelete = sqlsrv_query($conn, $deleteContenido, [$idCaja]);
+            
+            if ($stmtDelete === false) {
+                throw new Exception("Error al eliminar contenido: " . print_r(sqlsrv_errors(), true));
+            }
+            
+            // Eliminar la caja
+            $deleteCaja = "DELETE FROM CajaRegistro WHERE idCaja = ?";
+            $stmtDelete = sqlsrv_query($conn, $deleteCaja, [$idCaja]);
+            
+            if ($stmtDelete === false) {
+                throw new Exception("Error al eliminar caja: " . print_r(sqlsrv_errors(), true));
+            }
+            
+            sqlsrv_commit($conn);
+            header("Location: boxes.php?msg=caja_eliminada");
+            exit();
+            
+        } catch (Exception $e) {
+            sqlsrv_rollback($conn);
+            echo "<script>alert('Error al eliminar la caja: " . addslashes($e->getMessage()) . "');</script>";
+        }
     }
+    
+    // 3. Confirmar cambios en elementos
+    elseif (isset($_POST['confirmar'])) {
+        // Obtener contenido actual ANTES de los cambios
+        $contenidoActual = [];
+        $sqlActual = "SELECT idCodigo, cantidad FROM CajaContenido WHERE idCaja = ?";
+        $stmtActual = sqlsrv_query($conn, $sqlActual, [$idCaja]);
+        
+        if ($stmtActual === false) {
+            die("Error al obtener contenido actual: " . print_r(sqlsrv_errors(), true));
+        }
+        
+        while ($fila = sqlsrv_fetch_array($stmtActual, SQLSRV_FETCH_ASSOC)) {
+            $contenidoActual[$fila['idCodigo']] = $fila['cantidad'];
+        }
 
-        // Iniciar transacción para operaciones atómicas
-    sqlsrv_begin_transaction($conn);
+        $elementos = $_POST['elementos'] ?? [];
+        $diferencias = []; // Para almacenar cambios en cantidades
+        $errorStock = false;
+        $idCodigoError = 0;
 
-    try {
-        // Segunda pasada: Procesar cambios
+        // Primera pasada: Verificar disponibilidad de stock
         foreach ($elementos as $elem) {
             $idCodigo = intval($elem['idCodigo'] ?? 0);
             $cantidad = intval($elem['cantidad'] ?? 0);
@@ -129,52 +132,105 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['confirmar'])) {
                 $cantidadAnterior = $contenidoActual[$idCodigo] ?? 0;
                 $diferencia = $cantidad - $cantidadAnterior;
 
-                // Almacenar diferencia para actualizar inventario
-                if ($diferencia != 0) {
-                    $diferencias[$idCodigo] = ($diferencias[$idCodigo] ?? 0) + $diferencia;
-                }
-
-                // Verificar si ya existe en la caja
-                $checkSql = "SELECT COUNT(*) AS total FROM CajaContenido WHERE idCaja = ? AND idCodigo = ?";
-                $checkStmt = sqlsrv_query($conn, $checkSql, [$idCaja, $idCodigo]);
-                $checkRow = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
-
-                if ($checkRow['total'] > 0) {
-                    // Actualizar cantidad
-                    $updateSql = "UPDATE CajaContenido SET cantidad = ? WHERE idCaja = ? AND idCodigo = ?";
-                    sqlsrv_query($conn, $updateSql, [$cantidad, $idCaja, $idCodigo]);
-                } else {
-                    // Insertar nuevo registro
-                    $insertSql = "INSERT INTO CajaContenido (idCaja, idCodigo, cantidad) VALUES (?, ?, ?)";
-                    sqlsrv_query($conn, $insertSql, [$idCaja, $idCodigo, $cantidad]);
+                // Solo verificar stock cuando se agregan productos (diferencia positiva)
+                if ($diferencia > 0) {
+                    // Verificar stock disponible
+                    $sqlStock = "SELECT CantidadActual FROM Inventario WHERE idCodigo = ?";
+                    $stmtStock = sqlsrv_query($conn, $sqlStock, [$idCodigo]);
+                    
+                    if ($stmtStock === false) {
+                        die("Error al verificar stock: " . print_r(sqlsrv_errors(), true));
+                    }
+                    
+                    $rowStock = sqlsrv_fetch_array($stmtStock, SQLSRV_FETCH_ASSOC);
+                    
+                    if (!$rowStock || $rowStock['CantidadActual'] < $diferencia) {
+                        $errorStock = true;
+                        $idCodigoError = $idCodigo;
+                        break;
+                    }
                 }
             }
         }
-        // Actualizar inventario con las diferencias
-        foreach ($diferencias as $idCodigo => $diferencia) {
-            // Actualizar CantidadActual en Inventario
-            $updateInventario = "UPDATE Inventario 
-                                SET CantidadActual = CantidadActual - ? 
-                                WHERE idCodigo = ?";
-            sqlsrv_query($conn, $updateInventario, [$diferencia, $idCodigo]);
+
+        // Si hay error de stock, redirigir
+        if ($errorStock) {
+            header("Location: boxinspecter.php?idCaja=" . $idCaja . "&error=stock&idCodigo=" . $idCodigoError);
+            exit();
         }
 
-        // Confirmar todas las operaciones
-        sqlsrv_commit($conn);
-        
-        // Redirigir a página de confirmación
-        header("Location: boxinspectcnf.php?idCaja=" . $idCaja);
-        exit();
+        // Iniciar transacción para operaciones atómicas
+        sqlsrv_begin_transaction($conn);
 
-    } catch (Exception $e) {
-        // Revertir todas las operaciones en caso de error
-        sqlsrv_rollback($conn);
-        die("Error: " . $e->getMessage());
+        try {
+            // Segunda pasada: Procesar cambios
+            foreach ($elementos as $elem) {
+                $idCodigo = intval($elem['idCodigo'] ?? 0);
+                $cantidad = intval($elem['cantidad'] ?? 0);
+
+                if ($idCodigo > 0 && $cantidad >= 0) {
+                    $cantidadAnterior = $contenidoActual[$idCodigo] ?? 0;
+                    $diferencia = $cantidad - $cantidadAnterior;
+
+                    // Almacenar diferencia para actualizar inventario
+                    if ($diferencia != 0) {
+                        $diferencias[$idCodigo] = ($diferencias[$idCodigo] ?? 0) + $diferencia;
+                    }
+
+                    // Verificar si ya existe en la caja
+                    $checkSql = "SELECT COUNT(*) AS total FROM CajaContenido WHERE idCaja = ? AND idCodigo = ?";
+                    $checkStmt = sqlsrv_query($conn, $checkSql, [$idCaja, $idCodigo]);
+                    
+                    if ($checkStmt === false) {
+                        throw new Exception("Error al verificar existencia: " . print_r(sqlsrv_errors(), true));
+                    }
+                    
+                    $checkRow = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
+
+                    if ($checkRow['total'] > 0) {
+                        // Actualizar cantidad
+                        $updateSql = "UPDATE CajaContenido SET cantidad = ? WHERE idCaja = ? AND idCodigo = ?";
+                        $result = sqlsrv_query($conn, $updateSql, [$cantidad, $idCaja, $idCodigo]);
+                    } else {
+                        // Insertar nuevo registro
+                        $insertSql = "INSERT INTO CajaContenido (idCaja, idCodigo, cantidad) VALUES (?, ?, ?)";
+                        $result = sqlsrv_query($conn, $insertSql, [$idCaja, $idCodigo, $cantidad]);
+                    }
+                    
+                    if ($result === false) {
+                        throw new Exception("Error al actualizar contenido: " . print_r(sqlsrv_errors(), true));
+                    }
+                }
+            }
+            
+            // Actualizar inventario con las diferencias
+            foreach ($diferencias as $idCodigo => $diferencia) {
+                $updateInventario = "UPDATE Inventario 
+                                    SET CantidadActual = CantidadActual - ? 
+                                    WHERE idCodigo = ?";
+                $result = sqlsrv_query($conn, $updateInventario, [$diferencia, $idCodigo]);
+                
+                if ($result === false) {
+                    throw new Exception("Error al actualizar inventario: " . print_r(sqlsrv_errors(), true));
+                }
+            }
+
+            // Confirmar todas las operaciones
+            sqlsrv_commit($conn);
+            
+            // Redirigir a página de confirmación
+            header("Location: boxinspectcnf.php?idCaja=" . $idCaja);
+            exit();
+
+        } catch (Exception $e) {
+            // Revertir todas las operaciones en caso de error
+            sqlsrv_rollback($conn);
+            die("Error: " . $e->getMessage());
+        }
     }
 }
 
-
-// Obtener el nombre del operador y número de caja
+// Obtener datos de la caja
 $sqlCaja = "SELECT C.numeroCaja, O.nombreCompleto AS nombreOperador 
             FROM CajaRegistro C
             INNER JOIN Operativo O ON C.idOperador = O.idOperador
@@ -206,6 +262,9 @@ $stmtContenido = sqlsrv_query($conn, $sqlContenido, $params);
 if ($stmtContenido === false) {
     die("Error al obtener contenido: " . print_r(sqlsrv_errors(), true));
 }
+
+// Reiniciar el puntero del resultado para asegurar que podamos recorrerlo
+sqlsrv_fetch($stmtContenido, SQLSRV_SCROLL_FIRST);
 ?>
 
 <!DOCTYPE html>
