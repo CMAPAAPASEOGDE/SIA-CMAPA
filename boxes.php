@@ -23,6 +23,11 @@ if (isset($_SESSION['error'])) {
     unset($_SESSION['error']);
 }
 
+// Mostrar mensaje de caja eliminada
+if (isset($_GET['msg']) && $_GET['msg'] === 'caja_eliminada') {
+    echo '<div class="success-message">¡Caja eliminada correctamente! Los productos han sido devueltos al inventario.</div>';
+}
+
 // Conexión a la base de datos
 $serverName = "sqlserver-sia.database.windows.net";
 $connectionOptions = [

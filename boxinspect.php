@@ -265,27 +265,27 @@ if ($stmtContenido === false) {
         <div class="caja-numero">CAJA <?= htmlspecialchars($numeroCaja) ?></div>
     </div>
 
-<section class="responsable-section">
-    <label for="responsable">RESPONSABLE</label>
-    <input type="text" id="responsable" value="<?= htmlspecialchars($nombreOperador) ?>" readonly>
+    <section class="responsable-section">
+        <label for="responsable">RESPONSABLE</label>
+        <input type="text" id="responsable" value="<?= htmlspecialchars($nombreOperador) ?>" readonly>
 
-    <?php if ($idRol === 1): ?>
-        <form method="POST" class="cambiar-responsable-form">
-            <select name="nuevo_responsable" required>
-                <option value="">Seleccionar nuevo responsable</option>
-                <?php
-                $stmtOp = sqlsrv_query($conn, "SELECT idOperador, nombreCompleto FROM Operativo");
-                while ($op = sqlsrv_fetch_array($stmtOp, SQLSRV_FETCH_ASSOC)) {
-                    echo '<option value="'.$op['idOperador'].'">'.htmlspecialchars($op['nombreCompleto']).'</option>';
-                }
-                ?>
-            </select>
-            <button type="submit" name="accion" value="cambiar_responsable" class="btn-secundario">CAMBIAR RESPONSABLE</button>
-        </form>
-    <?php endif; ?>
-</section>
+        <?php if ($idRol === 1): ?>
+            <form method="POST" class="cambiar-responsable-form">
+                <select name="nuevo_responsable" required>
+                    <option value="">Seleccionar nuevo responsable</option>
+                    <?php
+                    $stmtOp = sqlsrv_query($conn, "SELECT idOperador, nombreCompleto FROM Operativo");
+                    while ($op = sqlsrv_fetch_array($stmtOp, SQLSRV_FETCH_ASSOC)) {
+                        echo '<option value="'.$op['idOperador'].'">'.htmlspecialchars($op['nombreCompleto']).'</option>';
+                    }
+                    ?>
+                </select>
+                <button type="submit" name="accion" value="cambiar_responsable" class="btn-secundario">CAMBIAR RESPONSABLE</button>
+            </form>
+        <?php endif; ?>
+    </section>
 
-        <!-- Formulario PRINCIPAL para actualizar elementos -->
+    <!-- Formulario para actualizar elementos -->
     <form method="POST" id="form-update">
         <section class="elementos-section" id="elementos-container">
             <div class="elementos-header">
@@ -294,19 +294,23 @@ if ($stmtContenido === false) {
                 <span>CANTIDAD</span>
             </div>
 
-            <!-- Elementos ya existentes en la caja -->
             <?php 
             $index = 0;
             $elementosEncontrados = false;
 
+            // Reiniciar el puntero del resultado para asegurar que podamos recorrerlo
+            sqlsrv_fetch($stmtContenido, SQLSRV_SCROLL_FIRST);
+            
             while ($row = sqlsrv_fetch_array($stmtContenido, SQLSRV_FETCH_ASSOC)) {
                 $elementosEncontrados = true;
                 ?>
                 <div class="elemento-row">
-                    <input type="hidden" name="elementos[<?= $index ?>][idCodigo]" value="<?= htmlspecialchars($row['idCodigo']) ?>" />
+                    <input type="hidden" name="elementos[<?= $index ?>][idCodigo]" 
+                           value="<?= htmlspecialchars($row['idCodigo']) ?>">
                     <input type="text" value="<?= htmlspecialchars($row['codigoProducto']) ?>" readonly>
                     <input type="text" value="<?= htmlspecialchars($row['descripcion']) ?>" readonly>
-                    <input type="number" name="elementos[<?= $index ?>][cantidad]" value="<?= htmlspecialchars($row['cantidad']) ?>" min="0" />
+                    <input type="number" name="elementos[<?= $index ?>][cantidad]" 
+                           value="<?= htmlspecialchars($row['cantidad']) ?>" min="0">
                 </div>
                 <?php
                 $index++;
@@ -318,12 +322,12 @@ if ($stmtContenido === false) {
             ?>
 
             <div class="nuevos-elementos" id="nuevos-elementos">
-              <!-- Aquí se añadirán dinámicamente nuevos campos -->
+                <!-- Los nuevos elementos se añadirán aquí dinámicamente -->
             </div>
-        </section>     
+        </section>
     </form>
 
-    <!-- Formulario SEPARADO para eliminar la caja -->
+    <!-- Formulario separado para eliminar la caja -->
     <?php if ($idRol === 1): ?>
         <form method="POST" id="form-delete" onsubmit="return confirmarEliminacion()">
             <input type="hidden" name="accion" value="eliminar_caja">
@@ -332,11 +336,11 @@ if ($stmtContenido === false) {
 
     <div class="caja-gestion-actions">
         <button type="button" class="btn-secundario" onclick="agregarElemento()">AÑADIR NUEVO ELEMENTO</button>
-
+        
         <?php if ($idRol === 1): ?>
             <button type="submit" form="form-delete" class="btn-secundario">BORRAR LA CAJA</button>
         <?php endif; ?>
-
+        
         <a href="boxes.php"><button type="button" class="btn">CANCELAR</button></a>
         <button type="submit" form="form-update" class="btn" name="confirmar">CONFIRMAR</button>
     </div>
