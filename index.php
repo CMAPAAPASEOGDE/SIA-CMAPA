@@ -84,14 +84,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <img src="img/padlockB.png" />
         <input type="password" name="contrasena" placeholder="Contraseña" required />
       </div>
-      <p class="forgot">
-        <a href="#" onclick="mostrarMensaje()">Olvidé mi contraseña</a>
-      </p>
       <button type="submit">Iniciar Sesión</button>
     </form>
-    <p id="mensaje-info" style="display: none;">
-      PARA UN CAMBIO DE USUARIO Y/O CONTRASEÑA ES NECESARIO QUE SE PONGA EN CONTACTO CON EL ADMINISTRADOR DEL SISTEMA.
-    </p>
   </section>
 
   <script>
