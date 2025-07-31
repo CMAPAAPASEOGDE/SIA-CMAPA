@@ -49,6 +49,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['accion'] === 'cambiar_respo
     }
 }
 
+// Procesar eliminación de la caja (embebido)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['accion']) && $_POST['accion'] === 'eliminar_caja' && $idRol === 1) {
+    // Iniciar transacción
+    sqlsrv_begin_transaction($conn);
+    try {
+        // Eliminar contenido de la caja
+        $deleteContenido = "DELETE FROM CajaContenido WHERE idCaja = ?";
+        sqlsrv_query($conn, $deleteContenido, [$idCaja]);
+
+        // Eliminar registro de la caja
+        $deleteCaja = "DELETE FROM CajaRegistro WHERE idCaja = ?";
+        sqlsrv_query($conn, $deleteCaja, [$idCaja]);
+
+        sqlsrv_commit($conn);
+        header("Location: boxes.php?msg=caja_eliminada");
+        exit();
+    } catch (Exception $e) {
+        sqlsrv_rollback($conn);
+        echo "<script>alert('Error al eliminar la caja: " . $e->getMessage() . "');</script>";
+    }
+}
+
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['confirmar'])) {
     // Obtener contenido actual ANTES de los cambios
     $contenidoActual = [];
@@ -302,10 +324,10 @@ if ($stmtContenido === false) {
         <div class="caja-gestion-actions">
             <button type="button" class="btn-secundario" onclick="agregarElemento()">AÑADIR NUEVO ELEMENTO</button>
                 <?php if ($idRol === 1): ?>
-                    <button type="button" class="btn-secundario" 
-                            onclick="confirmarEliminacion(<?= $idCaja ?>)">
-                        BORRAR LA CAJA
-                    </button>
+                    <form method="POST" onsubmit="return confirmarEliminacion()" style="display:inline;">
+                        <input type="hidden" name="accion" value="eliminar_caja">
+                        <button type="submit" class="btn-secundario">BORRAR LA CAJA</button>
+                    </form>
                 <?php endif; ?>
             <a href="boxes.php"><button type="button" class="btn">CANCELAR</button></a>
             <button type="submit" class="btn" name="confirmar">CONFIRMAR</button>
@@ -392,10 +414,8 @@ function cargarNombre(select) {
 </script>
 
 <script>
-function confirmarEliminacion(idCaja) {
-    if (confirm("¿Estás seguro de que deseas eliminar esta caja? Esta acción no se puede deshacer.")) {
-        window.location.href = "eliminar_caja.php?idCaja=" + idCaja;
-    }
+function confirmarEliminacion() {
+    return confirm("¿Estás seguro de que deseas eliminar esta caja? Esta acción no se puede deshacer.");
 }
 </script>
 </body>
