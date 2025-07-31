@@ -285,7 +285,8 @@ if ($stmtContenido === false) {
     <?php endif; ?>
 </section>
 
-    <form method="POST">
+        <!-- Formulario PRINCIPAL para actualizar elementos -->
+    <form method="POST" id="form-update">
         <section class="elementos-section" id="elementos-container">
             <div class="elementos-header">
                 <span>CÓDIGO</span>
@@ -320,22 +321,25 @@ if ($stmtContenido === false) {
               <!-- Aquí se añadirán dinámicamente nuevos campos -->
             </div>
         </section>     
-
-        <div class="caja-gestion-actions">
-            <button type="button" class="btn-secundario" onclick="agregarElemento()">AÑADIR NUEVO ELEMENTO</button>
-
-            <?php if ($idRol === 1): ?>
-                <!-- Formulario separado SOLO para eliminar -->
-                <form method="POST" onsubmit="return confirmarEliminacion()" style="display:inline;">
-                    <input type="hidden" name="accion" value="eliminar_caja">
-                    <button type="submit" class="btn-secundario">BORRAR LA CAJA</button>
-                </form>
-            <?php endif; ?>
-
-            <a href="boxes.php"><button type="button" class="btn">CANCELAR</button></a>
-            <button type="submit" class="btn" name="confirmar">CONFIRMAR</button>
-        </div>
     </form>
+
+    <!-- Formulario SEPARADO para eliminar la caja -->
+    <?php if ($idRol === 1): ?>
+        <form method="POST" id="form-delete" onsubmit="return confirmarEliminacion()">
+            <input type="hidden" name="accion" value="eliminar_caja">
+        </form>
+    <?php endif; ?>
+
+    <div class="caja-gestion-actions">
+        <button type="button" class="btn-secundario" onclick="agregarElemento()">AÑADIR NUEVO ELEMENTO</button>
+
+        <?php if ($idRol === 1): ?>
+            <button type="submit" form="form-delete" class="btn-secundario">BORRAR LA CAJA</button>
+        <?php endif; ?>
+
+        <a href="boxes.php"><button type="button" class="btn">CANCELAR</button></a>
+        <button type="submit" form="form-update" class="btn" name="confirmar">CONFIRMAR</button>
+    </div>
 </main>
 
 <script>
