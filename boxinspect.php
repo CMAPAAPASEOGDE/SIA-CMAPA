@@ -323,12 +323,15 @@ if ($stmtContenido === false) {
 
         <div class="caja-gestion-actions">
             <button type="button" class="btn-secundario" onclick="agregarElemento()">AÑADIR NUEVO ELEMENTO</button>
-                <?php if ($idRol === 1): ?>
-                    <form method="POST" onsubmit="return confirmarEliminacion()" style="display:inline;">
-                        <input type="hidden" name="accion" value="eliminar_caja">
-                        <button type="submit" class="btn-secundario">BORRAR LA CAJA</button>
-                    </form>
-                <?php endif; ?>
+
+            <?php if ($idRol === 1): ?>
+                <!-- Formulario separado SOLO para eliminar -->
+                <form method="POST" onsubmit="return confirmarEliminacion()" style="display:inline;">
+                    <input type="hidden" name="accion" value="eliminar_caja">
+                    <button type="submit" class="btn-secundario">BORRAR LA CAJA</button>
+                </form>
+            <?php endif; ?>
+
             <a href="boxes.php"><button type="button" class="btn">CANCELAR</button></a>
             <button type="submit" class="btn" name="confirmar">CONFIRMAR</button>
         </div>
