@@ -39,6 +39,26 @@ if (!$rowStock || ($rowStock['cantidadActual'] - $cantidad) < 0) {
     exit();
 }
 
+// Obtener herramientas únicas para actualizar
+$sqlGetTools = "SELECT TOP (?) idHerramienta 
+                FROM HerramientasUnicas 
+                WHERE idCodigo = ? AND enInventario = 1 
+                ORDER BY idHerramienta ASC";
+$paramsGetTools = [$cantidad, $idCodigo];
+$stmtGetTools = sqlsrv_query($conn, $sqlGetTools, $paramsGetTools);
+if ($stmtGetTools === false) die(print_r(sqlsrv_errors(), true));
+
+$toolIds = [];
+while ($row = sqlsrv_fetch_array($stmtGetTools, SQLSRV_FETCH_ASSOC)) {
+    $toolIds[] = $row['idHerramienta'];
+}
+
+// Si no hay suficientes herramientas, error
+if (count($toolIds) < $cantidad) {
+    header("Location: ../admnedtexter2.php");
+    exit();
+}
+
 // Insertar salida
 $sqlInsert = "INSERT INTO SalidaSinorden (areaSolicitante, encargadoArea, fecha, comentarios, idCodigo, cantidad)
               VALUES (?, ?, ?, ?, ?, ?)";
@@ -52,6 +72,15 @@ $sqlUpdate = "UPDATE Inventario SET cantidadActual = ?, ultimaActualizacion = ? 
 $paramsUpdate = [$nuevaCantidad, $fecha, $idCodigo];
 $stmtUpdate = sqlsrv_query($conn, $sqlUpdate, $paramsUpdate);
 if ($stmtUpdate === false) die(print_r(sqlsrv_errors(), true));
+
+// Actualizar herramientas únicas
+foreach ($toolIds as $toolId) {
+    $sqlUpdateTool = "UPDATE HerramientasUnicas 
+                      SET enInventario = 0 
+                      WHERE idHerramienta = ?";
+    $stmtUpdateTool = sqlsrv_query($conn, $sqlUpdateTool, [$toolId]);
+    if ($stmtUpdateTool === false) die(print_r(sqlsrv_errors(), true));
+}
 
 header("Location: ../admnedtextcf.php");
 exit();

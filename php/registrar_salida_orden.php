@@ -65,6 +65,26 @@ foreach ($elementos as $el) {
         exit();
     }
 
+    // Obtener herramientas únicas para actualizar
+    $sqlGetTools = "SELECT TOP (?) idHerramienta 
+                    FROM HerramientasUnicas 
+                    WHERE idCodigo = ? AND enInventario = 1 
+                    ORDER BY idHerramienta ASC";
+    $paramsGetTools = [$cantidad, $idCodigo];
+    $stmtGetTools = sqlsrv_query($conn, $sqlGetTools, $paramsGetTools);
+    if ($stmtGetTools === false) die(print_r(sqlsrv_errors(), true));
+    
+    $toolIds = [];
+    while ($rowTool = sqlsrv_fetch_array($stmtGetTools, SQLSRV_FETCH_ASSOC)) {
+        $toolIds[] = $rowTool['idHerramienta'];
+    }
+    
+    // Si no hay suficientes herramientas, error
+    if (count($toolIds) < $cantidad) {
+        header("Location: ../exitorder2.php");
+        exit();
+    }
+
     // Registrar salida
     $sqlInsert = "INSERT INTO Salidas (rpuUsuario, numeroOrden, comentarios, idOperador, idCodigo, cantidad, fechaSalida)
                   VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -78,8 +98,18 @@ foreach ($elementos as $el) {
     $paramsUpdate = [$nuevaCantidad, $fecha, $idCodigo];
     $stmtUpdate = sqlsrv_query($conn, $sqlUpdate, $paramsUpdate);
     if ($stmtUpdate === false) die(print_r(sqlsrv_errors(), true));
+    
+    // Actualizar herramientas únicas
+    foreach ($toolIds as $toolId) {
+        $sqlUpdateTool = "UPDATE HerramientasUnicas 
+                          SET enInventario = 0 
+                          WHERE idHerramienta = ?";
+        $stmtUpdateTool = sqlsrv_query($conn, $sqlUpdateTool, [$toolId]);
+        if ($stmtUpdateTool === false) die(print_r(sqlsrv_errors(), true));
+    }
 }
 
 // Redirigir a confirmación
 header("Location: ../exitordcnf.php");
 exit();
+?>
