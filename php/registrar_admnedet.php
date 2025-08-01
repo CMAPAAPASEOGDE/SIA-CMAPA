@@ -44,5 +44,28 @@ if ($row) {
     sqlsrv_query($conn, $sqlInsert, [$idCodigo, $idCaja, $cantidad, $ubicacion, $fecha]);
 }
 
+// 1. Verificar si el producto es tipo HERRAMIENTA
+$tsqlTipo = "SELECT tipo FROM Productos WHERE idCodigo = ?";
+$params = [$idCodigo];
+$stmtTipo = sqlsrv_query($conn, $tsqlTipo, $params);
+$esHerramienta = false;
+
+if ($stmtTipo && $rowTipo = sqlsrv_fetch_array($stmtTipo, SQLSRV_FETCH_ASSOC)) {
+    $esHerramienta = (strtoupper($rowTipo['tipo']) === 'HERRAMIENTA');
+}
+
+// 2. Si es herramienta, insertar tantas filas como cantidad
+if ($esHerramienta) {
+    $tsqlInsertHerramienta = "
+        INSERT INTO HerramientasUnicas (idCodigo, fechaEntrada, estadoActual, observaciones, enInventario)
+        VALUES (?, GETDATE(), 'FUNCIONAL', 'INGRESO NUEVO', 1)
+    ";
+
+    for ($i = 0; $i < $cantidad; $i++) {
+        sqlsrv_query($conn, $tsqlInsertHerramienta, [$idCodigo]);
+    }
+}
+
+
 header("Location: ../admnedtetcf.php");
 exit();
