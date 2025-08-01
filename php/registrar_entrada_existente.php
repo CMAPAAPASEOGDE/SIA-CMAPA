@@ -75,18 +75,32 @@ if ($stmtCheck === false) {
     die(print_r(sqlsrv_errors(), true));
 }
 
-if (sqlsrv_fetch($stmtCheck)) {
-    // Ya existe → actualizar
+$existeEnInventario = sqlsrv_fetch($stmtCheck);
+
+// 4. Insertar herramientas únicas
+for ($i = 0; $i < $cantidad; $i++) {
+    $sqlHerramienta = "INSERT INTO HerramientasUnicas (idCodigo, fechaEntrada, estadoActual, observaciones, enInventario)
+                       VALUES (?, ?, 'Funcional', 'Nueva herramienta', 1)";
+    $paramsHerramienta = array($idCodigo, $fecha);
+    $stmtHerramienta = sqlsrv_query($conn, $sqlHerramienta, $paramsHerramienta);
+    if ($stmtHerramienta === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+}
+
+// 5. Actualizar inventario
+if ($existeEnInventario) {
+    // Actualizar cantidad existente
     $sqlUpdate = "UPDATE Inventario 
-                  SET cantidadActual = ?, ultimaActualizacion = ?, idCaja = ?, ubicacion = ?
+                  SET cantidadActual = ?, ultimaActualizacion = ?
                   WHERE idCodigo = ?";
-    $paramsUpdate = array($nuevaCantidad, $fecha, $idCaja, $ubicacion, $idCodigo);
+    $paramsUpdate = array($nuevaCantidad, $fecha, $idCodigo);
     $stmtUpdate = sqlsrv_query($conn, $sqlUpdate, $paramsUpdate);
     if ($stmtUpdate === false) {
         die(print_r(sqlsrv_errors(), true));
     }
 } else {
-    // No existe → insertar
+    // Insertar nuevo registro
     $sqlInsertInv = "INSERT INTO Inventario (idCodigo, idCaja, cantidadActual, ubicacion, ultimaActualizacion)
                      VALUES (?, ?, ?, ?, ?)";
     $paramsInsert = array($idCodigo, $idCaja, $cantidad, $ubicacion, $fecha);
@@ -96,8 +110,7 @@ if (sqlsrv_fetch($stmtCheck)) {
     }
 }
 
-
-// 4. Confirmación
+// 6. Confirmación
 header("Location: ../extetcnf.php");
 exit();
 ?>
