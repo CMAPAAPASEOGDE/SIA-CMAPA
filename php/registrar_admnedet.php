@@ -22,49 +22,37 @@ $fecha = $_POST['fecha'];
 $idCaja = 1;
 $ubicacion = "Almacen";
 
-// 1. Insertar en Entradas
-$sqlEntrada = "INSERT INTO Entradas (idCodigo, idProveedor, cantidad, fecha)
-               VALUES (?, ?, ?, ?)";
+// Insertar en Entradas
+$sqlEntrada = "INSERT INTO Entradas (idCodigo, idProveedor, cantidad, fecha) VALUES (?, ?, ?, ?)";
 $paramsEntrada = [$idCodigo, $idProveedor, $cantidad, $fecha];
 sqlsrv_query($conn, $sqlEntrada, $paramsEntrada);
 
-// 2. Insertar o actualizar Inventario
+// Insertar o actualizar Inventario
 $sql = "SELECT cantidadActual FROM Inventario WHERE idCodigo = ?";
 $stmt = sqlsrv_query($conn, $sql, [$idCodigo]);
 $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
 
-// 1. Verificar si el producto es tipo HERRAMIENTA
-$tsqlTipo = "SELECT tipo FROM Productos WHERE idCodigo = ?";
-$params = [$idCodigo];
-$stmtTipo = sqlsrv_query($conn, $tsqlTipo, $params);
-$esHerramienta = false;
-
-if ($stmtTipo && $rowTipo = sqlsrv_fetch_array($stmtTipo, SQLSRV_FETCH_ASSOC)) {
-    $esHerramienta = (strtoupper($rowTipo['tipo']) === 'HERRAMIENTA');
-}
-
-// 2. Si es herramienta, insertar tantas filas como cantidad
-if ($esHerramienta) {
-    $tsqlInsertHerramienta = "
-        INSERT INTO HerramientasUnicas (idCodigo, fechaEntrada, estadoActual, observaciones, enInventario)
-        VALUES (?, GETDATE(), 'FUNCIONAL', 'INGRESO NUEVO', 1)
-    ";
-
-    for ($i = 0; $i < $cantidad; $i++) {
-        sqlsrv_query($conn, $tsqlInsertHerramienta, [$idCodigo]);
-    }
-}
-
 if ($row) {
     $nueva = $row['cantidadActual'] + $cantidad;
-    $sqlUpdate = "UPDATE Inventario SET cantidadActual = ?, ultimaActualizacion = ?, idCaja = ?, ubicacion = ?
-                  WHERE idCodigo = ?";
+    $sqlUpdate = "UPDATE Inventario SET cantidadActual = ?, ultimaActualizacion = ?, idCaja = ?, ubicacion = ? WHERE idCodigo = ?";
     sqlsrv_query($conn, $sqlUpdate, [$nueva, $fecha, $idCaja, $ubicacion, $idCodigo]);
 } else {
-    $sqlInsert = "INSERT INTO Inventario (idCodigo, idCaja, cantidadActual, ubicacion, ultimaActualizacion)
-                  VALUES (?, ?, ?, ?, ?)";
+    $sqlInsert = "INSERT INTO Inventario (idCodigo, idCaja, cantidadActual, ubicacion, ultimaActualizacion) VALUES (?, ?, ?, ?, ?)";
     sqlsrv_query($conn, $sqlInsert, [$idCodigo, $idCaja, $cantidad, $ubicacion, $fecha]);
+}
+
+// Verificar si es herramienta
+$sqlTipo = "SELECT tipo FROM Productos WHERE idCodigo = ?";
+$stmtTipo = sqlsrv_query($conn, [$sqlTipo], [$idCodigo]);
+$rowTipo = sqlsrv_fetch_array($stmtTipo, SQLSRV_FETCH_ASSOC);
+if (strtoupper($rowTipo['tipo']) === 'HERRAMIENTA') {
+    for ($i = 0; $i < $cantidad; $i++) {
+        $sqlHerr = "INSERT INTO HerramientasUnicas (idCodigo, estado, comentario, fechaRegreso, enInventario) 
+                    VALUES (?, 'FUNCIONAL', 'INGRESO NUEVO', NULL, 1)";
+        sqlsrv_query($conn, $sqlHerr, [$idCodigo]);
+    }
 }
 
 header("Location: ../admnedtetcf.php");
 exit();
+?>
