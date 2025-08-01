@@ -15,6 +15,33 @@ if (!in_array($idRol, [1, 2])) {
     header("Location: acceso_denegado.php");
     exit();
 }
+
+// Conexión
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = [
+    "Database" => "db_sia",
+    "Uid" => "cmapADMIN",
+    "PWD" => "@siaADMN56*",
+    "Encrypt" => true,
+    "TrustServerCertificate" => false
+];
+$conn = sqlsrv_connect($serverName, $connectionOptions);
+if ($conn === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+// Obtener herramientas prestadas
+$herramientas = [];
+$sql = "SELECT idHerramienta, codigo, descripcion 
+        FROM HerramientasUnicas 
+        WHERE enInventario = 0";
+$result = $conn->query($sql);
+if ($result->num_rows > 0) {
+    while($row = $result->fetch_assoc()) {
+        $herramientas[] = $row;
+    }
+}
+$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -73,38 +100,43 @@ if (!in_array($idRol, [1, 2])) {
         <h2>DEVOLUCIÓN DE HERRAMIENTAS</h2>
     </div>
     
-    <form class="devolucion-form">
+    <form id="devolucionForm" class="devolucion-form">
         <!-- Código -->
         <label for="codigo">CÓDIGO</label>
-        <select id="codigo">
-            <option selected>ABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789</option>
-            <!-- Agrega más códigos reales aquí -->
+        <select id="codigo" name="idHerramienta" required>
+            <option value="">-- Seleccione una herramienta --</option>
+            <?php foreach ($herramientas as $h): ?>
+                <option value="<?= $h['idHerramienta'] ?>" data-desc="<?= htmlspecialchars($h['descripcion']) ?>">
+                    <?= htmlspecialchars($h['codigo']) ?>
+                </option>
+            <?php endforeach; ?>
         </select>
         <!-- Nombre -->
         <label for="nombre">NOMBRE O DESCRIPCIÓN</label>
-        <input type="text" id="nombre" value="">
+        <input type="text" id="nombre" value="" readonly>
         <!-- Observaciones -->
         <label for="observaciones">OBSERVACIONES</label>
-        <textarea id="observaciones" rows="5"></textarea>
+        <textarea id="observaciones" name="observaciones" rows="5"></textarea>
         <!-- Estado y Fecha -->
         <div class="form-row">
             <div class="form-group">
                 <label for="estado">ESTADO</label>
-                <select id="estado">
-                  <option>NECESITA CAMBIO</option>
-                  <option>FUNCIONAL</option>
-                  <option>EN REPARACIÓN</option>
+                <select id="estado" name="estado" required>
+                    <option value="">-- Seleccione --</option>
+                    <option value="NECESITA CAMBIO">NECESITA CAMBIO</option>
+                    <option value="FUNCIONAL">FUNCIONAL</option>
+                    <option value="EN REPARACIÓN">EN REPARACIÓN</option>
                 </select>
             </div>
             <div class="form-group">
                 <label for="fecha">FECHA DE RETORNO</label>
-                <input type="date" id="fecha" value="">
+                <input type="date" id="fecha" name="fechaRetorno" value="<?= date('Y-m-d') ?>">
             </div>
         </div>
         <!-- Botones -->
         <div class="form-buttons">
             <a href="warehouse.php"><button type="button" class="btn cancel">CANCELAR</button></a>
-            <a href="#"><button type="button" class="btn confirm">CONFIRMAR</button></a>
+            <button type="submit" class="btn confirm">CONFIRMAR</button>
         </div>
     </form>
 </main>
@@ -160,6 +192,50 @@ if (!in_array($idRol, [1, 2])) {
 
   document.querySelector('.cancel').addEventListener('click', function () {
     window.history.back(); // volver atrás o redireccionar
+  });
+</script>
+
+<script>
+  // Autocompletar descripción al seleccionar herramienta
+  $('#codigo').change(function() {
+    const selected = $(this).find('option:selected');
+    $('#nombre').val(selected.data('desc') || '');
+  });
+
+  // Enviar formulario
+  $('#devolucionForm').submit(function(e) {
+    e.preventDefault();
+    
+    const formData = {
+      idHerramienta: $('#codigo').val(),
+      observaciones: $('#observaciones').val(),
+      estado: $('#estado').val(),
+      fechaRetorno: $('#fecha').val(),
+      registradoPor: <?= $_SESSION['user_id'] ?>
+    };
+
+    if (!formData.idHerramienta || !formData.estado) {
+      alert('Por favor complete todos los campos obligatorios');
+      return;
+    }
+
+    $.ajax({
+      type: 'POST',
+      url: 'procesar_devolucion.php',
+      data: formData,
+      dataType: 'json',
+      success: function(response) {
+        if (response.success) {
+          alert('Devolución registrada correctamente');
+          window.location.href = 'warehouse.php';
+        } else {
+          alert('Error: ' + response.message);
+        }
+      },
+      error: function() {
+        alert('Error al procesar la solicitud');
+      }
+    });
   });
 </script>
 </body>
