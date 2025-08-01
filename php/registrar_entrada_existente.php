@@ -75,27 +75,6 @@ if ($stmtCheck === false) {
     die(print_r(sqlsrv_errors(), true));
 }
 
-if (sqlsrv_fetch($stmtCheck)) {
-    // Ya existe → actualizar
-    $sqlUpdate = "UPDATE Inventario 
-                  SET cantidadActual = ?, ultimaActualizacion = ?, idCaja = ?, ubicacion = ?
-                  WHERE idCodigo = ?";
-    $paramsUpdate = array($nuevaCantidad, $fecha, $idCaja, $ubicacion, $idCodigo);
-    $stmtUpdate = sqlsrv_query($conn, $sqlUpdate, $paramsUpdate);
-    if ($stmtUpdate === false) {
-        die(print_r(sqlsrv_errors(), true));
-    }
-} else {
-    // No existe → insertar
-    $sqlInsertInv = "INSERT INTO Inventario (idCodigo, idCaja, cantidadActual, ubicacion, ultimaActualizacion)
-                     VALUES (?, ?, ?, ?, ?)";
-    $paramsInsert = array($idCodigo, $idCaja, $cantidad, $ubicacion, $fecha);
-    $stmtInsert = sqlsrv_query($conn, $sqlInsertInv, $paramsInsert);
-    if ($stmtInsert === false) {
-        die(print_r(sqlsrv_errors(), true));
-    }
-}
-
 // 1. Verificar si el producto es tipo HERRAMIENTA
 $tsqlTipo = "SELECT tipo FROM Productos WHERE idCodigo = ?";
 $params = [$idCodigo];
@@ -118,6 +97,26 @@ if ($esHerramienta) {
     }
 }
 
+if (sqlsrv_fetch($stmtCheck)) {
+    // Ya existe → actualizar
+    $sqlUpdate = "UPDATE Inventario 
+                  SET cantidadActual = ?, ultimaActualizacion = ?, idCaja = ?, ubicacion = ?
+                  WHERE idCodigo = ?";
+    $paramsUpdate = array($nuevaCantidad, $fecha, $idCaja, $ubicacion, $idCodigo);
+    $stmtUpdate = sqlsrv_query($conn, $sqlUpdate, $paramsUpdate);
+    if ($stmtUpdate === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+} else {
+    // No existe → insertar
+    $sqlInsertInv = "INSERT INTO Inventario (idCodigo, idCaja, cantidadActual, ubicacion, ultimaActualizacion)
+                     VALUES (?, ?, ?, ?, ?)";
+    $paramsInsert = array($idCodigo, $idCaja, $cantidad, $ubicacion, $fecha);
+    $stmtInsert = sqlsrv_query($conn, $sqlInsertInv, $paramsInsert);
+    if ($stmtInsert === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+}
 
 // 4. Confirmación
 header("Location: ../extetcnf.php");

@@ -33,17 +33,6 @@ $sql = "SELECT cantidadActual FROM Inventario WHERE idCodigo = ?";
 $stmt = sqlsrv_query($conn, $sql, [$idCodigo]);
 $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
 
-if ($row) {
-    $nueva = $row['cantidadActual'] + $cantidad;
-    $sqlUpdate = "UPDATE Inventario SET cantidadActual = ?, ultimaActualizacion = ?, idCaja = ?, ubicacion = ?
-                  WHERE idCodigo = ?";
-    sqlsrv_query($conn, $sqlUpdate, [$nueva, $fecha, $idCaja, $ubicacion, $idCodigo]);
-} else {
-    $sqlInsert = "INSERT INTO Inventario (idCodigo, idCaja, cantidadActual, ubicacion, ultimaActualizacion)
-                  VALUES (?, ?, ?, ?, ?)";
-    sqlsrv_query($conn, $sqlInsert, [$idCodigo, $idCaja, $cantidad, $ubicacion, $fecha]);
-}
-
 // 1. Verificar si el producto es tipo HERRAMIENTA
 $tsqlTipo = "SELECT tipo FROM Productos WHERE idCodigo = ?";
 $params = [$idCodigo];
@@ -66,6 +55,16 @@ if ($esHerramienta) {
     }
 }
 
+if ($row) {
+    $nueva = $row['cantidadActual'] + $cantidad;
+    $sqlUpdate = "UPDATE Inventario SET cantidadActual = ?, ultimaActualizacion = ?, idCaja = ?, ubicacion = ?
+                  WHERE idCodigo = ?";
+    sqlsrv_query($conn, $sqlUpdate, [$nueva, $fecha, $idCaja, $ubicacion, $idCodigo]);
+} else {
+    $sqlInsert = "INSERT INTO Inventario (idCodigo, idCaja, cantidadActual, ubicacion, ultimaActualizacion)
+                  VALUES (?, ?, ?, ?, ?)";
+    sqlsrv_query($conn, $sqlInsert, [$idCodigo, $idCaja, $cantidad, $ubicacion, $fecha]);
+}
 
 header("Location: ../admnedtetcf.php");
 exit();
