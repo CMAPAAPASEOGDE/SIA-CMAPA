@@ -28,7 +28,7 @@ if ($conn === false) {
 // Obtener herramientas prestadas - CORREGIDO para SQL Server
 $herramientas = [];
 $sql = "SELECT idHerramienta, codigo, descripcion 
-        FROM Productos 
+        FROM HerramientasUnicas 
         WHERE enInventario = 0";
 $stmt = sqlsrv_query($conn, $sql);
 if ($stmt === false) {
