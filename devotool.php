@@ -103,7 +103,9 @@ sqlsrv_close($conn);
         <!-- Código -->
         <label for="codigo">CÓDIGO</label>
         <select id="codigo" name="idHerramienta" required>
-            <option value="">-- Seleccione una herramienta --</option>
+            <option value="<?= $h['idHerramienta'] ?>" data-desc="<?= htmlspecialchars($h['descripcion']) ?>">
+              <?= $h['idHerramienta'] ?> - <?= htmlspecialchars($h['codigo']) ?>
+            </option>
             <?php foreach ($herramientas as $h): ?>
                 <option value="<?= $h['idHerramienta'] ?>" data-desc="<?= htmlspecialchars($h['descripcion']) ?>">
                     <?= htmlspecialchars($h['codigo']) ?>
@@ -139,6 +141,8 @@ sqlsrv_close($conn);
         </div>
     </form>
 </main>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script>
   const toggle = document.getElementById('menu-toggle');
