@@ -1,22 +1,17 @@
 <?php
-// Iniciar sesión
 session_start();
-
-// Verificar si el usuario está autenticado
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
 
-// Verificar el rol del usuario
 $idRol = (int)($_SESSION['rol'] ?? 0);
 if (!in_array($idRol, [1, 2])) {
     header("Location: acceso_denegado.php");
     exit();
 }
 
-// Conexión
+// Conexión CORREGIDA para SQL Server
 $serverName = "sqlserver-sia.database.windows.net";
 $connectionOptions = [
     "Database" => "db_sia",
@@ -30,18 +25,21 @@ if ($conn === false) {
     die(print_r(sqlsrv_errors(), true));
 }
 
-// Obtener herramientas prestadas
+// Obtener herramientas prestadas - CORREGIDO para SQL Server
 $herramientas = [];
 $sql = "SELECT idHerramienta, codigo, descripcion 
         FROM HerramientasUnicas 
         WHERE enInventario = 0";
-$result = $conn->query($sql);
-if ($result->num_rows > 0) {
-    while($row = $result->fetch_assoc()) {
-        $herramientas[] = $row;
-    }
+$stmt = sqlsrv_query($conn, $sql);
+if ($stmt === false) {
+    die(print_r(sqlsrv_errors(), true));
 }
-$conn->close();
+
+while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    $herramientas[] = $row;
+}
+sqlsrv_free_stmt($stmt);
+sqlsrv_close($conn);
 ?>
 
 <!DOCTYPE html>
@@ -235,6 +233,52 @@ $conn->close();
       error: function() {
         alert('Error al procesar la solicitud');
       }
+    });
+  });
+</script>
+
+<script>
+  $(document).ready(function() {
+    // Autocompletar descripción
+    $('#codigo').change(function() {
+      const selected = $(this).find('option:selected');
+      $('#nombre').val(selected.data('desc') || '');
+    });
+
+    // Enviar formulario
+    $('#devolucionForm').submit(function(e) {
+      e.preventDefault();
+      
+      const formData = {
+        idHerramienta: $('#codigo').val(),
+        observaciones: $('#observaciones').val(),
+        estado: $('#estado').val(),
+        fechaRetorno: $('#fecha').val(),
+        registradoPor: <?= $_SESSION['user_id'] ?>
+      };
+
+      if (!formData.idHerramienta || !formData.estado) {
+        alert('Por favor complete todos los campos obligatorios');
+        return;
+      }
+
+      $.ajax({
+        type: 'POST',
+        url: 'procesar_devolucion.php',
+        data: formData,
+        dataType: 'json',
+        success: function(response) {
+          if (response.success) {
+            alert('Devolución registrada correctamente');
+            window.location.href = 'warehouse.php';
+          } else {
+            alert('Error: ' + response.message);
+          }
+        },
+        error: function(xhr, status, error) {
+          alert('Error al procesar: ' + error);
+        }
+      });
     });
   });
 </script>
