@@ -27,11 +27,9 @@ if ($conn === false) {
 
 // Obtener herramientas prestadas - CORREGIDO para SQL Server
 $herramientas = [];
-$sql = "SELECT H.idHerramienta, P.codigo, P.descripcion 
-        FROM HerramientasUnicas H
-        INNER JOIN Productos P ON H.idProducto = P.idProducto
-        WHERE H.enInventario = 0";
-
+$sql = "SELECT idHerramienta, codigo, descripcion 
+        FROM Productos 
+        WHERE enInventario = 0";
 $stmt = sqlsrv_query($conn, $sql);
 if ($stmt === false) {
     die(print_r(sqlsrv_errors(), true));
