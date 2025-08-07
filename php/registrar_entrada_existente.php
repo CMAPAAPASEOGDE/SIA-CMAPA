@@ -78,10 +78,22 @@ if ($stmtCheck === false) {
 $existeEnInventario = sqlsrv_fetch($stmtCheck);
 
 // 4. Insertar herramientas únicas
-for ($i = 0; $i < $cantidad; $i++) {
-    $sqlHerramienta = "INSERT INTO HerramientasUnicas (idCodigo, fechaEntrada, estadoActual, observaciones, enInventario)
-                       VALUES (?, ?, 'Funcional', 'Nueva herramienta', 1)";
-    $paramsHerramienta = array($idCodigo, $fecha);
+// Obtener el número actual de herramientas con ese código
+$sqlContador = "SELECT COUNT(*) AS total FROM HerramientasUnicas WHERE idCodigo = ?";
+$stmtContador = sqlsrv_query($conn, $sqlContador, [$idCodigo]);
+if ($stmtContador === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+$rowContador = sqlsrv_fetch_array($stmtContador, SQLSRV_FETCH_ASSOC);
+$contador = (int)$rowContador['total'];
+
+// Insertar nuevas herramientas con identificador único incremental
+for ($i = 1; $i <= $cantidad; $i++) {
+    $identificadorUnico = $idCodigo . '-' . ($contador + $i);
+
+    $sqlHerramienta = "INSERT INTO HerramientasUnicas (idCodigo, fechaEntrada, estadoActual, observaciones, enInventario, identificadorUnico)
+                       VALUES (?, ?, 'Funcional', 'Nueva herramienta', 1, ?)";
+    $paramsHerramienta = [$idCodigo, $fecha, $identificadorUnico];
     $stmtHerramienta = sqlsrv_query($conn, $sqlHerramienta, $paramsHerramienta);
     if ($stmtHerramienta === false) {
         die(print_r(sqlsrv_errors(), true));
