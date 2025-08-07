@@ -31,7 +31,7 @@ if ($stmtInfo === false) {
     die(print_r(sqlsrv_errors(), true));
 }
 $rowInfo = sqlsrv_fetch_array($stmtInfo, SQLSRV_FETCH_ASSOC);
-$esHerramienta = (strtolower($rowInfo['tipo']) === 'herramienta');
+$esHerramienta = ($tipo === 'herramienta' || $tipo === 'herramientas');
 $codigoProducto = $rowInfo['codigo'];
 
 // 1. Insertar en Entradas

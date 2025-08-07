@@ -38,7 +38,7 @@ if (!$rowInfo) {
     die("Producto no encontrado.");
 }
 $codigoProducto = $rowInfo['codigo'];
-$esHerramienta = (strtolower($rowInfo['tipo']) === 'herramienta');
+$esHerramienta = ($tipo === 'herramienta' || $tipo === 'herramientas');
 
 // 1. Insertar en Entradas
 $sqlEntrada = "INSERT INTO Entradas (idCodigo, idProveedor, cantidad, fecha)
