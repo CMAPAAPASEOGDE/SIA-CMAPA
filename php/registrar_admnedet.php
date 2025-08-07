@@ -34,15 +34,6 @@ $rowInfo = sqlsrv_fetch_array($stmtInfo, SQLSRV_FETCH_ASSOC);
 $esHerramienta = (strtolower($rowInfo['tipo']) === 'herramienta');
 $codigoProducto = $rowInfo['codigo'];
 
-// Verificar si el producto es una herramienta
-$sqlTipo = "SELECT tipo FROM Productos WHERE idCodigo = ?";
-$stmtTipo = sqlsrv_query($conn, $sqlTipo, [$idCodigo]);
-if ($stmtTipo === false) {
-    die(print_r(sqlsrv_errors(), true));
-}
-$rowTipo = sqlsrv_fetch_array($stmtTipo, SQLSRV_FETCH_ASSOC);
-$esHerramienta = (strtolower($rowTipo['tipo']) === 'herramienta');
-
 // 1. Insertar en Entradas
 $sqlEntrada = "INSERT INTO Entradas (idCodigo, idProveedor, cantidad, fecha)
                VALUES (?, ?, ?, ?)";
