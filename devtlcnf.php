@@ -89,15 +89,15 @@ if (!in_array($idRol, [1, 2])) {
         <!-- Código -->
         <label for="codigo">CÓDIGO</label>
         <select id="codigo">
-            <option selected>ABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789</option>
+            <option selected></option>
             <!-- Agrega más códigos reales aquí -->
         </select>
         <!-- Nombre -->
         <label for="nombre">NOMBRE O DESCRIPCIÓN</label>
-        <input type="text" id="nombre" value="TALADRO MAKITA">
+        <input type="text" id="nombre" value="">
         <!-- Observaciones -->
         <label for="observaciones">OBSERVACIONES</label>
-        <textarea id="observaciones" rows="4">EL TALADRO SE ENTREGA CON 2 BROCAS FALTANTES, UNA BATERIA FALTANTE, YA NO SUJETA BIEN LA BATERIA TIENEN QUE SUJETARLA CON CINTA</textarea>
+        <textarea id="observaciones" rows="4"></textarea>
         <!-- Estado y Fecha -->
         <div class="form-row">
             <div class="form-group">
@@ -110,7 +110,7 @@ if (!in_array($idRol, [1, 2])) {
             </div>
             <div class="form-group">
                 <label for="fecha">FECHA DE RETORNO</label>
-                <input type="date" id="fecha" value="2025-04-30">
+                <input type="date" id="fecha" value="">
             </div>
         </div>
         <!-- Botones -->

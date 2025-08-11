@@ -28,7 +28,7 @@ if ($conn === false) {
 // Obtener herramientas prestadas (enInventario = 0)
 $herramientas = [];
 $sql = "SELECT 
-            H.idHerramienta,
+            H.idHerramienta,           -- GUID (UNIQUEIDENTIFIER)
             H.identificadorUnico,
             H.idCodigo,
             P.codigo,
@@ -109,7 +109,7 @@ sqlsrv_close($conn);
       <option value="">-- Selecciona una herramienta prestada --</option>
       <?php foreach ($herramientas as $h): ?>
         <option
-          value="<?= (int)$h['idHerramienta'] ?>"
+          value="<?= htmlspecialchars($h['idHerramienta']) ?>"  <!-- GUID como texto -->
           data-ident="<?= htmlspecialchars($h['identificadorUnico']) ?>"
           data-idcodigo="<?= (int)$h['idCodigo'] ?>"
           data-codigo="<?= htmlspecialchars($h['codigo']) ?>"
@@ -160,7 +160,7 @@ sqlsrv_close($conn);
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script>
-// Menú hamburguesa
+// Menús
 const toggle = document.getElementById('menu-toggle');
 const dropdown = document.getElementById('dropdown-menu');
 toggle.addEventListener('click', () => {
@@ -171,8 +171,6 @@ window.addEventListener('click', (e) => {
     dropdown.style.display = 'none';
   }
 });
-
-// Menú de usuario
 const userToggle = document.getElementById('user-toggle');
 const userDropdown = document.getElementById('user-dropdown');
 userToggle.addEventListener('click', () => {
@@ -183,8 +181,6 @@ window.addEventListener('click', (e) => {
     userDropdown.style.display = 'none';
   }
 });
-
-// Notificaciones
 const notifToggle = document.getElementById('notif-toggle');
 const notifDropdown = document.getElementById('notif-dropdown');
 notifToggle.addEventListener('click', () => {
@@ -199,16 +195,20 @@ window.addEventListener('click', (e) => {
 
 <script>
 $(function () {
-  // Autocompletar descripción al seleccionar herramienta
+  // Autocompletar descripción al seleccionar
   $('#codigo').on('change', function() {
     const selected = $(this).find('option:selected');
     $('#nombre').val(selected.data('desc') || '');
   });
 
+  // Inicializa descripción si ya hay selección
+  $('#codigo').trigger('change');
+
   // Enviar formulario vía AJAX
   $('#devolucionForm').on('submit', function(e) {
     e.preventDefault();
 
+    const selected = $('#codigo').find('option:selected');
     const idHerramienta = $('#codigo').val();
     const estado = $('#estado').val();
 
@@ -218,12 +218,12 @@ $(function () {
     }
 
     const formData = {
-      idHerramienta: idHerramienta,
+      idHerramienta: idHerramienta,                       // GUID como texto
+      identificadorUnico: selected.data('ident') || '',   // respaldo opcional
       observaciones: $('#observaciones').val(),
       estado: estado,
       fechaRetorno: $('#fecha').val(),
-      // En Devoluciones -> registradoPor = idRol (requerimiento)
-      registradoPor: <?= (int)($_SESSION['rol'] ?? 0) ?>
+      registradoPor: <?= (int)($_SESSION['rol'] ?? 0) ?>  // idRol
     };
 
     $('#btnConfirm').prop('disabled', true);
@@ -235,14 +235,11 @@ $(function () {
       dataType: 'json'
     }).done(function(response) {
       if (response && response.success) {
-        // Éxito -> redirigir a confirmación
         window.location.href = 'devtlcnf.php';
       } else {
-        // Fallo (incluye: no existe / ya devuelta / error de validación)
         window.location.href = 'devtlerr.php';
       }
-    }).fail(function(xhr, status, error) {
-      // Error técnico -> redirigir a error
+    }).fail(function() {
       window.location.href = 'devtlerr.php';
     }).always(function() {
       $('#btnConfirm').prop('disabled', false);
