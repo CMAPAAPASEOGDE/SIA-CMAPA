@@ -36,30 +36,33 @@ $codigoProducto = $rowInfo['codigo'];
 $tipo           = strtolower(trim($rowInfo['tipo'] ?? ''));
 $esHerramienta  = in_array($tipo, ['herramienta','herramientas'], true);
 
-// Transacción
-if (!sqlsrv_begin_transaction($conn)) die(print_r(sqlsrv_errors(), true));
+if (!sqlsrv_begin_transaction($conn)) {
+    die(print_r(sqlsrv_errors(), true));
+}
 
-// 1) Entradas
+// 1) Insertar en Entradas
 $sqlEntrada = "INSERT INTO Entradas (idCodigo, idProveedor, cantidad, fecha)
                VALUES (?, ?, ?, ?)";
 $paramsEntrada = [$idCodigo, $idProveedor, $cantidad, $fechaParam];
 $stmtEntrada = sqlsrv_query($conn, $sqlEntrada, $paramsEntrada);
-if ($stmtEntrada === false) { sqlsrv_rollback($conn); die(print_r(sqlsrv_errors(), true)); }
+if ($stmtEntrada === false) {
+    sqlsrv_rollback($conn);
+    die(print_r(sqlsrv_errors(), true));
+}
 
-// 2) Herramientas únicas (si aplica)
+// 2) Insertar herramientas únicas con identificadorUnico incremental
 if ($esHerramienta && $cantidad > 0) {
-
-    $identificadorBase = $codigoProducto; // Lo que pediste: guardar el código
-
-    // --- Alternativa única incremental (si la necesitas):
-    // $sqlContador = "SELECT COUNT(*) AS total FROM HerramientasUnicas WHERE idCodigo = ?";
-    // $stmtContador = sqlsrv_query($conn, $sqlContador, [$idCodigo]);
-    // if ($stmtContador === false) { sqlsrv_rollback($conn); die(print_r(sqlsrv_errors(), true)); }
-    // $rowContador = sqlsrv_fetch_array($stmtContador, SQLSRV_FETCH_ASSOC);
-    // $contador = (int)($rowContador['total'] ?? 0);
+    $sqlContador = "SELECT COUNT(*) AS total FROM HerramientasUnicas WHERE idCodigo = ?";
+    $stmtContador = sqlsrv_query($conn, $sqlContador, [$idCodigo]);
+    if ($stmtContador === false) {
+        sqlsrv_rollback($conn);
+        die(print_r(sqlsrv_errors(), true));
+    }
+    $rowContador = sqlsrv_fetch_array($stmtContador, SQLSRV_FETCH_ASSOC);
+    $contador = (int)($rowContador['total'] ?? 0);
 
     for ($i = 1; $i <= $cantidad; $i++) {
-        $identificadorUnico = $identificadorBase; // ó $codigoProducto . '-' . ($contador + $i);
+        $identificadorUnico = $codigoProducto . '-' . ($contador + $i);
 
         $sqlHerramienta = "INSERT INTO HerramientasUnicas
             (idCodigo, fechaEntrada, estadoActual, observaciones, enInventario, identificadorUnico)
