@@ -34,6 +34,22 @@ $estado = trim($_POST['estado'] ?? '');
 $fechaRetorno = $_POST['fechaRetorno'] ?? date('Y-m-d');
 $registradoPor = (int)($_POST['registradoPor'] ?? $idRol);
 
+// Verificar si el usuario existe
+$sqlCheckUser = "SELECT COUNT(*) AS user_exists FROM Usuarios WHERE idUsuario = ?";
+$paramsCheckUser = array($registradoPor);
+$stmtCheckUser = sqlsrv_query($conn, $sqlCheckUser, $paramsCheckUser);
+
+if ($stmtCheckUser === false) {
+    echo json_encode(['success' => false, 'message' => 'Error al verificar usuario']);
+    exit();
+}
+
+$userCheck = sqlsrv_fetch_array($stmtCheckUser, SQLSRV_FETCH_ASSOC);
+if ($userCheck['user_exists'] == 0) {
+    echo json_encode(['success' => false, 'message' => 'Usuario no válido: ' . $registradoPor]);
+    exit();
+}
+
 if (empty($idHerramienta)) {
     echo json_encode(['success' => false, 'message' => 'ID de herramienta requerido']); exit();
 }

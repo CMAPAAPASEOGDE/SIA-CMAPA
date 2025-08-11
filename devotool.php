@@ -223,7 +223,7 @@ $(function () {
       observaciones: $('#observaciones').val(),
       estado: estado,
       fechaRetorno: $('#fecha').val(),
-      registradoPor: <?= (int)($_SESSION['rol'] ?? 0) ?>  // idRol
+      registradoPor: <?= (int)($_SESSION['user_id'] ?? 0) ?>  // idRol
     };
 
     $('#btnConfirm').prop('disabled', true);
