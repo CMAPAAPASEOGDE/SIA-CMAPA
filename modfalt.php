@@ -2,19 +2,43 @@
 // Iniciar sesión
 session_start();
 
-// Verificar si el usuario está autenticado
+// Autenticación
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
 
-// Verificar el rol del usuario
+// Rol permitido (1 y 2, como en tus otras pantallas)
 $idRol = (int)($_SESSION['rol'] ?? 0);
-if (!in_array($idRol, [1, 2])) {
+if (!in_array($idRol, [1, 2], true)) {
     header("Location: acceso_denegado.php");
     exit();
 }
+
+// Conexión SQL Server
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = [
+    "Database" => "db_sia",
+    "Uid" => "cmapADMIN",
+    "PWD" => "@siaADMN56*",
+    "Encrypt" => true,
+    "TrustServerCertificate" => false
+];
+$conn = sqlsrv_connect($serverName, $connectionOptions);
+if ($conn === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+// Cargar productos para el selector
+$productos = [];
+$sqlProd = "SELECT idCodigo, codigo, descripcion FROM Productos ORDER BY codigo";
+$stmtProd = sqlsrv_query($conn, $sqlProd);
+if ($stmtProd === false) { die(print_r(sqlsrv_errors(), true)); }
+while ($row = sqlsrv_fetch_array($stmtProd, SQLSRV_FETCH_ASSOC)) {
+    $productos[] = $row;
+}
+sqlsrv_free_stmt($stmtProd);
+sqlsrv_close($conn);
 ?>
 
 <!DOCTYPE html>
@@ -69,72 +93,121 @@ if (!in_array($idRol, [1, 2])) {
 </header>
 
 <main class="altas-container">
-    <div class="altas-title">
-        <h2>MODIFICACIONES DE INVENTARIO</h2>
-        <h3>ALTAS</h3>
+  <div class="altas-title">
+    <h2>MODIFICACIONES DE INVENTARIO</h2>
+    <h3>ALTAS</h3>
+  </div>
+
+  <form id="formAltas" class="altas-form">
+    <label for="idCodigo">CÓDIGO</label>
+    <select id="idCodigo" name="idCodigo" required>
+      <option value="">-- Selecciona un producto --</option>
+      <?php foreach ($productos as $p): ?>
+        <option
+          value="<?= (int)$p['idCodigo'] ?>"
+          data-codigo="<?= htmlspecialchars($p['codigo'], ENT_QUOTES, 'UTF-8') ?>"
+          data-desc="<?= htmlspecialchars($p['descripcion'], ENT_QUOTES, 'UTF-8') ?>"
+        >
+          <?= htmlspecialchars($p['codigo'], ENT_QUOTES, 'UTF-8') ?> — <?= htmlspecialchars($p['descripcion'], ENT_QUOTES, 'UTF-8') ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+
+    <label for="codigoVista">CÓDIGO SELECCIONADO</label>
+    <input type="text" id="codigoVista" value="" readonly>
+
+    <label for="motivo">MOTIVO DE LA ALTA</label>
+    <textarea id="motivo" name="motivo" rows="5" required></textarea>
+
+    <div class="altas-row">
+      <div class="altas-column">
+        <label for="cantidad">CANTIDAD</label>
+        <input type="number" id="cantidad" name="cantidad" min="1" step="1" required>
+      </div>
+      <div class="altas-column">
+        <label for="fechaVista">FECHA DE SOLICITUD</label>
+        <input type="date" id="fechaVista" value="<?= date('Y-m-d') ?>" readonly>
+        <!-- la fecha real la pondrá el servidor; este campo es solo informativo -->
+      </div>
     </div>
-    <form class="altas-form">
-        <label for="codigo">CÓDIGO</label>
-        <input type="text" id="codigo" name="codigo" value="">
-        <label for="motivo">MOTIVO DE LA ALTA</label>
-        <textarea id="motivo" name="motivo" rows="5"></textarea>
-        <div class="altas-row">
-            <div class="altas-column">
-                <label for="cantidad">CANTIDAD</label>
-                <input type="number" id="cantidad" name="cantidad" value="0">
-            </div>
-            <div class="altas-column">
-                <label for="fecha">FECHA DE SOLICITUD</label>
-                <input type="date" id="fecha" name="fecha" value="">
-            </div>
-        </div>
-        <div class="altas-buttons">
-            <a href="modif.php"><button type="button" class="btn">CANCELAR</button></a>
-            <a href="#"><button type="button" class="btn">CONFIRMAR</button></a>
-        </div>
-    </form>
+
+    <div class="altas-buttons">
+      <a href="modif.php"><button type="button" class="btn">CANCELAR</button></a>
+      <button type="submit" class="btn">CONFIRMAR</button>
+    </div>
+  </form>
 </main>
 
-
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-  const toggle = document.getElementById('menu-toggle');
-  const dropdown = document.getElementById('dropdown-menu');
-  toggle.addEventListener('click', () => {
-    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
-  });
-  window.addEventListener('click', (e) => {
-    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
-      dropdown.style.display = 'none';
-    }
-  });
-</script>
+// Menús (igual que tus otras páginas)
+const toggle = document.getElementById('menu-toggle');
+const dropdown = document.getElementById('dropdown-menu');
+toggle.addEventListener('click', () => {
+  dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+});
+window.addEventListener('click', (e) => {
+  if (!toggle.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
+});
+const userToggle = document.getElementById('user-toggle');
+const userDropdown = document.getElementById('user-dropdown');
+userToggle.addEventListener('click', () => {
+  userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+});
+window.addEventListener('click', (e) => {
+  if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) userDropdown.style.display = 'none';
+});
+const notifToggle = document.getElementById('notif-toggle');
+const notifDropdown = document.getElementById('notif-dropdown');
+notifToggle.addEventListener('click', () => {
+  notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
+});
+window.addEventListener('click', (e) => {
+  if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) notifDropdown.style.display = 'none';
+});
 
-<script>
-  const userToggle = document.getElementById('user-toggle');
-  const userDropdown = document.getElementById('user-dropdown');
-  userToggle.addEventListener('click', () => {
-    userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
-  });
+// UX: muestra código seleccionado
+$('#idCodigo').on('change', function () {
+  const sel = $(this).find('option:selected');
+  $('#codigoVista').val(sel.data('codigo') || '');
+});
 
-  // Cerrar el menú al hacer clic fuera
-  window.addEventListener('click', (e) => {
-    if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
-      userDropdown.style.display = 'none';
-    }
-  });
-</script>
+// Envío
+$('#formAltas').on('submit', function (e) {
+  e.preventDefault();
 
-<script>
-  const notifToggle = document.getElementById('notif-toggle');
-  const notifDropdown = document.getElementById('notif-dropdown');
-  notifToggle.addEventListener('click', () => {
-    notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
-  });
-  window.addEventListener('click', (e) => {
-    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
-      notifDropdown.style.display = 'none';
+  const idCodigo = $('#idCodigo').val();
+  const motivo   = $('#motivo').val().trim();
+  const cantidad = parseInt($('#cantidad').val(), 10);
+
+  if (!idCodigo || !motivo || !cantidad || cantidad <= 0) {
+    alert('Completa código, motivo y una cantidad válida (>0).');
+    return;
+  }
+
+  $.ajax({
+    type: 'POST',
+    url: 'procesar_modfalt.php',
+    data: {
+      idCodigo: idCodigo,
+      descripcion: motivo,        // se guarda en Notificaciones.descripcion
+      cantidad: cantidad
+      // fecha la pone el servidor con SYSDATETIME()
+      // solicitudRevisada = 0 por defecto
+      // idRol se toma del servidor (sesión)
+    },
+    dataType: 'json'
+  }).done(function(resp){
+    if (resp && resp.success) {
+      alert('Solicitud enviada a administración.');
+      window.location.href = 'modif.php';
+    } else {
+      alert('Error: ' + (resp.message || 'No se pudo registrar la solicitud'));
     }
+  }).fail(function(){
+    alert('Error al enviar la solicitud.');
   });
+});
 </script>
 </body>
 </html>
