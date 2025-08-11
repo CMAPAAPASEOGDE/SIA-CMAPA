@@ -104,12 +104,12 @@ sqlsrv_close($conn);
 
   <form id="devolucionForm" class="devolucion-form">
     <!-- Identificador -->
-    <label for="codigo">IDENTIFICADOR (identificadorUnico)</label>
+    <label for="codigo">IDENTIFICADOR</label>
     <select id="codigo" name="idHerramienta" required>
       <option value="">-- Selecciona una herramienta prestada --</option>
       <?php foreach ($herramientas as $h): ?>
         <option
-          value="<?= htmlspecialchars($h['idHerramienta']) ?>"  <!-- GUID como texto -->
+          value="<?= htmlspecialchars($h['idHerramienta']) ?>"
           data-ident="<?= htmlspecialchars($h['identificadorUnico']) ?>"
           data-idcodigo="<?= (int)$h['idCodigo'] ?>"
           data-codigo="<?= htmlspecialchars($h['codigo']) ?>"
