@@ -230,7 +230,7 @@ $(function () {
 
     $.ajax({
       type: 'POST',
-      url: 'procesar_devolucion.php',
+      url: 'php/procesar_devolucion.php',
       data: formData,
       dataType: 'json'
     }).done(function(response) {
