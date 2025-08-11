@@ -5,7 +5,6 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Conexión a la base de datos
 $serverName = "sqlserver-sia.database.windows.net";
 $connOpts = [
     "Database" => "db_sia",
@@ -15,89 +14,84 @@ $connOpts = [
     "TrustServerCertificate" => false
 ];
 $conn = sqlsrv_connect($serverName, $connOpts);
-if ($conn === false) {
-    die(print_r(sqlsrv_errors(), true));
-}
+if ($conn === false) die(print_r(sqlsrv_errors(), true));
 
-// Recibir datos del formulario
-$idCodigo = (int)$_POST['idCodigo'];
-$idProveedor = (int)$_POST['idProveedor'];
-$cantidad = (int)$_POST['cantidad'];
-$fecha = $_POST['fecha'];
-$idCaja = 1;
-$ubicacion = "Almacen";
+$idCodigo    = (int)($_POST['idCodigo'] ?? 0);
+$idProveedor = (int)($_POST['idProveedor'] ?? 0);
+$cantidad    = (int)($_POST['cantidad'] ?? 0);
+$fecha       = $_POST['fecha'] ?? date('Y-m-d H:i:s');
+$idCaja      = 1;
+$ubicacion   = "Almacen";
 
-// Obtener código y tipo del producto
+$fechaParam = date('Y-m-d H:i:s', strtotime($fecha));
+
+// 0) Info del producto
 $sqlInfo = "SELECT codigo, tipo FROM Productos WHERE idCodigo = ?";
 $stmtInfo = sqlsrv_query($conn, $sqlInfo, [$idCodigo]);
-if ($stmtInfo === false) {
-    die(print_r(sqlsrv_errors(), true));
-}
+if ($stmtInfo === false) die(print_r(sqlsrv_errors(), true));
 $rowInfo = sqlsrv_fetch_array($stmtInfo, SQLSRV_FETCH_ASSOC);
-if (!$rowInfo) {
-    die("Producto no encontrado.");
-}
-$codigoProducto = $rowInfo['codigo'];
-$esHerramienta = ($tipo === 'herramienta' || $tipo === 'herramientas');
+if (!$rowInfo) die("Producto no encontrado.");
 
-// 1. Insertar en Entradas
+$codigoProducto = $rowInfo['codigo'];
+$tipo           = strtolower(trim($rowInfo['tipo'] ?? ''));
+$esHerramienta  = in_array($tipo, ['herramienta','herramientas'], true);
+
+// Transacción
+if (!sqlsrv_begin_transaction($conn)) die(print_r(sqlsrv_errors(), true));
+
+// 1) Entradas
 $sqlEntrada = "INSERT INTO Entradas (idCodigo, idProveedor, cantidad, fecha)
                VALUES (?, ?, ?, ?)";
-$paramsEntrada = [$idCodigo, $idProveedor, $cantidad, $fecha];
+$paramsEntrada = [$idCodigo, $idProveedor, $cantidad, $fechaParam];
 $stmtEntrada = sqlsrv_query($conn, $sqlEntrada, $paramsEntrada);
-if ($stmtEntrada === false) {
-    die(print_r(sqlsrv_errors(), true));
-}
+if ($stmtEntrada === false) { sqlsrv_rollback($conn); die(print_r(sqlsrv_errors(), true)); }
 
-// 2. Insertar herramientas únicas con identificadorUnico (si aplica)
-if ($esHerramienta) {
-    $sqlContador = "SELECT COUNT(*) AS total FROM HerramientasUnicas WHERE idCodigo = ?";
-    $stmtContador = sqlsrv_query($conn, $sqlContador, [$idCodigo]);
-    if ($stmtContador === false) {
-        die(print_r(sqlsrv_errors(), true));
-    }
-    $rowContador = sqlsrv_fetch_array($stmtContador, SQLSRV_FETCH_ASSOC);
-    $contador = (int)$rowContador['total'];
+// 2) Herramientas únicas (si aplica)
+if ($esHerramienta && $cantidad > 0) {
+
+    $identificadorBase = $codigoProducto; // Lo que pediste: guardar el código
+
+    // --- Alternativa única incremental (si la necesitas):
+    // $sqlContador = "SELECT COUNT(*) AS total FROM HerramientasUnicas WHERE idCodigo = ?";
+    // $stmtContador = sqlsrv_query($conn, $sqlContador, [$idCodigo]);
+    // if ($stmtContador === false) { sqlsrv_rollback($conn); die(print_r(sqlsrv_errors(), true)); }
+    // $rowContador = sqlsrv_fetch_array($stmtContador, SQLSRV_FETCH_ASSOC);
+    // $contador = (int)($rowContador['total'] ?? 0);
 
     for ($i = 1; $i <= $cantidad; $i++) {
-        $identificadorUnico = $codigoProducto . '-' . ($contador + $i);
-        $sqlHerramienta = "INSERT INTO HerramientasUnicas (idCodigo, fechaEntrada, estadoActual, observaciones, enInventario, identificadorUnico)
-                           VALUES (?, ?, 'Funcional', 'Nueva herramienta', 1, ?)";
-        $paramsHerramienta = [$idCodigo, $fecha, $identificadorUnico];
+        $identificadorUnico = $identificadorBase; // ó $codigoProducto . '-' . ($contador + $i);
+
+        $sqlHerramienta = "INSERT INTO HerramientasUnicas
+            (idCodigo, fechaEntrada, estadoActual, observaciones, enInventario, identificadorUnico)
+            VALUES (?, ?, 'Funcional', 'Nueva herramienta', 1, ?)";
+        $paramsHerramienta = [$idCodigo, $fechaParam, $identificadorUnico];
         $stmtHerramienta = sqlsrv_query($conn, $sqlHerramienta, $paramsHerramienta);
         if ($stmtHerramienta === false) {
+            sqlsrv_rollback($conn);
             die(print_r(sqlsrv_errors(), true));
         }
     }
 }
 
-// 3. Insertar o actualizar Inventario
+// 3) Inventario (upsert)
 $sql = "SELECT cantidadActual FROM Inventario WHERE idCodigo = ?";
 $stmt = sqlsrv_query($conn, $sql, [$idCodigo]);
-if ($stmt === false) {
-    die(print_r(sqlsrv_errors(), true));
-}
+if ($stmt === false) { sqlsrv_rollback($conn); die(print_r(sqlsrv_errors(), true)); }
 
 $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
-
 if ($row) {
-    $nueva = $row['cantidadActual'] + $cantidad;
-    $sqlUpdate = "UPDATE Inventario SET cantidadActual = ?, ultimaActualizacion = ?
-                  WHERE idCodigo = ?";
-    $stmtUpdate = sqlsrv_query($conn, $sqlUpdate, [$nueva, $fecha, $idCodigo]);
-    if ($stmtUpdate === false) {
-        die(print_r(sqlsrv_errors(), true));
-    }
+    $nueva = (int)$row['cantidadActual'] + $cantidad;
+    $sqlUpdate = "UPDATE Inventario SET cantidadActual = ?, ultimaActualizacion = ? WHERE idCodigo = ?";
+    $stmtUpdate = sqlsrv_query($conn, $sqlUpdate, [$nueva, $fechaParam, $idCodigo]);
+    if ($stmtUpdate === false) { sqlsrv_rollback($conn); die(print_r(sqlsrv_errors(), true)); }
 } else {
     $sqlInsert = "INSERT INTO Inventario (idCodigo, idCaja, cantidadActual, ubicacion, ultimaActualizacion)
                   VALUES (?, ?, ?, ?, ?)";
-    $stmtInsert = sqlsrv_query($conn, $sqlInsert, [$idCodigo, $idCaja, $cantidad, $ubicacion, $fecha]);
-    if ($stmtInsert === false) {
-        die(print_r(sqlsrv_errors(), true));
-    }
+    $stmtInsert = sqlsrv_query($conn, $sqlInsert, [$idCodigo, $idCaja, $cantidad, $ubicacion, $fechaParam]);
+    if ($stmtInsert === false) { sqlsrv_rollback($conn); die(print_r(sqlsrv_errors(), true)); }
 }
 
-// 4. Redirección de confirmación
+sqlsrv_commit($conn);
+
 header("Location: ../admnedtetcf.php");
 exit();
-?>
