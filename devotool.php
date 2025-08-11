@@ -237,11 +237,12 @@ $(function () {
       if (response && response.success) {
         window.location.href = 'devtlcnf.php';
       } else {
-        window.location.href = 'devtlerr.php';
+        // Mostrar error detallado
+        alert('Error: ' + (response.message || 'Error desconocido'));
+        $('#btnConfirm').prop('disabled', false);
       }
-    }).fail(function() {
-      window.location.href = 'devtlerr.php';
-    }).always(function() {
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+      alert('Error en la solicitud: ' + textStatus + ', ' + errorThrown);
       $('#btnConfirm').prop('disabled', false);
     });
   });
