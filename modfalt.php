@@ -187,7 +187,7 @@ $('#formAltas').on('submit', function (e) {
 
   $.ajax({
     type: 'POST',
-    url: 'procesar_modfalt.php',
+    url: 'php/procesar_modfalt.php',
     data: {
       idCodigo: idCodigo,
       descripcion: motivo,        // se guarda en Notificaciones.descripcion
