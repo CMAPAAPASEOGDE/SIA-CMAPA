@@ -35,6 +35,8 @@ if ($conn === false) {
 }
 
 // Insert en Notificaciones
+$destinoRol = 1;
+
 $sql = "INSERT INTO Notificaciones (idRol, descripcion, fecha, solicitudRevisada, cantidad, idCodigo)
         VALUES (?, ?, SYSDATETIME(), 0, ?, ?)";
 $params = [$idRol, $descripcion, $cantidad, $idCodigo];
