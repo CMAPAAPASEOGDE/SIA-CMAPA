@@ -12,23 +12,20 @@ if (!in_array($idRol, [1, 2])) {
     exit();
 }
 
-// Mostrar mensajes de éxito/error
+// Mensajes flash
 if (isset($_SESSION['success'])) {
     echo '<div class="success-message">' . htmlspecialchars($_SESSION['success']) . '</div>';
     unset($_SESSION['success']);
 }
-
 if (isset($_SESSION['error'])) {
     echo '<div class="error-message">' . htmlspecialchars($_SESSION['error']) . '</div>';
     unset($_SESSION['error']);
 }
-
-// Mostrar mensaje de caja eliminada
 if (isset($_GET['msg']) && $_GET['msg'] === 'caja_eliminada') {
     echo '<div class="success-message">¡Caja eliminada correctamente! Los productos han sido devueltos al inventario.</div>';
 }
 
-// Conexión a la base de datos
+// Conexión SQL Server
 $serverName = "sqlserver-sia.database.windows.net";
 $connectionOptions = [
     "Database" => "db_sia",
@@ -42,40 +39,53 @@ if ($conn === false) {
     die(print_r(sqlsrv_errors(), true));
 }
 
-if ($conn) {
-    if ($rolActual === 1) {
-        // ADMIN: ver SOLO las destinadas a admin (idRol = 1)
-        $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = 1");
-        $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
-                                          FROM Notificaciones
-                                          WHERE solicitudRevisada = 0 AND idRol = 1
-                                          ORDER BY fecha DESC");
-    } else {
-        // USUARIO: ver SOLO las destinadas a su rol (p. ej. 2)
-        $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = ?", [$rolActual]);
-        $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
-                                          FROM Notificaciones
-                                          WHERE solicitudRevisada = 0 AND idRol = ?
-                                          ORDER BY fecha DESC", [$rolActual]);
-    }
+/* ================================
+   NOTIFICACIONES (para el header)
+   ================================ */
+$rolActual   = (int)($_SESSION['rol'] ?? 0);
+$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
+$unreadCount = 0;
+$notifList   = [];
 
-    if ($stmtCount) {
-        $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
-        $unreadCount = (int)($row['c'] ?? 0);
-        sqlsrv_free_stmt($stmtCount);
-    }
+// Admin ve SOLO notificaciones destinadas a admin (idRol=1).
+// Usuario ve SOLO las destinadas a su rol.
+if ($rolActual === 1) {
+    $sqlCount = "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = 1";
+    $stmtCount = sqlsrv_query($conn, $sqlCount);
 
-    if ($stmtList) {
-        while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
-            $notifList[] = $r;
-        }
-        sqlsrv_free_stmt($stmtList);
-    }
+    $sqlList = "SELECT TOP 10 idNotificacion, descripcion, fecha
+                FROM Notificaciones
+                WHERE solicitudRevisada = 0 AND idRol = 1
+                ORDER BY fecha DESC";
+    $stmtList = sqlsrv_query($conn, $sqlList);
+} else {
+    $sqlCount = "SELECT COUNT(*) AS c
+                 FROM Notificaciones
+                 WHERE solicitudRevisada = 0 AND idRol = ?";
+    $stmtCount = sqlsrv_query($conn, $sqlCount, [$rolActual]);
 
-    sqlsrv_close($conn);
+    $sqlList = "SELECT TOP 10 idNotificacion, descripcion, fecha
+                FROM Notificaciones
+                WHERE solicitudRevisada = 0 AND idRol = ?
+                ORDER BY fecha DESC";
+    $stmtList = sqlsrv_query($conn, $sqlList, [$rolActual]);
 }
 
-// Obtener cajas y nombres de operadores, excluyendo caja 000
+if ($stmtCount !== false) {
+    $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
+    $unreadCount = (int)($row['c'] ?? 0);
+    sqlsrv_free_stmt($stmtCount);
+}
+if ($stmtList !== false) {
+    while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
+        $notifList[] = $r; // -> idNotificacion, descripcion, fecha
+    }
+    sqlsrv_free_stmt($stmtList);
+}
+
+/* ================================
+   Consulta de Cajas (tu lógica)
+   ================================ */
 $sql = "SELECT C.numeroCaja, O.nombreCompleto AS nombreOperador, C.idCaja
         FROM CajaRegistro C
         INNER JOIN Operativo O ON C.idOperador = O.idOperador
@@ -84,12 +94,6 @@ $result = sqlsrv_query($conn, $sql);
 if ($result === false) {
     die(print_r(sqlsrv_errors(), true));
 }
-
-$rolActual   = (int)($_SESSION['rol'] ?? 0);
-$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
-
-$unreadCount = 0;
-$notifList   = [];
 ?>
 
 <!DOCTYPE html>
