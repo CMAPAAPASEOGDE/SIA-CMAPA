@@ -4,28 +4,69 @@ session_start();
 
 // Verificar si el usuario está autenticado
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
 
 // Conectar a la base de datos
 $serverName = "sqlserver-sia.database.windows.net";
-$connectionOptions = array(
+$connectionOptions = [
     "Database" => "db_sia",
     "Uid" => "cmapADMIN",
     "PWD" => "@siaADMN56*",
     "Encrypt" => true,
     "TrustServerCertificate" => false
-);
-
+];
 $conn = sqlsrv_connect($serverName, $connectionOptions);
-
 if ($conn === false) {
     die("Error de conexión: " . print_r(sqlsrv_errors(), true));
 }
 
-// Consulta para obtener datos del inventario
+// ============================
+// NOTIFICACIONES (para header)
+// ============================
+$rolActual   = (int)($_SESSION['rol'] ?? 0);
+$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php'; // úsalo en el header
+$unreadCount = 0;
+$notifList   = [];
+
+// Admin ve SOLO notifs destinadas a admin (idRol = 1)
+// Usuario ve SOLO notifs destinadas a su rol (idRol = rolActual)
+if ($rolActual === 1) {
+    $sqlCount = "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = 1";
+    $stmtCount = sqlsrv_query($conn, $sqlCount);
+
+    $sqlList = "SELECT TOP 10 idNotificacion, descripcion, fecha
+                FROM Notificaciones
+                WHERE solicitudRevisada = 0 AND idRol = 1
+                ORDER BY fecha DESC";
+    $stmtList = sqlsrv_query($conn, $sqlList);
+} else {
+    $sqlCount = "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = ?";
+    $stmtCount = sqlsrv_query($conn, $sqlCount, [$rolActual]);
+
+    $sqlList = "SELECT TOP 10 idNotificacion, descripcion, fecha
+                FROM Notificaciones
+                WHERE solicitudRevisada = 0 AND idRol = ?
+                ORDER BY fecha DESC";
+    $stmtList = sqlsrv_query($conn, $sqlList, [$rolActual]);
+}
+
+if ($stmtCount !== false) {
+    $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
+    $unreadCount = (int)($row['c'] ?? 0);
+    sqlsrv_free_stmt($stmtCount);
+}
+if ($stmtList !== false) {
+    while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
+        $notifList[] = $r; // cada $r tiene: idNotificacion, descripcion, fecha
+    }
+    sqlsrv_free_stmt($stmtList);
+}
+
+// ============================
+// CONSULTA INVENTARIO (igual)
+// ============================
 $sql = "SELECT 
             p.codigo, 
             p.descripcion, 
@@ -45,14 +86,15 @@ $sql = "SELECT
             END AS estado
         FROM Productos p
         INNER JOIN Inventario i ON p.idCodigo = i.idCodigo";
-
 $stmt = sqlsrv_query($conn, $sql);
-
 if ($stmt === false) {
     die("Error en la consulta: " . print_r(sqlsrv_errors(), true));
 }
 
-// Obtener el rol del usuario
+// (si luego NO usarás más la conexión, puedes cerrarla aquí)
+// sqlsrv_close($conn);
+
+// Rol del usuario por si lo necesitas abajo
 $idRol = (int)$_SESSION['rol'];
 ?>
 
