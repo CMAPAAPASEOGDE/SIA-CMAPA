@@ -111,6 +111,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 }
+
+$rolActual   = (int)($_SESSION['rol'] ?? 0);
+$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
+
+$unreadCount = 0;
+$notifList   = [];
+
+if ($conn) {
+    if ($rolActual === 1) {
+        // ADMIN: ver SOLO las destinadas a admin (idRol = 1)
+        $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = 1");
+        $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
+                                          FROM Notificaciones
+                                          WHERE solicitudRevisada = 0 AND idRol = 1
+                                          ORDER BY fecha DESC");
+    } else {
+        // USUARIO: ver SOLO las destinadas a su rol (p. ej. 2)
+        $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = ?", [$rolActual]);
+        $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
+                                          FROM Notificaciones
+                                          WHERE solicitudRevisada = 0 AND idRol = ?
+                                          ORDER BY fecha DESC", [$rolActual]);
+    }
+
+    if ($stmtCount) {
+        $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
+        $unreadCount = (int)($row['c'] ?? 0);
+        sqlsrv_free_stmt($stmtCount);
+    }
+
+    if ($stmtList) {
+        while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
+            $notifList[] = $r;
+        }
+        sqlsrv_free_stmt($stmtList);
+    }
+
+    sqlsrv_close($conn);
+}
 ?>
 
 <!DOCTYPE html>
