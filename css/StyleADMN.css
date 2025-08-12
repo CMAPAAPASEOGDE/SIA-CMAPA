@@ -22,6 +22,10 @@ header {
   align-items: center;
   padding: 0 10px;
   position: sticky;
+  top: 0;
+  color: white;
+  padding: 1rem;
+  z-index: 1000;
 }
 
 /* agrupa logo + título */
