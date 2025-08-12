@@ -2,48 +2,47 @@
 // Iniciar sesión
 session_start();
 
-$isAdmin = isset($_SESSION['rol']) && (int)$_SESSION['rol'] === 1;
+$rolActual = (int)($_SESSION['rol'] ?? 0);
+$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php'; // <-- ajusta el destino de usuarios
 
 $unreadCount = 0;
 $notifList   = [];
 
-if ($isAdmin) {
-    // Conexión SQL Server (misma que usas en el proyecto)
-    $serverName = "sqlserver-sia.database.windows.net";
-    $connectionOptions = [
-        "Database" => "db_sia",
-        "Uid" => "cmapADMIN",
-        "PWD" => "@siaADMN56*",
-        "Encrypt" => true,
-        "TrustServerCertificate" => false
-    ];
-    $conn = sqlsrv_connect($serverName, $connectionOptions);
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = [
+    "Database" => "db_sia",
+    "Uid" => "cmapADMIN",
+    "PWD" => "@siaADMN56*",
+    "Encrypt" => true,
+    "TrustServerCertificate" => false
+];
+$conn = sqlsrv_connect($serverName, $connectionOptions);
 
-    if ($conn) {
-        // Contador de no leídas (NO filtramos por idRol para que admin vea todas las solicitudes)
-        $sqlCount = "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0";
-        $stmtCount = sqlsrv_query($conn, $sqlCount);
-        if ($stmtCount) {
-            $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
-            $unreadCount = (int)($row['c'] ?? 0);
-            sqlsrv_free_stmt($stmtCount);
-        }
-
-        // Últimas 10 no leídas para el menú
-        $sqlList = "SELECT TOP 10 idNotificacion, descripcion, fecha
-                    FROM Notificaciones
-                    WHERE solicitudRevisada = 0
-                    ORDER BY fecha DESC";
-        $stmtList = sqlsrv_query($conn, $sqlList);
-        if ($stmtList) {
-            while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
-                $notifList[] = $r;
-            }
-            sqlsrv_free_stmt($stmtList);
-        }
-
-        sqlsrv_close($conn);
+if ($conn) {
+    // Solo notificaciones destinadas al ROL del usuario (admin o usuario)
+    $sqlCount = "SELECT COUNT(*) AS c
+                 FROM Notificaciones
+                 WHERE solicitudRevisada = 0 AND idRol = ?";
+    $stmtCount = sqlsrv_query($conn, $sqlCount, [$rolActual]);
+    if ($stmtCount) {
+        $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
+        $unreadCount = (int)($row['c'] ?? 0);
+        sqlsrv_free_stmt($stmtCount);
     }
+
+    $sqlList = "SELECT TOP 10 idNotificacion, descripcion, fecha
+                FROM Notificaciones
+                WHERE solicitudRevisada = 0 AND idRol = ?
+                ORDER BY fecha DESC";
+    $stmtList = sqlsrv_query($conn, $sqlList, [$rolActual]);
+    if ($stmtList) {
+        while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
+            $notifList[] = $r;
+        }
+        sqlsrv_free_stmt($stmtList);
+    }
+
+    sqlsrv_close($conn);
 }
 
 // Verificar si el usuario está autenticado
@@ -73,9 +72,8 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
   </div>
-  <div class="header-right">
 
-    <?php if ($isAdmin): ?>
+  <div class="header-right">
     <div class="notification-container">
       <button class="icon-btn" id="notif-toggle" type="button" aria-label="Notificaciones">
         <img
@@ -87,38 +85,32 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 
       <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
         <?php if ($unreadCount === 0): ?>
-          <div class="notif-empty">No hay notificaciones nuevas.</div>
+          <div class="notif-empty" style="padding:10px;">No hay notificaciones nuevas.</div>
         <?php else: ?>
-          <ul class="notif-list" style="list-style:none; margin:0; padding:0;">
+          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
             <?php foreach ($notifList as $n): ?>
               <li class="notif-item"
                   style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  onclick="window.location.href='admnrqst.php'">
+                  onclick="window.location.href='<?= $notifTarget ?>'">
                 <div class="notif-desc" style="font-size:0.95rem;">
                   <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                 </div>
                 <div class="notif-date" style="font-size:0.8rem; opacity:0.7;">
                   <?php
                     $f = $n['fecha'];
-                    // sqlsrv devuelve DateTime; si viene string, intenta formatear igual
-                    if ($f instanceof DateTime) {
-                      echo $f->format('Y-m-d H:i');
-                    } else {
-                      $dt = @date_create(is_string($f) ? $f : 'now');
-                      echo $dt ? $dt->format('Y-m-d H:i') : '';
-                    }
+                    if ($f instanceof DateTime) echo $f->format('Y-m-d H:i');
+                    else { $dt = @date_create(is_string($f) ? $f : 'now'); echo $dt ? $dt->format('Y-m-d H:i') : ''; }
                   ?>
                 </div>
               </li>
             <?php endforeach; ?>
           </ul>
           <div style="padding:8px 10px;">
-            <button type="button" class="btn" onclick="window.location.href='admnrqst.php'">Ver todas</button>
+            <button type="button" class="btn" onclick="window.location.href='<?= $notifTarget ?>'">Ver todas</button>
           </div>
         <?php endif; ?>
       </div>
     </div>
-    <?php endif; ?>
 
     <p><?= htmlspecialchars($_SESSION['usuario'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
 
@@ -133,7 +125,6 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
       </div>
     </div>
 
-    <!-- botón hamburguesa -->
     <div class="menu-container">
       <button class="icon-btn" id="menu-toggle" type="button">
         <img src="img/menu.png" alt="Menú" />
@@ -147,10 +138,8 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
         <a href="logout.php">Cerrar Sesion</a>
       </div>
     </div>
-
   </div>
 </header>
-
 
 <main class="menu">
   <div class="card">
