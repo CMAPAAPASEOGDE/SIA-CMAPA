@@ -1,8 +1,13 @@
 <?php
-// Iniciar sesión
 session_start();
 
-$rolActual = (int)($_SESSION['rol'] ?? 0);
+// Verificar sesión
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    header("Location: index.php");
+    exit();
+}
+
+$rolActual   = (int)($_SESSION['rol'] ?? 0);
 $notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
 
 $unreadCount = 0;
@@ -20,27 +25,19 @@ $conn = sqlsrv_connect($serverName, $connectionOptions);
 
 if ($conn) {
     if ($rolActual === 1) {
-        // ADMIN: ve todas las no leídas (aunque se hayan insertado con idRol=2)
-        $sqlCount = "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0";
-        $stmtCount = sqlsrv_query($conn, $sqlCount);
-
-        $sqlList = "SELECT TOP 10 idNotificacion, descripcion, fecha
-                    FROM Notificaciones
-                    WHERE solicitudRevisada = 0
-                    ORDER BY fecha DESC";
-        $stmtList = sqlsrv_query($conn, $sqlList);
+        // ADMIN: ver SOLO las destinadas a admin (idRol = 1)
+        $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = 1");
+        $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
+                                          FROM Notificaciones
+                                          WHERE solicitudRevisada = 0 AND idRol = 1
+                                          ORDER BY fecha DESC");
     } else {
-        // USUARIO: sólo las dirigidas a su rol
-        $sqlCount = "SELECT COUNT(*) AS c
-                     FROM Notificaciones
-                     WHERE solicitudRevisada = 0 AND idRol = ?";
-        $stmtCount = sqlsrv_query($conn, $sqlCount, [$rolActual]);
-
-        $sqlList = "SELECT TOP 10 idNotificacion, descripcion, fecha
-                    FROM Notificaciones
-                    WHERE solicitudRevisada = 0 AND idRol = ?
-                    ORDER BY fecha DESC";
-        $stmtList = sqlsrv_query($conn, $sqlList, [$rolActual]);
+        // USUARIO: ver SOLO las destinadas a su rol (p. ej. 2)
+        $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = ?", [$rolActual]);
+        $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
+                                          FROM Notificaciones
+                                          WHERE solicitudRevisada = 0 AND idRol = ?
+                                          ORDER BY fecha DESC", [$rolActual]);
     }
 
     if ($stmtCount) {
@@ -48,6 +45,7 @@ if ($conn) {
         $unreadCount = (int)($row['c'] ?? 0);
         sqlsrv_free_stmt($stmtCount);
     }
+
     if ($stmtList) {
         while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
             $notifList[] = $r;
@@ -56,12 +54,6 @@ if ($conn) {
     }
 
     sqlsrv_close($conn);
-}
-
-// Verificar sesión
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    header("Location: index.php");
-    exit();
 }
 ?>
 

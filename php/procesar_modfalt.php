@@ -39,7 +39,7 @@ $destinoRol = 1;
 
 $sql = "INSERT INTO Notificaciones (idRol, descripcion, fecha, solicitudRevisada, cantidad, idCodigo)
         VALUES (?, ?, SYSDATETIME(), 0, ?, ?)";
-$params = [$idRol, $descripcion, $cantidad, $idCodigo];
+$params = [$destinoRol, $idRol, $descripcion, $cantidad, $idCodigo];
 $stmt = sqlsrv_query($conn, $sql, $params);
 
 if ($stmt === false) {
