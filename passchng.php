@@ -159,30 +159,64 @@ if ($conn) {
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
   </div>
+
   <div class="header-right">
     <div class="notification-container">
-      <button class="icon-btn" id="notif-toggle">
-        <img src="img/bell.png" class="imgh3" alt="Notificaciones" />
+      <button class="icon-btn" id="notif-toggle" type="button" aria-label="Notificaciones">
+        <img
+          src="<?= $unreadCount > 0 ? 'img/belldot.png' : 'img/bell.png' ?>"
+          class="imgh3"
+          alt="Notificaciones"
+        />
       </button>
-      <div class="notification-dropdown" id="notif-dropdown"></div>
-    </div>
-    <p> <?= $_SESSION['usuario'] ?> </p>
-    <div class="user-menu-container">
-      <button class="icon-btn" id="user-toggle">
-        <img src="img/userB.png" class="imgh2" alt="Usuario" />
-      </button>
-      <div class="user-dropdown" id="user-dropdown">
-        <p><strong>Usuario:</strong> <?= $_SESSION[ 'rol' ]?></p>
-        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'])?></p>
-        <a href="passchng.php"><button class="user-option">CAMBIAR CONTRASEÑA</button></a>
+
+      <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
+        <?php if ($unreadCount === 0): ?>
+          <div class="notif-empty" style="padding:10px;">No hay notificaciones nuevas.</div>
+        <?php else: ?>
+          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
+            <?php foreach ($notifList as $n): ?>
+              <li class="notif-item"
+                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
+                  onclick="window.location.href='<?= $notifTarget ?>'">
+                <div class="notif-desc" style="font-size:0.95rem;">
+                  <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+                </div>
+                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;">
+                  <?php
+                    $f = $n['fecha'];
+                    if ($f instanceof DateTime) echo $f->format('Y-m-d H:i');
+                    else { $dt = @date_create(is_string($f) ? $f : 'now'); echo $dt ? $dt->format('Y-m-d H:i') : ''; }
+                  ?>
+                </div>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+          <div style="padding:8px 10px;">
+            <button type="button" class="btn" onclick="window.location.href='<?= $notifTarget ?>'">Ver todas</button>
+          </div>
+        <?php endif; ?>
       </div>
     </div>
-    <!-- botón hamburguesa -->
+
+    <p><?= htmlspecialchars($_SESSION['usuario'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
+
+    <div class="user-menu-container">
+      <button class="icon-btn" id="user-toggle" type="button">
+        <img src="img/userB.png" class="imgh2" alt="Usuario" />
+      </button>
+      <div class="user-dropdown" id="user-dropdown" style="display:none;">
+        <p><strong>Usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
+        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
+        <a href="passchng.php"><button class="user-option" type="button">CAMBIAR CONTRASEÑA</button></a>
+      </div>
+    </div>
+
     <div class="menu-container">
-      <button class="icon-btn" id="menu-toggle">
+      <button class="icon-btn" id="menu-toggle" type="button">
         <img src="img/menu.png" alt="Menú" />
       </button>
-      <div class="dropdown" id="dropdown-menu">
+      <div class="dropdown" id="dropdown-menu" style="display:none;">
         <a href="homepage.php">Inicio</a>
         <a href="mnthclsr.php">Cierre de mes</a>
         <a href="admin.php">Menu de administador</a>
@@ -191,9 +225,8 @@ if ($conn) {
         <a href="logout.php">Cerrar Sesion</a>
       </div>
     </div>
-</div>
+  </div>
 </header>
-
 <main class="pwd-container">
   <form id="form-pass" method="POST" action="passchng.php">
     <div class="pwd-box">
