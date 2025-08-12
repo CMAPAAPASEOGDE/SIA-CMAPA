@@ -199,8 +199,7 @@ $('#formAltas').on('submit', function (e) {
     dataType: 'json'
   }).done(function(resp){
     if (resp && resp.success) {
-      alert('Solicitud enviada a administración.');
-      window.location.href = 'modif.php';
+      window.location.href = 'modfaltcnf.php';
     } else {
       alert('Error: ' + (resp.message || 'No se pudo registrar la solicitud'));
     }
