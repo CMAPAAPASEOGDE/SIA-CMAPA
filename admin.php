@@ -26,6 +26,21 @@ if ($idRol !== 1) {
     <link rel="stylesheet" href="css/StyleADMN.css">
 </head>
 
+<style>
+  body {
+    margin: 0;
+  }
+  
+  header {
+    position: sticky;
+    top: 0; /* Punto de anclaje */
+    background: #333;
+    color: white;
+    padding: 1rem;
+    z-index: 1000;
+  }
+</style>
+
 <body>
 <header>
   <div class="brand">
@@ -76,7 +91,7 @@ if ($idRol !== 1) {
     <section class="admin-menu">
         <a href="admnedt.php"><button class="admin-btn">EDITAR ELEMENTOS</button></a>
         <a href="admnusrs.php"><button class="admin-btn">ADMINISTRACIÓN DE USUARIOS</button></a>
-        <a href="admnlogs.php"><button class="admin-btn">CONFIRMAR SOLICITUD DE MODIFICACION</button></a>
+        <a href="admnrqst.php"><button class="admin-btn">SOLICITUDES DE MODIFICACION</button></a>
         <a href="admnlogs.php"><button class="admin-btn">REGISTROS DEL SISTEMA</button></a>
         <button class="admin-btn">
             <a href="https://www.outlook.com" class="btn-link">OUTLOOK</a>
