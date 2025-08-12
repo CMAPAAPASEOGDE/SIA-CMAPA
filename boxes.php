@@ -42,22 +42,6 @@ if ($conn === false) {
     die(print_r(sqlsrv_errors(), true));
 }
 
-// Obtener cajas y nombres de operadores, excluyendo caja 000
-$sql = "SELECT C.numeroCaja, O.nombreCompleto AS nombreOperador, C.idCaja
-        FROM CajaRegistro C
-        INNER JOIN Operativo O ON C.idOperador = O.idOperador
-        WHERE C.numeroCaja <> '0000'";
-$result = sqlsrv_query($conn, $sql);
-if ($result === false) {
-    die(print_r(sqlsrv_errors(), true));
-}
-
-$rolActual   = (int)($_SESSION['rol'] ?? 0);
-$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
-
-$unreadCount = 0;
-$notifList   = [];
-
 if ($conn) {
     if ($rolActual === 1) {
         // ADMIN: ver SOLO las destinadas a admin (idRol = 1)
@@ -90,6 +74,22 @@ if ($conn) {
 
     sqlsrv_close($conn);
 }
+
+// Obtener cajas y nombres de operadores, excluyendo caja 000
+$sql = "SELECT C.numeroCaja, O.nombreCompleto AS nombreOperador, C.idCaja
+        FROM CajaRegistro C
+        INNER JOIN Operativo O ON C.idOperador = O.idOperador
+        WHERE C.numeroCaja <> '0000'";
+$result = sqlsrv_query($conn, $sql);
+if ($result === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+$rolActual   = (int)($_SESSION['rol'] ?? 0);
+$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
+
+$unreadCount = 0;
+$notifList   = [];
 ?>
 
 <!DOCTYPE html>

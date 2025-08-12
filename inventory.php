@@ -21,37 +21,6 @@ $connectionOptions = array(
 
 $conn = sqlsrv_connect($serverName, $connectionOptions);
 
-if ($conn === false) {
-    die("Error de conexión: " . print_r(sqlsrv_errors(), true));
-}
-
-// Consulta para obtener datos del inventario
-$sql = "SELECT 
-            p.codigo, 
-            p.descripcion, 
-            p.linea, 
-            p.sublinea, 
-            i.cantidadActual AS cantidad, 
-            p.unidad, 
-            p.precio, 
-            p.puntoReorden, 
-            p.stockMaximo, 
-            p.tipo,
-            CASE 
-                WHEN i.cantidadActual = 0 THEN 'Fuera de stock'
-                WHEN i.cantidadActual <= p.puntoReorden THEN 'Bajo stock'
-                WHEN i.cantidadActual >= p.stockMaximo THEN 'Sobre stock'
-                ELSE 'En stock'
-            END AS estado
-        FROM Productos p
-        INNER JOIN Inventario i ON p.idCodigo = i.idCodigo";
-
-$stmt = sqlsrv_query($conn, $sql);
-
-if ($stmt === false) {
-    die("Error en la consulta: " . print_r(sqlsrv_errors(), true));
-}
-
 // Obtener el rol del usuario
 $idRol = (int)$_SESSION['rol'];
 
@@ -92,6 +61,37 @@ if ($conn) {
     }
 
     sqlsrv_close($conn);
+}
+
+if ($conn === false) {
+    die("Error de conexión: " . print_r(sqlsrv_errors(), true));
+}
+
+// Consulta para obtener datos del inventario
+$sql = "SELECT 
+            p.codigo, 
+            p.descripcion, 
+            p.linea, 
+            p.sublinea, 
+            i.cantidadActual AS cantidad, 
+            p.unidad, 
+            p.precio, 
+            p.puntoReorden, 
+            p.stockMaximo, 
+            p.tipo,
+            CASE 
+                WHEN i.cantidadActual = 0 THEN 'Fuera de stock'
+                WHEN i.cantidadActual <= p.puntoReorden THEN 'Bajo stock'
+                WHEN i.cantidadActual >= p.stockMaximo THEN 'Sobre stock'
+                ELSE 'En stock'
+            END AS estado
+        FROM Productos p
+        INNER JOIN Inventario i ON p.idCodigo = i.idCodigo";
+
+$stmt = sqlsrv_query($conn, $sql);
+
+if ($stmt === false) {
+    die("Error en la consulta: " . print_r(sqlsrv_errors(), true));
 }
 ?>
 

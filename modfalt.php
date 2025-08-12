@@ -25,20 +25,6 @@ $connectionOptions = [
     "TrustServerCertificate" => false
 ];
 $conn = sqlsrv_connect($serverName, $connectionOptions);
-if ($conn === false) {
-    die(print_r(sqlsrv_errors(), true));
-}
-
-// Cargar productos para el selector
-$productos = [];
-$sqlProd = "SELECT idCodigo, codigo, descripcion FROM Productos ORDER BY codigo";
-$stmtProd = sqlsrv_query($conn, $sqlProd);
-if ($stmtProd === false) { die(print_r(sqlsrv_errors(), true)); }
-while ($row = sqlsrv_fetch_array($stmtProd, SQLSRV_FETCH_ASSOC)) {
-    $productos[] = $row;
-}
-sqlsrv_free_stmt($stmtProd);
-sqlsrv_close($conn);
 
 $rolActual   = (int)($_SESSION['rol'] ?? 0);
 $notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
@@ -78,6 +64,21 @@ if ($conn) {
 
     sqlsrv_close($conn);
 }
+
+if ($conn === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+// Cargar productos para el selector
+$productos = [];
+$sqlProd = "SELECT idCodigo, codigo, descripcion FROM Productos ORDER BY codigo";
+$stmtProd = sqlsrv_query($conn, $sqlProd);
+if ($stmtProd === false) { die(print_r(sqlsrv_errors(), true)); }
+while ($row = sqlsrv_fetch_array($stmtProd, SQLSRV_FETCH_ASSOC)) {
+    $productos[] = $row;
+}
+sqlsrv_free_stmt($stmtProd);
+sqlsrv_close($conn);
 ?>
 
 <!DOCTYPE html>

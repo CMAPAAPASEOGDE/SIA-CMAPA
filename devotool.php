@@ -21,31 +21,6 @@ $connectionOptions = [
     "TrustServerCertificate" => false
 ];
 $conn = sqlsrv_connect($serverName, $connectionOptions);
-if ($conn === false) {
-    die(print_r(sqlsrv_errors(), true));
-}
-
-// Obtener herramientas prestadas (enInventario = 0)
-$herramientas = [];
-$sql = "SELECT 
-            H.idHerramienta,           -- GUID (UNIQUEIDENTIFIER)
-            H.identificadorUnico,
-            H.idCodigo,
-            P.codigo,
-            P.descripcion
-        FROM HerramientasUnicas H
-        INNER JOIN Productos P ON H.idCodigo = P.idCodigo
-        WHERE H.enInventario = 0
-        ORDER BY P.descripcion, H.identificadorUnico";
-$stmt = sqlsrv_query($conn, $sql);
-if ($stmt === false) {
-    die(print_r(sqlsrv_errors(), true));
-}
-while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    $herramientas[] = $row;
-}
-sqlsrv_free_stmt($stmt);
-sqlsrv_close($conn);
 
 $rolActual   = (int)($_SESSION['rol'] ?? 0);
 $notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
@@ -85,6 +60,32 @@ if ($conn) {
 
     sqlsrv_close($conn);
 }
+
+if ($conn === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+// Obtener herramientas prestadas (enInventario = 0)
+$herramientas = [];
+$sql = "SELECT 
+            H.idHerramienta,           -- GUID (UNIQUEIDENTIFIER)
+            H.identificadorUnico,
+            H.idCodigo,
+            P.codigo,
+            P.descripcion
+        FROM HerramientasUnicas H
+        INNER JOIN Productos P ON H.idCodigo = P.idCodigo
+        WHERE H.enInventario = 0
+        ORDER BY P.descripcion, H.identificadorUnico";
+$stmt = sqlsrv_query($conn, $sql);
+if ($stmt === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    $herramientas[] = $row;
+}
+sqlsrv_free_stmt($stmt);
+sqlsrv_close($conn);
 ?>
 
 <!DOCTYPE html>
