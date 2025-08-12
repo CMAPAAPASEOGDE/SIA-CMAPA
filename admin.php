@@ -26,21 +26,6 @@ if ($idRol !== 1) {
     <link rel="stylesheet" href="css/StyleADMN.css">
 </head>
 
-<style>
-  body {
-    margin: 0;
-  }
-  
-  header {
-    position: sticky;
-    top: 0; /* Punto de anclaje */
-    background: #333;
-    color: white;
-    padding: 1rem;
-    z-index: 1000;
-  }
-</style>
-
 <body>
 <header>
   <div class="brand">
