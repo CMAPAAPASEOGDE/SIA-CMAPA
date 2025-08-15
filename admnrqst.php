@@ -212,7 +212,9 @@ sqlsrv_close($conn);
 
           <div class="rqst-actions">
             <input type="hidden" name="idNotificacion" value="<?= (int)$s['idNotificacion'] ?>">
-            <button type="submit" name="accion" value="confirmar" class="rqst-confirm">CONFIRMAR</button>
+            <button type="submit" name="accion" value="confirmar" class="rqst-confirm" data-id="<?= (int)$sol['idNotificacion'] ?>">
+              CONFIRMAR
+            </button>
           </div>
         </form>
       <?php endforeach; ?>
@@ -251,6 +253,36 @@ sqlsrv_close($conn);
   window.addEventListener('click', (e) => {
     if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) notifDropdown.style.display = 'none';
   });
+</script>
+
+<script>
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-confirmar');
+  if (!btn) return;
+
+  const id = btn.getAttribute('data-id');
+  btn.disabled = true;
+
+  fetch('php/confirmar_solicitud.php', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
+    body: 'id=' + encodeURIComponent(id)
+  })
+  .then(r => r.json())
+  .then(j => {
+    if (j && j.success) {
+      // Quitas la fila de la lista de admin o refrescas
+      location.reload();
+    } else {
+      alert('No se pudo confirmar: ' + (j.message || 'Error'));
+      btn.disabled = false;
+    }
+  })
+  .catch(() => {
+    alert('Error de red');
+    btn.disabled = false;
+  });
+});
 </script>
 </body>
 </html>
