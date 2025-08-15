@@ -29,8 +29,10 @@ if ($conn === false) {
   echo json_encode(['success' => false, 'message' => 'Error de conexión']); exit;
 }
 
-// Elimina la notificación del buzón del usuario (resueltas)
-$sql = "DELETE FROM Notificaciones WHERE idNotificacion = ? AND idRol = 2 AND solicitudRevisada = 1";
+// Marca como leída la notificación del usuario
+$sql = "UPDATE Notificaciones
+        SET solicitudRevisada = 1
+        WHERE idNotificacion = ? AND idRol = 2";
 $stmt = sqlsrv_query($conn, $sql, [$id]);
 
 echo json_encode(['success' => $stmt !== false]);

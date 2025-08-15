@@ -37,16 +37,16 @@ if ($conn) {
              WHERE idRol = 1 AND solicitudRevisada = 0
              ORDER BY fecha DESC");
     } else {
-        // USUARIO: resueltas para usuarios
-        $stmtCount = sqlsrv_query($conn,
-            "SELECT COUNT(*) AS c
-             FROM Notificaciones
-             WHERE idRol = 2 AND solicitudRevisada = 1");
-        $stmtList  = sqlsrv_query($conn,
-            "SELECT TOP 10 idNotificacion, descripcion, fecha
-             FROM Notificaciones
-             WHERE idRol = 2 AND solicitudRevisada = 1
-             ORDER BY fecha DESC");
+        // USUARIO: ver PENDIENTES para usuarios (no leídas por el usuario)
+          $stmtCount = sqlsrv_query($conn,
+              "SELECT COUNT(*) AS c
+              FROM Notificaciones
+              WHERE idRol = 2 AND solicitudRevisada = 0");
+          $stmtList  = sqlsrv_query($conn,
+              "SELECT TOP 10 idNotificacion, descripcion, fecha
+              FROM Notificaciones
+              WHERE idRol = 2 AND solicitudRevisada = 0
+              ORDER BY fecha DESC");
     }
 
     if ($stmtCount) {
