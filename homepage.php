@@ -8,7 +8,8 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 }
 
 $rolActual   = (int)($_SESSION['rol'] ?? 0);
-$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
+// Admin -> admnrqst.php | Usuario -> inventory.php
+$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'inventory.php';
 
 $unreadCount = 0;
 $notifList   = [];
@@ -25,19 +26,27 @@ $conn = sqlsrv_connect($serverName, $connectionOptions);
 
 if ($conn) {
     if ($rolActual === 1) {
-        // ADMIN: ver SOLO las destinadas a admin (idRol = 1)
-        $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = 1");
-        $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
-                                          FROM Notificaciones
-                                          WHERE solicitudRevisada = 0 AND idRol = 1
-                                          ORDER BY fecha DESC");
+        // ADMIN: pendientes para admin
+        $stmtCount = sqlsrv_query($conn,
+            "SELECT COUNT(*) AS c
+             FROM Notificaciones
+             WHERE idRol = 1 AND solicitudRevisada = 0");
+        $stmtList  = sqlsrv_query($conn,
+            "SELECT TOP 10 idNotificacion, descripcion, fecha
+             FROM Notificaciones
+             WHERE idRol = 1 AND solicitudRevisada = 0
+             ORDER BY fecha DESC");
     } else {
-        // USUARIO: ver SOLO las destinadas a su rol (p. ej. 2)
-        $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = ?", [$rolActual]);
-        $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
-                                          FROM Notificaciones
-                                          WHERE solicitudRevisada = 0 AND idRol = ?
-                                          ORDER BY fecha DESC", [$rolActual]);
+        // USUARIO: resueltas para usuarios
+        $stmtCount = sqlsrv_query($conn,
+            "SELECT COUNT(*) AS c
+             FROM Notificaciones
+             WHERE idRol = 2 AND solicitudRevisada = 1");
+        $stmtList  = sqlsrv_query($conn,
+            "SELECT TOP 10 idNotificacion, descripcion, fecha
+             FROM Notificaciones
+             WHERE idRol = 2 AND solicitudRevisada = 1
+             ORDER BY fecha DESC");
     }
 
     if ($stmtCount) {
@@ -56,10 +65,8 @@ if ($conn) {
     sqlsrv_close($conn);
 }
 ?>
-
 <!DOCTYPE html>
 <html>
-
 <head>
     <meta charset="UTF-8" />
     <title>SIA Homepage</title>
@@ -69,7 +76,6 @@ if ($conn) {
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styleHP.css">
 </head>
-
 <body>
 <header>
   <div class="brand">
@@ -93,19 +99,23 @@ if ($conn) {
         <?php else: ?>
           <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
             <?php foreach ($notifList as $n): ?>
+              <?php
+                $idNoti = (int)($n['idNotificacion'] ?? 0);
+                $f = $n['fecha'];
+                $fechaTxt = ($f instanceof DateTime) ? $f->format('Y-m-d H:i')
+                           : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
+              ?>
               <li class="notif-item"
                   style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  onclick="window.location.href='<?= $notifTarget ?>'">
+                  <?php if ($rolActual === 2): ?>
+                    onclick="ackUserNotif(<?= $idNoti ?>)"
+                  <?php else: ?>
+                    onclick="window.location.href='<?= $notifTarget ?>'"
+                  <?php endif; ?>>
                 <div class="notif-desc" style="font-size:0.95rem;">
                   <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                 </div>
-                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;">
-                  <?php
-                    $f = $n['fecha'];
-                    if ($f instanceof DateTime) echo $f->format('Y-m-d H:i');
-                    else { $dt = @date_create(is_string($f) ? $f : 'now'); echo $dt ? $dt->format('Y-m-d H:i') : ''; }
-                  ?>
-                </div>
+                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
               </li>
             <?php endforeach; ?>
           </ul>
@@ -161,6 +171,7 @@ if ($conn) {
 </main>
 
 <script>
+  // Menú hamburguesa
   const toggle = document.getElementById('menu-toggle');
   const dropdown = document.getElementById('dropdown-menu');
   toggle.addEventListener('click', () => {
@@ -171,24 +182,20 @@ if ($conn) {
       dropdown.style.display = 'none';
     }
   });
-</script>
 
-<script>
+  // Menú de usuario
   const userToggle = document.getElementById('user-toggle');
   const userDropdown = document.getElementById('user-dropdown');
   userToggle.addEventListener('click', () => {
     userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
   });
-
-  // Cerrar el menú al hacer clic fuera
   window.addEventListener('click', (e) => {
     if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
       userDropdown.style.display = 'none';
     }
   });
-</script>
 
-<script>
+  // Notificaciones
   const notifToggle = document.getElementById('notif-toggle');
   const notifDropdown = document.getElementById('notif-dropdown');
   if (notifToggle && notifDropdown) {
@@ -201,20 +208,17 @@ if ($conn) {
       }
     });
   }
-</script>
 
-<script>
-  const notifToggle = document.getElementById('notif-toggle');
-  const notifDropdown = document.getElementById('notif-dropdown');
-  notifToggle.addEventListener('click', () => {
-    notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
-  });
-  window.addEventListener('click', (e) => {
-    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
-      notifDropdown.style.display = 'none';
-    }
-  });
+  // Solo usuario (rol 2): marcar como vista y redirigir
+  function ackUserNotif(idNotificacion) {
+    fetch('php/ack_notif.php', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
+      body: 'id=' + encodeURIComponent(idNotificacion)
+    })
+    .then(r => r.json()).catch(() => ({}))
+    .finally(() => { window.location.href = 'inventory.php'; });
+  }
 </script>
 </body>
-
 </html>
