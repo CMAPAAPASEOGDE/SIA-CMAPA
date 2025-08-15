@@ -15,6 +15,29 @@ if (!in_array($idRol, [1, 2])) {
     header("Location: acceso_denegado.php");
     exit();
 }
+
+// Conexión SQL Server
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = [
+    "Database" => "db_sia",
+    "Uid" => "cmapADMIN",
+    "PWD" => "@siaADMN56*",
+    "Encrypt" => true,
+    "TrustServerCertificate" => false
+];
+$conn = sqlsrv_connect($serverName, $connectionOptions);
+if ($conn === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+$productos = [];
+$sqlProd = "SELECT idCodigo, codigo, descripcion FROM Productos ORDER BY codigo";
+$stmtProd = sqlsrv_query($conn, $sqlProd);
+if ($stmtProd === false) { die(print_r(sqlsrv_errors(), true)); }
+while ($row = sqlsrv_fetch_array($stmtProd, SQLSRV_FETCH_ASSOC)) {
+    $productos[] = $row;
+}
+sqlsrv_free_stmt($stmtProd);
 ?>
 
 <!DOCTYPE html>
@@ -34,11 +57,6 @@ if (!in_array($idRol, [1, 2])) {
     <h1>SIA - CMAPA</h1>
   </div>
   <div class="header-right">
-    <div class="notification-container">
-      <button class="icon-btn" id="notif-toggle">
-        <img src="img/bell.png" class="imgh3" alt="Notificaciones" />
-      </button>
-      <div class="notification-dropdown" id="notif-dropdown"></div>
     </div>
     <p> <?= $_SESSION['usuario'] ?> </p>
     <div class="user-menu-container">
@@ -69,33 +87,52 @@ if (!in_array($idRol, [1, 2])) {
 </header>
 
 <main class="altas-container">
-    <div class="altas-title">
-        <h2>MODIFICACIONES DE INVENTARIO</h2>
-        <h3>BAJAS</h3>
+  <div class="altas-title">
+    <h2>MODIFICACIONES DE INVENTARIO</h2>
+    <h3>BAJAS</h3>
+  </div>
+
+  <form id="formBajas" class="altas-form">
+    <label for="idCodigo">CÓDIGO</label>
+    <select id="idCodigo" name="idCodigo" required>
+      <option value="">-- Selecciona un producto --</option>
+      <?php foreach ($productos as $p): ?>
+        <option
+          value="<?= (int)$p['idCodigo'] ?>"
+          data-codigo="<?= htmlspecialchars($p['codigo'], ENT_QUOTES, 'UTF-8') ?>"
+          data-desc="<?= htmlspecialchars($p['descripcion'], ENT_QUOTES, 'UTF-8') ?>"
+        >
+          <?= htmlspecialchars($p['codigo'], ENT_QUOTES, 'UTF-8') ?> — <?= htmlspecialchars($p['descripcion'], ENT_QUOTES, 'UTF-8') ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+
+    <label for="codigoVista">CÓDIGO SELECCIONADO</label>
+    <input type="text" id="codigoVista" value="" readonly>
+
+    <label for="motivo">MOTIVO DE LA BAJA</label>
+    <textarea id="motivo" name="motivo" rows="5" required></textarea>
+
+    <div class="altas-row">
+      <div class="altas-column">
+        <label for="cantidad">CANTIDAD</label>
+        <input type="number" id="cantidad" name="cantidad" min="1" step="1" required>
+      </div>
+      <div class="altas-column">
+        <label for="fechaVista">FECHA DE SOLICITUD</label>
+        <input type="date" id="fechaVista" value="<?= date('Y-m-d') ?>" readonly>
+        <!-- la fecha real la pondrá el servidor con SYSDATETIME() -->
+      </div>
     </div>
-    <form class="altas-form">
-        <label for="codigo">CÓDIGO</label>
-        <input type="text" id="codigo" name="codigo" value="">
-        <label for="motivo">MOTIVO DE LA BAJA</label>
-        <textarea id="motivo" name="motivo" rows="5"></textarea>
-        <div class="altas-row">
-            <div class="altas-column">
-                <label for="cantidad">CANTIDAD</label>
-                <input type="number" id="cantidad" name="cantidad" value="0">
-            </div>
-            <div class="altas-column">
-                <label for="fecha">FECHA DE SOLICITUD</label>
-                <input type="date" id="fecha" name="fecha" value="">
-            </div>
-        </div>
-        <div class="altas-buttons">
-            <a href="modif.php"><button type="button" class="btn">CANCELAR</button></a>
-            <a href="#"><button type="button" class="btn">CONFIRMAR</button></a>
-        </div>
-    </form>
+
+    <div class="altas-buttons">
+      <a href="modif.php"><button type="button" class="btn">CANCELAR</button></a>
+      <button type="submit" class="btn">CONFIRMAR</button>
+    </div>
+  </form>
 </main>
 
-
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
   const toggle = document.getElementById('menu-toggle');
   const dropdown = document.getElementById('dropdown-menu');
@@ -135,6 +172,50 @@ if (!in_array($idRol, [1, 2])) {
       notifDropdown.style.display = 'none';
     }
   });
+</script>
+
+<script>
+  $('#idCodigo').on('change', function () {
+  const sel = $(this).find('option:selected');
+  $('#codigoVista').val(sel.data('codigo') || '');
+});
+
+// Envío AJAX - crea notificación de BAJA para admin
+$('#formBajas').on('submit', function (e) {
+  e.preventDefault();
+
+  const idCodigo = $('#idCodigo').val();
+  const motivo   = $('#motivo').val().trim();
+  const cantidad = parseInt($('#cantidad').val(), 10);
+
+  if (!idCodigo || !motivo || !cantidad || cantidad <= 0) {
+    alert('Completa código, motivo y una cantidad válida (>0).');
+    return;
+  }
+
+  $.ajax({
+    type: 'POST',
+    url: 'php/procesar_modbjs.php',
+    data: {
+      idCodigo: idCodigo,
+      descripcion: motivo, // Notificaciones.descripcion
+      cantidad: cantidad   // Notificaciones.cantidad
+      // fecha la pone SYSDATETIME() en el servidor
+      // solicitudRevisada = 0
+      // idRol destino = 1 (admins)
+      // tipo = 'baja'
+    },
+    dataType: 'json'
+  }).done(function(resp){
+    if (resp && resp.success) {
+      window.location.href = 'modbjscnf.php';
+    } else {
+      alert('Error: ' + (resp.message || 'No se pudo registrar la solicitud'));
+    }
+  }).fail(function(){
+    alert('Error al enviar la solicitud.');
+  });
+});
 </script>
 </body>
 </html>
