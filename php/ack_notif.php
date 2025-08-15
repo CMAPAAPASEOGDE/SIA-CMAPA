@@ -6,7 +6,6 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
   echo json_encode(['success' => false, 'message' => 'Sesión no válida']); exit;
 }
 
-// Solo usuarios (rol 2) deben poder “quitar” su notificación
 $rol = (int)($_SESSION['rol'] ?? 0);
 if ($rol !== 2) {
   echo json_encode(['success' => false, 'message' => 'Sin permisos']); exit;
@@ -30,15 +29,8 @@ if ($conn === false) {
   echo json_encode(['success' => false, 'message' => 'Error de conexión']); exit;
 }
 
-/*
-  Estrategia simple: eliminar la notificación del “buzón” de usuarios
-  (idRol=2 y ya resuelta solicitudRevisada=1).
-*/
+// Elimina la notificación del buzón del usuario (resueltas)
 $sql = "DELETE FROM Notificaciones WHERE idNotificacion = ? AND idRol = 2 AND solicitudRevisada = 1";
 $stmt = sqlsrv_query($conn, $sql, [$id]);
 
-if ($stmt === false) {
-  echo json_encode(['success' => false, 'message' => 'No se pudo actualizar']); exit;
-}
-
-echo json_encode(['success' => true]);
+echo json_encode(['success' => $stmt !== false]);
