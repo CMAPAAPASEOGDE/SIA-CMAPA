@@ -155,12 +155,12 @@ if ($conn) {
         <strong>SIA - CMAPA</strong>
     </p>
     <p class="about-version">
-        Version: <strong>1.3 In Development</strong>
+        Version: <strong>1.3.1 In Development</strong>
     </p>
     <img src="img/tools.png" alt="Herramientas" class="about-tools">
     <div class="about-details">
         <p><strong>Azure:</strong> Actualizado y En Linea</p>
-        <p><strong>Version SSMS:</strong> 21</p>
+        <p><strong>Version SSMS:</strong> 21.4.12</p>
         <p><strong>Version PHP:</strong> 8.2</p>
         <p><strong>Version HTML:</strong> 5</p>
     </div>
