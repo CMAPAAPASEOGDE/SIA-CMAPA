@@ -40,9 +40,7 @@ while ($row = sqlsrv_fetch_array($stmtProd, SQLSRV_FETCH_ASSOC)) {
 sqlsrv_free_stmt($stmtProd);
 sqlsrv_close($conn);
 ?>
-
 <!DOCTYPE html>
-
 <html>
 <head>
     <meta charset="UTF-8" />
@@ -50,7 +48,6 @@ sqlsrv_close($conn);
     <title>SIA Modifications Registers</title>
     <link rel="stylesheet" href="css/StyleMDFAL.css">
 </head>
-
 <body>
 <header>
   <div class="brand">
@@ -69,7 +66,6 @@ sqlsrv_close($conn);
         <a href="passchng.php"><button class="user-option">CAMBIAR CONTRASEÑA</button></a>
       </div>
     </div>
-    <!-- botón hamburguesa -->
     <div class="menu-container">
       <button class="icon-btn" id="menu-toggle">
         <img src="img/menu.png" alt="Menú" />
@@ -121,7 +117,6 @@ sqlsrv_close($conn);
       <div class="altas-column">
         <label for="fechaVista">FECHA DE SOLICITUD</label>
         <input type="date" id="fechaVista" value="<?= date('Y-m-d') ?>" readonly>
-        <!-- la fecha real la pondrá el servidor; este campo es solo informativo -->
       </div>
     </div>
 
@@ -134,7 +129,7 @@ sqlsrv_close($conn);
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-// Menús (igual que tus otras páginas)
+// Menús
 const toggle = document.getElementById('menu-toggle');
 const dropdown = document.getElementById('dropdown-menu');
 toggle.addEventListener('click', () => {
@@ -150,14 +145,6 @@ userToggle.addEventListener('click', () => {
 });
 window.addEventListener('click', (e) => {
   if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) userDropdown.style.display = 'none';
-});
-const notifToggle = document.getElementById('notif-toggle');
-const notifDropdown = document.getElementById('notif-dropdown');
-notifToggle.addEventListener('click', () => {
-  notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
-});
-window.addEventListener('click', (e) => {
-  if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) notifDropdown.style.display = 'none';
 });
 
 // UX: muestra código seleccionado
@@ -184,17 +171,16 @@ $('#formAltas').on('submit', function (e) {
     url: 'php/procesar_modfalt.php',
     data: {
       idCodigo: idCodigo,
-      descripcion: motivo,        // se guarda en Notificaciones.descripcion
+      descripcion: motivo,
       cantidad: cantidad
-      // fecha la pone el servidor con SYSDATETIME()
-      // solicitudRevisada = 0 por defecto
-      // idRol se toma del servidor (sesión)
+      // tipo lo pondrá el servidor en 'alta'
+      // fecha = SYSDATETIME() en servidor
     },
     dataType: 'json'
   }).done(function(resp){
     if (resp && resp.success) {
-      alert('Solicitud enviada a administración.');
-      window.location.href = 'modif.php';
+      // redirección a la página de confirmación
+      window.location.href = 'modfaltcnf.php';
     } else {
       alert('Error: ' + (resp.message || 'No se pudo registrar la solicitud'));
     }

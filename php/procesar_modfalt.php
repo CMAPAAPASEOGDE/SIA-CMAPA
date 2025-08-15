@@ -32,14 +32,14 @@ if ($conn === false) {
 }
 
 /**
- * Estas solicitudes de ALTA están dirigidas a ADMIN,
- * por lo tanto se guardan con idRol = 1 (destinatario).
+ * Estas solicitudes de ALTA están dirigidas a ADMIN (destinatario idRol = 1).
+ * Guardamos además tipo = 'alta'.
  */
 $destinoRol = 1;
 
-$sql = "INSERT INTO Notificaciones (idRol, descripcion, fecha, solicitudRevisada, cantidad, idCodigo)
-        VALUES (?, ?, SYSDATETIME(), 0, ?, ?)";
-$params = [$destinoRol, $descripcion, $cantidad, $idCodigo]; // <-- SOLO 4 parámetros y en el orden correcto
+$sql = "INSERT INTO Notificaciones (idRol, descripcion, fecha, solicitudRevisada, cantidad, idCodigo, tipo)
+        VALUES (?, ?, SYSDATETIME(), 0, ?, ?, ?)";
+$params = [$destinoRol, $descripcion, $cantidad, $idCodigo, 'alta'];
 
 $stmt = sqlsrv_query($conn, $sql, $params);
 if ($stmt === false) {
