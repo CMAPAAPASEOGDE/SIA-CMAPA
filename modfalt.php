@@ -1,4 +1,5 @@
 <?php
+// Iniciar sesión
 session_start();
 
 // Autenticación
@@ -7,7 +8,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     exit();
 }
 
-// Rol permitido (1 y 2)
+// Rol permitido (1 y 2, como en tus otras pantallas)
 $idRol = (int)($_SESSION['rol'] ?? 0);
 if (!in_array($idRol, [1, 2], true)) {
     header("Location: acceso_denegado.php");
@@ -24,64 +25,51 @@ $connectionOptions = [
     "TrustServerCertificate" => false
 ];
 $conn = sqlsrv_connect($serverName, $connectionOptions);
-if ($conn === false) {
-    die(print_r(sqlsrv_errors(), true));
-}
 
-/* =========================
-   NOTIFICACIONES (header)
-   ========================= */
 $rolActual   = (int)($_SESSION['rol'] ?? 0);
 $notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
 
 $unreadCount = 0;
 $notifList   = [];
 
-if ($rolActual === 1) {
-    // Admin ve solo notifs para admin (idRol=1)
-    $stmtCount = sqlsrv_query($conn,
-        "SELECT COUNT(*) AS c
-         FROM Notificaciones
-         WHERE solicitudRevisada = 0 AND idRol = 1"
-    );
-    $stmtList  = sqlsrv_query($conn,
-        "SELECT TOP 10 idNotificacion, descripcion, fecha
-         FROM Notificaciones
-         WHERE solicitudRevisada = 0 AND idRol = 1
-         ORDER BY fecha DESC"
-    );
-} else {
-    // Usuario ve solo notifs destinadas a su rol
-    $stmtCount = sqlsrv_query($conn,
-        "SELECT COUNT(*) AS c
-         FROM Notificaciones
-         WHERE solicitudRevisada = 0 AND idRol = ?",
-        [$rolActual]
-    );
-    $stmtList  = sqlsrv_query($conn,
-        "SELECT TOP 10 idNotificacion, descripcion, fecha
-         FROM Notificaciones
-         WHERE solicitudRevisada = 0 AND idRol = ?
-         ORDER BY fecha DESC",
-        [$rolActual]
-    );
-}
-
-if ($stmtCount) {
-    $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
-    $unreadCount = (int)($row['c'] ?? 0);
-    sqlsrv_free_stmt($stmtCount);
-}
-if ($stmtList) {
-    while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
-        $notifList[] = $r;
+if ($conn) {
+    if ($rolActual === 1) {
+        // ADMIN: ver SOLO las destinadas a admin (idRol = 1)
+        $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = 1");
+        $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
+                                          FROM Notificaciones
+                                          WHERE solicitudRevisada = 0 AND idRol = 1
+                                          ORDER BY fecha DESC");
+    } else {
+        // USUARIO: ver SOLO las destinadas a su rol (p. ej. 2)
+        $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = ?", [$rolActual]);
+        $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
+                                          FROM Notificaciones
+                                          WHERE solicitudRevisada = 0 AND idRol = ?
+                                          ORDER BY fecha DESC", [$rolActual]);
     }
-    sqlsrv_free_stmt($stmtList);
+
+    if ($stmtCount) {
+        $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
+        $unreadCount = (int)($row['c'] ?? 0);
+        sqlsrv_free_stmt($stmtCount);
+    }
+
+    if ($stmtList) {
+        while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
+            $notifList[] = $r;
+        }
+        sqlsrv_free_stmt($stmtList);
+    }
+
+    sqlsrv_close($conn);
 }
 
-/* =========================
-   CARGAR PRODUCTOS
-   ========================= */
+if ($conn === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+// Cargar productos para el selector
 $productos = [];
 $sqlProd = "SELECT idCodigo, codigo, descripcion FROM Productos ORDER BY codigo";
 $stmtProd = sqlsrv_query($conn, $sqlProd);
@@ -90,29 +78,23 @@ while ($row = sqlsrv_fetch_array($stmtProd, SQLSRV_FETCH_ASSOC)) {
     $productos[] = $row;
 }
 sqlsrv_free_stmt($stmtProd);
-
-// Cerrar conexión (no se usa más en PHP)
 sqlsrv_close($conn);
 ?>
+
 <!DOCTYPE html>
+
 <html>
 <head>
     <meta charset="UTF-8" />
-    <title>SIA Modifications Registers</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
+    <title>SIA Modifications Registers</title>
     <link rel="stylesheet" href="css/StyleMDFAL.css">
-    <style>
-      .notification-container{position:relative}
-      .notification-dropdown{display:none;position:absolute;right:0;top:40px;background:#fff;border:1px solid #e5e5e5;border-radius:10px;width:320px;box-shadow:0 10px 25px rgba(0,0,0,.08);z-index:20}
-      .notif-item{padding:8px 10px;cursor:pointer;border-bottom:1px solid #eaeaea}
-      .notif-item:hover{background:#fafafa}
-    </style>
 </head>
 
 <body>
 <header>
   <div class="brand">
-    <img src="img/cmapa.png" class="logo" alt="CMAPA" />
+    <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
   </div>
 
@@ -126,13 +108,15 @@ sqlsrv_close($conn);
         />
       </button>
 
-      <div class="notification-dropdown" id="notif-dropdown">
+      <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
         <?php if ($unreadCount === 0): ?>
           <div class="notif-empty" style="padding:10px;">No hay notificaciones nuevas.</div>
         <?php else: ?>
           <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
             <?php foreach ($notifList as $n): ?>
-              <li class="notif-item" onclick="window.location.href='<?= $notifTarget ?>'">
+              <li class="notif-item"
+                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
+                  onclick="window.location.href='<?= $notifTarget ?>'">
                 <div class="notif-desc" style="font-size:0.95rem;">
                   <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                 </div>
@@ -217,7 +201,7 @@ sqlsrv_close($conn);
       <div class="altas-column">
         <label for="fechaVista">FECHA DE SOLICITUD</label>
         <input type="date" id="fechaVista" value="<?= date('Y-m-d') ?>" readonly>
-        <!-- la fecha real la pondrá el servidor con SYSDATETIME() -->
+        <!-- la fecha real la pondrá el servidor; este campo es solo informativo -->
       </div>
     </div>
 
@@ -230,43 +214,31 @@ sqlsrv_close($conn);
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-// Toggle menú
+// Menús (igual que tus otras páginas)
 const toggle = document.getElementById('menu-toggle');
 const dropdown = document.getElementById('dropdown-menu');
-if (toggle && dropdown) {
-  toggle.addEventListener('click', () => {
-    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
-  });
-  window.addEventListener('click', (e) => {
-    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
-  });
-}
-
-// Toggle usuario
+toggle.addEventListener('click', () => {
+  dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+});
+window.addEventListener('click', (e) => {
+  if (!toggle.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
+});
 const userToggle = document.getElementById('user-toggle');
 const userDropdown = document.getElementById('user-dropdown');
-if (userToggle && userDropdown) {
-  userToggle.addEventListener('click', () => {
-    userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
-  });
-  window.addEventListener('click', (e) => {
-    if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) userDropdown.style.display = 'none';
-  });
-}
-
-// Toggle notificaciones
+userToggle.addEventListener('click', () => {
+  userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+});
+window.addEventListener('click', (e) => {
+  if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) userDropdown.style.display = 'none';
+});
 const notifToggle = document.getElementById('notif-toggle');
 const notifDropdown = document.getElementById('notif-dropdown');
-if (notifToggle && notifDropdown) {
-  notifToggle.addEventListener('click', () => {
-    notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
-  });
-  window.addEventListener('click', (e) => {
-    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
-      notifDropdown.style.display = 'none';
-    }
-  });
-}
+notifToggle.addEventListener('click', () => {
+  notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
+});
+window.addEventListener('click', (e) => {
+  if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) notifDropdown.style.display = 'none';
+});
 
 // UX: muestra código seleccionado
 $('#idCodigo').on('change', function () {
@@ -274,7 +246,7 @@ $('#idCodigo').on('change', function () {
   $('#codigoVista').val(sel.data('codigo') || '');
 });
 
-// Envío AJAX
+// Envío
 $('#formAltas').on('submit', function (e) {
   e.preventDefault();
 
@@ -292,11 +264,11 @@ $('#formAltas').on('submit', function (e) {
     url: 'php/procesar_modfalt.php',
     data: {
       idCodigo: idCodigo,
-      descripcion: motivo, // Notificaciones.descripcion
+      descripcion: motivo,        // se guarda en Notificaciones.descripcion
       cantidad: cantidad
       // fecha la pone el servidor con SYSDATETIME()
       // solicitudRevisada = 0 por defecto
-      // idRol destino = 1 (lo maneja el server en procesar_modfalt.php)
+      // idRol se toma del servidor (sesión)
     },
     dataType: 'json'
   }).done(function(resp){
