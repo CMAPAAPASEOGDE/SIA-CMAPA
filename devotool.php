@@ -21,54 +21,52 @@ $connectionOptions = [
     "TrustServerCertificate" => false
 ];
 $conn = sqlsrv_connect($serverName, $connectionOptions);
-
-$rolActual   = (int)($_SESSION['rol'] ?? 0);
-$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
-
-$unreadCount = 0;
-$notifList   = [];
-
-if ($conn) {
-    if ($rolActual === 1) {
-        // ADMIN: ver SOLO las destinadas a admin (idRol = 1)
-        $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = 1");
-        $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
-                                          FROM Notificaciones
-                                          WHERE solicitudRevisada = 0 AND idRol = 1
-                                          ORDER BY fecha DESC");
-    } else {
-        // USUARIO: ver SOLO las destinadas a su rol (p. ej. 2)
-        $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = ?", [$rolActual]);
-        $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
-                                          FROM Notificaciones
-                                          WHERE solicitudRevisada = 0 AND idRol = ?
-                                          ORDER BY fecha DESC", [$rolActual]);
-    }
-
-    if ($stmtCount) {
-        $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
-        $unreadCount = (int)($row['c'] ?? 0);
-        sqlsrv_free_stmt($stmtCount);
-    }
-
-    if ($stmtList) {
-        while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
-            $notifList[] = $r;
-        }
-        sqlsrv_free_stmt($stmtList);
-    }
-
-    sqlsrv_close($conn);
-}
-
 if ($conn === false) {
     die(print_r(sqlsrv_errors(), true));
 }
 
-// Obtener herramientas prestadas (enInventario = 0)
+/* =========================
+   NOTIFICACIONES (header)
+   ========================= */
+$rolActual   = (int)($_SESSION['rol'] ?? 0);
+$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
+$unreadCount = 0;
+$notifList   = [];
+
+if ($rolActual === 1) {
+    // ADMIN: ver SOLO las destinadas a admin (idRol = 1)
+    $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = 1");
+    $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
+                                      FROM Notificaciones
+                                      WHERE solicitudRevisada = 0 AND idRol = 1
+                                      ORDER BY fecha DESC");
+} else {
+    // USUARIO: ver SOLO las destinadas a su rol
+    $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = ?", [$rolActual]);
+    $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
+                                      FROM Notificaciones
+                                      WHERE solicitudRevisada = 0 AND idRol = ?
+                                      ORDER BY fecha DESC", [$rolActual]);
+}
+
+if ($stmtCount) {
+    $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
+    $unreadCount = (int)($row['c'] ?? 0);
+    sqlsrv_free_stmt($stmtCount);
+}
+if ($stmtList) {
+    while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
+        $notifList[] = $r;
+    }
+    sqlsrv_free_stmt($stmtList);
+}
+
+/* =========================================
+   OBTENER herramientas prestadas (enInventario = 0)
+   ========================================= */
 $herramientas = [];
 $sql = "SELECT 
-            H.idHerramienta,           -- GUID (UNIQUEIDENTIFIER)
+            H.idHerramienta,           -- UNIQUEIDENTIFIER (GUID)
             H.identificadorUnico,
             H.idCodigo,
             P.codigo,
@@ -85,11 +83,11 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
     $herramientas[] = $row;
 }
 sqlsrv_free_stmt($stmt);
+
+// Cerrar conexión cuando ya no la necesitemos para más consultas PHP
 sqlsrv_close($conn);
 ?>
-
 <!DOCTYPE html>
-
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
@@ -186,13 +184,13 @@ sqlsrv_close($conn);
       <option value="">-- Selecciona una herramienta prestada --</option>
       <?php foreach ($herramientas as $h): ?>
         <option
-          value="<?= htmlspecialchars($h['idHerramienta']) ?>"
-          data-ident="<?= htmlspecialchars($h['identificadorUnico']) ?>"
+          value="<?= htmlspecialchars($h['idHerramienta'], ENT_QUOTES, 'UTF-8') ?>"
+          data-ident="<?= htmlspecialchars($h['identificadorUnico'], ENT_QUOTES, 'UTF-8') ?>"
           data-idcodigo="<?= (int)$h['idCodigo'] ?>"
-          data-codigo="<?= htmlspecialchars($h['codigo']) ?>"
-          data-desc="<?= htmlspecialchars($h['descripcion']) ?>"
+          data-codigo="<?= htmlspecialchars($h['codigo'], ENT_QUOTES, 'UTF-8') ?>"
+          data-desc="<?= htmlspecialchars($h['descripcion'], ENT_QUOTES, 'UTF-8') ?>"
         >
-          <?= htmlspecialchars($h['identificadorUnico']) ?> — <?= htmlspecialchars($h['descripcion']) ?>
+          <?= htmlspecialchars($h['identificadorUnico'], ENT_QUOTES, 'UTF-8') ?> — <?= htmlspecialchars($h['descripcion'], ENT_QUOTES, 'UTF-8') ?>
         </option>
       <?php endforeach; ?>
     </select>
@@ -300,21 +298,20 @@ $(function () {
       observaciones: $('#observaciones').val(),
       estado: estado,
       fechaRetorno: $('#fecha').val(),
-      registradoPor: <?= (int)($_SESSION['user_id'] ?? 0) ?>  // idRol
+      registradoPor: <?= (int)($_SESSION['rol'] ?? 0) ?>  // <-- En tu modelo va el idRol, no el user_id
     };
 
     $('#btnConfirm').prop('disabled', true);
 
     $.ajax({
       type: 'POST',
-      url: 'php/procesar_devolucion.php',
+      url: 'php/procesar_devolucion.php', // ajusta la ruta si tu script está en otra carpeta
       data: formData,
       dataType: 'json'
     }).done(function(response) {
       if (response && response.success) {
         window.location.href = 'devtlcnf.php';
       } else {
-        // Mostrar error detallado
         alert('Error: ' + (response.message || 'Error desconocido'));
         $('#btnConfirm').prop('disabled', false);
       }
