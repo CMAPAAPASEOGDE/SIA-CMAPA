@@ -26,7 +26,7 @@ $conn = sqlsrv_connect($serverName, $connectionOptions);
 
 if ($conn) {
     if ($rolActual === 1) {
-        // ADMIN: pendientes para admin
+        // ADMIN: ver pendientes para admin
         $stmtCount = sqlsrv_query($conn,
             "SELECT COUNT(*) AS c
              FROM Notificaciones
@@ -37,16 +37,16 @@ if ($conn) {
              WHERE idRol = 1 AND solicitudRevisada = 0
              ORDER BY fecha DESC");
     } else {
-        // USUARIO: ver PENDIENTES para usuarios (no leídas por el usuario)
-          $stmtCount = sqlsrv_query($conn,
-              "SELECT COUNT(*) AS c
-              FROM Notificaciones
-              WHERE idRol = 2 AND solicitudRevisada = 0");
-          $stmtList  = sqlsrv_query($conn,
-              "SELECT TOP 10 idNotificacion, descripcion, fecha
-              FROM Notificaciones
-              WHERE idRol = 2 AND solicitudRevisada = 0
-              ORDER BY fecha DESC");
+        // USUARIO: ver resueltas por admin y NO leídas por el usuario
+        $stmtCount = sqlsrv_query($conn,
+            "SELECT COUNT(*) AS c
+             FROM Notificaciones
+             WHERE idRol = 2 AND solicitudRevisada = 1 AND confirmacionLectura = 0");
+        $stmtList  = sqlsrv_query($conn,
+            "SELECT TOP 10 idNotificacion, descripcion, fecha
+             FROM Notificaciones
+             WHERE idRol = 2 AND solicitudRevisada = 1 AND confirmacionLectura = 0
+             ORDER BY fecha DESC");
     }
 
     if ($stmtCount) {
@@ -100,8 +100,8 @@ if ($conn) {
           <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
             <?php foreach ($notifList as $n): ?>
               <?php
-                $idNoti = (int)($n['idNotificacion'] ?? 0);
-                $f = $n['fecha'];
+                $idNoti   = (int)($n['idNotificacion'] ?? 0);
+                $f        = $n['fecha'];
                 $fechaTxt = ($f instanceof DateTime) ? $f->format('Y-m-d H:i')
                            : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
               ?>
@@ -209,15 +209,15 @@ if ($conn) {
     });
   }
 
-  // Solo usuario (rol 2): marcar como vista y redirigir
+  // Solo usuario (rol 2): confirmar lectura y redirigir
   function ackUserNotif(idNotificacion) {
     fetch('php/ack_notif.php', {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
       body: 'id=' + encodeURIComponent(idNotificacion)
     })
-    .then(r => r.json()).catch(() => ({}))
-    .finally(() => { window.location.href = 'inventory.php'; });
+    .then(() => { window.location.href = 'inventory.php'; })
+    .catch(() => { window.location.href = 'inventory.php'; });
   }
 </script>
 </body>
