@@ -28,23 +28,19 @@ $connectionOptions = [
 ];
 $conn = sqlsrv_connect($serverName, $connectionOptions);
 if ($conn === false) {
-    echo json_encode(['success' => false, 'message' => 'Error de conexión', 'detail' => print_r(sqlsrv_errors(), true)]); exit;
+    echo json_encode(['success' => false, 'message' => 'Error de conexión']); exit;
 }
 
 /**
- * Estas solicitudes de ALTA están dirigidas a ADMIN (destinatario idRol = 1).
- * Guardamos además tipo = 'alta'.
+ * Se crea NOTIFICACIÓN para ADMIN (idRol=1):
+ * - solicitudRevisada = 0 (pendiente para admin)
+ * - confirmacionLectura = 0 (no aplica realmente a admin, pero queda en 0 por consistencia)
+ * - tipo = 'alta'
  */
-$destinoRol = 1;
-
-$sql = "INSERT INTO Notificaciones (idRol, descripcion, fecha, solicitudRevisada, cantidad, idCodigo, tipo)
-        VALUES (?, ?, SYSDATETIME(), 0, ?, ?, ?)";
-$params = [$destinoRol, $descripcion, $cantidad, $idCodigo, 'alta'];
+$sql = "INSERT INTO Notificaciones
+        (idRol, descripcion, fecha, solicitudRevisada, cantidad, idCodigo, tipo, confirmacionLectura)
+        VALUES (?, ?, SYSDATETIME(), 0, ?, ?, ?, 0)";
+$params = [1, $descripcion, $cantidad, $idCodigo, 'alta'];
 
 $stmt = sqlsrv_query($conn, $sql, $params);
-if ($stmt === false) {
-    echo json_encode(['success' => false, 'message' => 'No se pudo registrar la solicitud', 'detail' => print_r(sqlsrv_errors(), true)]); 
-    exit;
-}
-
-echo json_encode(['success' => true]); exit;
+echo json_encode(['success' => $stmt !== false]);

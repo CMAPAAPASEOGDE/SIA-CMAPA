@@ -5,9 +5,7 @@ header('Content-Type: application/json');
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
   echo json_encode(['success' => false, 'message' => 'Sesión no válida']); exit;
 }
-
-$rol = (int)($_SESSION['rol'] ?? 0);
-if ($rol !== 2) {
+if ((int)($_SESSION['rol'] ?? 0) !== 2) {
   echo json_encode(['success' => false, 'message' => 'Sin permisos']); exit;
 }
 
@@ -29,9 +27,8 @@ if ($conn === false) {
   echo json_encode(['success' => false, 'message' => 'Error de conexión']); exit;
 }
 
-// Marca como leída la notificación del usuario
 $sql = "UPDATE Notificaciones
-        SET solicitudRevisada = 1
+        SET confirmacionLectura = 1
         WHERE idNotificacion = ? AND idRol = 2";
 $stmt = sqlsrv_query($conn, $sql, [$id]);
 
