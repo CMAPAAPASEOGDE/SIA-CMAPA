@@ -1,75 +1,18 @@
 <?php
+// Iniciar sesión
 session_start();
 
-// Verificar sesión
+// Verificar si el usuario está autenticado
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
-
-$rolActual   = (int)($_SESSION['rol'] ?? 0);
-// Admin -> admnrqst.php | Usuario -> inventory.php
-$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'inventory.php';
-
-$unreadCount = 0;
-$notifList   = [];
-
-$serverName = "sqlserver-sia.database.windows.net";
-$connectionOptions = [
-    "Database" => "db_sia",
-    "Uid" => "cmapADMIN",
-    "PWD" => "@siaADMN56*",
-    "Encrypt" => true,
-    "TrustServerCertificate" => false
-];
-$conn = sqlsrv_connect($serverName, $connectionOptions);
-
-if ($conn) {
-    if ($rolActual === 1) {
-        // ADMIN: ver pendientes para admin
-        $stmtCount = sqlsrv_query($conn,
-            "SELECT COUNT(*) AS c
-             FROM Notificaciones
-             WHERE idRol = 1 AND solicitudRevisada = 0");
-        $stmtList  = sqlsrv_query($conn,
-            "SELECT TOP 10 idNotificacion, descripcion, fecha
-             FROM Notificaciones
-             WHERE idRol = 1 AND solicitudRevisada = 0
-             ORDER BY fecha DESC");
-    } else {
-        // USUARIO: ver resueltas por admin y NO leídas por el usuario
-        $userId = (int)$_SESSION['user_id'];
-        $stmtCount = sqlsrv_query($conn,
-            "SELECT COUNT(*) AS c
-             FROM Notificaciones
-             WHERE idRol = 2 AND solicitudRevisada = 1 AND confirmacionLectura = 0");
-          $stmtList  = sqlsrv_query($conn,
-              "SELECT TOP 10 idNotificacion, descripcion, fecha
-              FROM Notificaciones
-              WHERE idUsuario = ? AND solicitudRevisada = 1 AND confirmacionLectura = 0
-              ORDER BY fecha DESC",
-              array($userId)
-            );
-    }
-
-    if ($stmtCount) {
-        $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
-        $unreadCount = (int)($row['c'] ?? 0);
-        sqlsrv_free_stmt($stmtCount);
-    }
-
-    if ($stmtList) {
-        while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
-            $notifList[] = $r;
-        }
-        sqlsrv_free_stmt($stmtList);
-    }
-
-    sqlsrv_close($conn);
-}
 ?>
+
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8" />
     <title>SIA Homepage</title>
@@ -79,74 +22,37 @@ if ($conn) {
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styleHP.css">
 </head>
+
 <body>
 <header>
   <div class="brand">
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
   </div>
-
   <div class="header-right">
     <div class="notification-container">
-      <button class="icon-btn" id="notif-toggle" type="button" aria-label="Notificaciones">
-        <img
-          src="<?= $unreadCount > 0 ? 'img/belldot.png' : 'img/bell.png' ?>"
-          class="imgh3"
-          alt="Notificaciones"
-        />
+      <button class="icon-btn" id="notif-toggle">
+        <img src="img/bell.png" class="imgh3" alt="Notificaciones" />
       </button>
-
-      <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
-        <?php if ($unreadCount === 0): ?>
-          <div class="notif-empty" style="padding:10px;">No hay notificaciones nuevas.</div>
-        <?php else: ?>
-          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
-            <?php foreach ($notifList as $n): ?>
-              <?php
-                $idNoti   = (int)($n['idNotificacion'] ?? 0);
-                $f        = $n['fecha'];
-                $fechaTxt = ($f instanceof DateTime) ? $f->format('Y-m-d H:i')
-                           : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
-              ?>
-              <li class="notif-item"
-                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  <?php if ($rolActual === 2): ?>
-                    onclick="ackUserNotif(<?= $idNoti ?>)"
-                  <?php else: ?>
-                    onclick="window.location.href='<?= $notifTarget ?>'"
-                  <?php endif; ?>>
-                <div class="notif-desc" style="font-size:0.95rem;">
-                  <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
-                </div>
-                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-          <div style="padding:8px 10px;">
-            <button type="button" class="btn" onclick="window.location.href='<?= $notifTarget ?>'">Ver todas</button>
-          </div>
-        <?php endif; ?>
-      </div>
+      <div class="notification-dropdown" id="notif-dropdown"></div>
     </div>
-
-    <p><?= htmlspecialchars($_SESSION['usuario'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
-
+    <p> <?= $_SESSION['usuario'] ?> </p>
     <div class="user-menu-container">
-      <button class="icon-btn" id="user-toggle" type="button">
+      <button class="icon-btn" id="user-toggle">
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
       </button>
-      <div class="user-dropdown" id="user-dropdown" style="display:none;">
-        <p><strong>Tipo de Usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
-        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
-        <a href="passchng.php"><button class="user-option" type="button">CAMBIAR CONTRASEÑA</button></a>
+      <div class="user-dropdown" id="user-dropdown">
+        <p><strong>Usuario:</strong> <?= $_SESSION[ 'rol' ]?></p>
+        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'])?></p>
+        <a href="passchng.php"><button class="user-option">CAMBIAR CONTRASEÑA</button></a>
       </div>
     </div>
-
+    <!-- botón hamburguesa -->
     <div class="menu-container">
-      <button class="icon-btn" id="menu-toggle" type="button">
+      <button class="icon-btn" id="menu-toggle">
         <img src="img/menu.png" alt="Menú" />
       </button>
-      <div class="dropdown" id="dropdown-menu" style="display:none;">
+      <div class="dropdown" id="dropdown-menu">
         <a href="homepage.php">Inicio</a>
         <a href="mnthclsr.php">Cierre de mes</a>
         <a href="admin.php">Menu de administador</a>
@@ -155,7 +61,7 @@ if ($conn) {
         <a href="logout.php">Cerrar Sesion</a>
       </div>
     </div>
-  </div>
+</div>
 </header>
 
 <main class="menu">
@@ -174,7 +80,6 @@ if ($conn) {
 </main>
 
 <script>
-  // Menú hamburguesa
   const toggle = document.getElementById('menu-toggle');
   const dropdown = document.getElementById('dropdown-menu');
   toggle.addEventListener('click', () => {
@@ -185,43 +90,35 @@ if ($conn) {
       dropdown.style.display = 'none';
     }
   });
+</script>
 
-  // Menú de usuario
+<script>
   const userToggle = document.getElementById('user-toggle');
   const userDropdown = document.getElementById('user-dropdown');
   userToggle.addEventListener('click', () => {
     userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
   });
+
+  // Cerrar el menú al hacer clic fuera
   window.addEventListener('click', (e) => {
     if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
       userDropdown.style.display = 'none';
     }
   });
+</script>
 
-  // Notificaciones
+<script>
   const notifToggle = document.getElementById('notif-toggle');
   const notifDropdown = document.getElementById('notif-dropdown');
-  if (notifToggle && notifDropdown) {
-    notifToggle.addEventListener('click', () => {
-      notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
-    });
-    window.addEventListener('click', (e) => {
-      if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
-        notifDropdown.style.display = 'none';
-      }
-    });
-  }
-
-  // Solo usuario (rol 2): confirmar lectura y redirigir
-  function ackUserNotif(idNotificacion) {
-    fetch('php/ack_notif.php', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
-      body: 'id=' + encodeURIComponent(idNotificacion)
-    })
-    .then(() => { window.location.href = 'inventory.php'; })
-    .catch(() => { window.location.href = 'inventory.php'; });
-  }
+  notifToggle.addEventListener('click', () => {
+    notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
+  });
+  window.addEventListener('click', (e) => {
+    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
+      notifDropdown.style.display = 'none';
+    }
+  });
 </script>
 </body>
+
 </html>
