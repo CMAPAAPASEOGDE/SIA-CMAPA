@@ -30,12 +30,6 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     <h1>SIA - CMAPA</h1>
   </div>
   <div class="header-right">
-    <div class="notification-container">
-      <button class="icon-btn" id="notif-toggle">
-        <img src="img/bell.png" class="imgh3" alt="Notificaciones" />
-      </button>
-      <div class="notification-dropdown" id="notif-dropdown"></div>
-    </div>
     <p> <?= $_SESSION['usuario'] ?> </p>
     <div class="user-menu-container">
       <button class="icon-btn" id="user-toggle">
