@@ -30,6 +30,6 @@ if ($conn === false) {
 $sql = "UPDATE Notificaciones
         SET confirmacionLectura = 1
         WHERE idNotificacion = ? AND idRol = 2";
-$stmt = sqlsrv_query($conn, $sql, [$id]);
+$stmt = sqlsrv_query($conn, $sql, [$id, $_SESSION['user_id']]);
 
 echo json_encode(['success' => $stmt !== false]);

@@ -37,10 +37,10 @@ if ($conn === false) {
  * - confirmacionLectura = 0 (no aplica realmente a admin, pero queda en 0 por consistencia)
  * - tipo = 'alta'
  */
-$sql = "INSERT INTO Notificaciones
-        (idRol, descripcion, fecha, solicitudRevisada, cantidad, idCodigo, tipo, confirmacionLectura)
-        VALUES (?, ?, SYSDATETIME(), 0, ?, ?, ?, 0)";
-$params = [1, $descripcion, $cantidad, $idCodigo, 'alta'];
+$sql = "INSERT INTO Notificaciones 
+        (idRol, idUsuario, descripcion, fecha, solicitudRevisada, cantidad, idCodigo, tipo, confirmacionLectura)
+        VALUES (1, ?, ?, SYSDATETIME(), 0, ?, ?, 'alta', 0)";
+$params = array($_SESSION['user_id'], $motivo, $cantidad, $idCodigo);
 
 $stmt = sqlsrv_query($conn, $sql, $params);
 echo json_encode(['success' => $stmt !== false]);

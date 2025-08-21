@@ -38,15 +38,18 @@ if ($conn) {
              ORDER BY fecha DESC");
     } else {
         // USUARIO: ver resueltas por admin y NO leídas por el usuario
+        $userId = (int)$_SESSION['user_id'];
         $stmtCount = sqlsrv_query($conn,
             "SELECT COUNT(*) AS c
              FROM Notificaciones
              WHERE idRol = 2 AND solicitudRevisada = 1 AND confirmacionLectura = 0");
-        $stmtList  = sqlsrv_query($conn,
-            "SELECT TOP 10 idNotificacion, descripcion, fecha
-             FROM Notificaciones
-             WHERE idRol = 2 AND solicitudRevisada = 1 AND confirmacionLectura = 0
-             ORDER BY fecha DESC");
+          $stmtList  = sqlsrv_query($conn,
+              "SELECT TOP 10 idNotificacion, descripcion, fecha
+              FROM Notificaciones
+              WHERE idUsuario = ? AND solicitudRevisada = 1 AND confirmacionLectura = 0
+              ORDER BY fecha DESC",
+              array($userId)
+            );
     }
 
     if ($stmtCount) {

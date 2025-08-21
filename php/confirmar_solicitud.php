@@ -51,12 +51,18 @@ try {
   //    - idRol = 2
   //    - solicitudRevisada = 1 (significa "resuelta por admin")
   //    - confirmacionLectura = 0 (pendiente de que el usuario la marque como leída)
+  $sqlUser = "SELECT idUsuario FROM Notificaciones WHERE idNotificacion = ?";
+  $stmtUser = sqlsrv_query($conn, $sqlUser, [$id]);
+  if ($stmtUser && ($userRow = sqlsrv_fetch_array($stmtUser, SQLSRV_FETCH_ASSOC))) {
+      $idUsuario = (int)$userRow['idUsuario'];
+
   $ins = sqlsrv_query($conn,
     "INSERT INTO Notificaciones
      (idRol, descripcion, fecha, solicitudRevisada, cantidad, idCodigo, tipo, confirmacionLectura)
      VALUES (2, ?, SYSDATETIME(), 1, ?, ?, ?, 0)",
     [$row['descripcion'], (int)$row['cantidad'], (int)$row['idCodigo'], (string)$row['tipo']]
   );
+}
   if ($ins === false) throw new Exception('No se pudo crear la notificación para el usuario.');
 
   sqlsrv_commit($conn);
