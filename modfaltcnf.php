@@ -73,7 +73,7 @@ if (!in_array($idRol, [1, 2])) {
     <h2>CONFIRMACIÓN</h2>
     <p>
       TU SOLICITUD SE HA ENVIADO CORRECTAMENTE. <br>
-      EL ADMINISTRADOR TE INFORMARA SI SE APRUEBA LA MODIFICACION.
+      RECUERDA ESTAR AL PENDIENTE DE LA BARRA DE NOTIFICACIONES PARA SABER SI SE APRUEBA TU MODIFICACION.
     </p>
     <div class="form-buttons">
       <a href="modif.php"><button type="submit" class="btn confirm">CONFIRMAR</button></a>
