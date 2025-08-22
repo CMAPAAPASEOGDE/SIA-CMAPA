@@ -4,18 +4,15 @@ session_start();
 
 // Autenticación
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    header("Location: index.php");
-    exit();
+    header("Location: index.php"); exit();
 }
-
 // Solo admin
 $idRol = (int)($_SESSION['rol'] ?? 0);
 if ($idRol !== 1) {
-    header("Location: acceso_denegado.php");
-    exit();
+    header("Location: acceso_denegado.php"); exit();
 }
 
-// Conexión a SQL Server (una sola vez para toda la página)
+// Conexión SQL Server
 $serverName = "sqlserver-sia.database.windows.net";
 $connectionOptions = [
     "Database" => "db_sia",
@@ -29,50 +26,72 @@ if ($conn === false) {
     die("Error de conexión: " . print_r(sqlsrv_errors(), true));
 }
 
-/* ==========================
-   1) Confirmar solicitud (POST)
-   ========================== */
+/* ======================================================
+   1) Confirmar solicitud: Modificaciones -> solicitudRevisada=1
+      y crear Notificaciones (idModificacion, comentario admin)
+   ====================================================== */
 $flashMsg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'confirmar') {
-    $idNoti = (int)($_POST['idNotificacion'] ?? 0);
-    if ($idNoti > 0) {
-        $upd = sqlsrv_query(
-            $conn,
-            "UPDATE Notificaciones SET solicitudRevisada = 1 WHERE idNotificacion = ?",
-            [$idNoti]
-        );
-        if ($upd) {
-            $flashMsg = "Solicitud #$idNoti confirmada.";
+    $idModificacion = (int)($_POST['idModificacion'] ?? 0);
+    $comentario     = trim($_POST['comentario'] ?? '');
+
+    if ($idModificacion > 0) {
+        if (sqlsrv_begin_transaction($conn) === false) {
+            $flashMsg = "No se pudo iniciar la transacción.";
         } else {
-            $flashMsg = "No se pudo confirmar la solicitud #$idNoti.";
+            $ok1 = sqlsrv_query(
+                $conn,
+                "UPDATE Modificaciones SET solicitudRevisada = 1 WHERE idModificacion = ?",
+                [$idModificacion]
+            );
+
+            $ok2 = false;
+            if ($ok1) {
+                $ok2 = sqlsrv_query(
+                    $conn,
+                    "INSERT INTO Notificaciones (idModificacion, descripcion, fechaNotificacion, estatusRevision)
+                     VALUES (?, ?, SYSDATETIME(), 0)",
+                    [$idModificacion, $comentario]
+                );
+            }
+
+            if ($ok1 && $ok2) {
+                sqlsrv_commit($conn);
+                $flashMsg = "Solicitud #$idModificacion confirmada y notificada al usuario.";
+            } else {
+                sqlsrv_rollback($conn);
+                $flashMsg = "No se pudo confirmar la solicitud #$idModificacion.";
+            }
         }
+    } else {
+        $flashMsg = "Solicitud inválida.";
     }
 }
 
-/* ==========================
-   2) Notificaciones del header
-   ========================== */
-$rolActual   = (int)($_SESSION['rol'] ?? 0);
-$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
-
+/* ======================================================
+   2) Notificaciones del header (ADMIN): vienen de Modificaciones
+   ====================================================== */
 $unreadCount = 0;
 $notifList   = [];
 
 $stmtCount = sqlsrv_query(
     $conn,
-    "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = 1"
+    "SELECT COUNT(*) AS c
+       FROM Modificaciones
+      WHERE idRol = 1 AND solicitudRevisada = 0"
 );
 if ($stmtCount) {
     $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
     $unreadCount = (int)($row['c'] ?? 0);
     sqlsrv_free_stmt($stmtCount);
 }
+
 $stmtList = sqlsrv_query(
     $conn,
-    "SELECT TOP 10 idNotificacion, descripcion, fecha
-     FROM Notificaciones
-     WHERE solicitudRevisada = 0 AND idRol = 1
-     ORDER BY fecha DESC"
+    "SELECT TOP 10 idModificacion, descripcion, fecha, tipo, cantidad
+       FROM Modificaciones
+      WHERE idRol = 1 AND solicitudRevisada = 0
+      ORDER BY fecha DESC"
 );
 if ($stmtList) {
     while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
@@ -81,18 +100,17 @@ if ($stmtList) {
     sqlsrv_free_stmt($stmtList);
 }
 
-/* ==========================
-   3) Traer solicitudes PENDIENTES (idRol=1)
-   ========================== */
+/* ======================================================
+   3) Tablero principal: solicitudes pendientes (Modificaciones)
+   ====================================================== */
 $solicitudes = [];
 $sqlPend = "
-    SELECT N.idNotificacion, N.tipo, N.descripcion, N.cantidad, N.fecha,
-           N.idCodigo, P.codigo AS codigoProducto
-    FROM Notificaciones N
-    LEFT JOIN Productos P ON P.idCodigo = N.idCodigo
-    WHERE N.solicitudRevisada = 0 AND N.idRol = 1
-    ORDER BY N.fecha DESC
-";
+    SELECT M.idModificacion, M.tipo, M.descripcion, M.cantidad, M.fecha,
+           M.idCodigo, P.codigo AS codigoProducto
+      FROM Modificaciones M
+ LEFT JOIN Productos P ON P.idCodigo = M.idCodigo
+     WHERE M.idRol = 1 AND M.solicitudRevisada = 0
+  ORDER BY M.fecha DESC";
 $stmtPend = sqlsrv_query($conn, $sqlPend);
 if ($stmtPend) {
     while ($s = sqlsrv_fetch_array($stmtPend, SQLSRV_FETCH_ASSOC)) {
@@ -130,24 +148,27 @@ sqlsrv_close($conn);
         <?php else: ?>
           <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
             <?php foreach ($notifList as $n): ?>
+              <?php
+                $f = $n['fecha'] ?? null;
+                $fechaTxt = ($f instanceof DateTime)
+                  ? $f->format('Y-m-d H:i')
+                  : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
+                $tipoTxt = strtoupper((string)($n['tipo'] ?? ''));
+                $qtyTxt  = isset($n['cantidad']) ? ' • Cant.: '.(int)$n['cantidad'] : '';
+              ?>
               <li class="notif-item"
                   style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  onclick="window.location.href='<?= $notifTarget ?>'">
+                  onclick="window.location.href='admnrqst.php'">
                 <div class="notif-desc" style="font-size:0.95rem;">
-                  <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+                  [<?= htmlspecialchars($tipoTxt, ENT_QUOTES, 'UTF-8') ?>]
+                  <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') . $qtyTxt ?>
                 </div>
-                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;">
-                  <?php
-                    $f = $n['fecha'];
-                    if ($f instanceof DateTime) echo $f->format('Y-m-d H:i');
-                    else { $dt = @date_create(is_string($f) ? $f : 'now'); echo $dt ? $dt->format('Y-m-d H:i') : ''; }
-                  ?>
-                </div>
+                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
               </li>
             <?php endforeach; ?>
           </ul>
           <div style="padding:8px 10px;">
-            <button type="button" class="btn" onclick="window.location.href='<?= $notifTarget ?>'">Ver todas</button>
+            <button type="button" class="btn" onclick="window.location.href='admnrqst.php'">Ver todas</button>
           </div>
         <?php endif; ?>
       </div>
@@ -160,7 +181,7 @@ sqlsrv_close($conn);
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
       </button>
       <div class="user-dropdown" id="user-dropdown" style="display:none;">
-        <p><strong>Usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
+        <p><strong>Tipo de usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
         <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
         <a href="passchng.php"><button class="user-option" type="button">CAMBIAR CONTRASEÑA</button></a>
       </div>
@@ -186,7 +207,7 @@ sqlsrv_close($conn);
   <div class="rqst-title">MODIFICACIONES DE ALMACEN</div>
 
   <?php if ($flashMsg): ?>
-    <div class="rqst-flash"><?= htmlspecialchars($flashMsg) ?></div>
+    <div class="rqst-flash"><?= htmlspecialchars($flashMsg, ENT_QUOTES, 'UTF-8') ?></div>
   <?php endif; ?>
 
   <section class="rqst-board">
@@ -196,23 +217,27 @@ sqlsrv_close($conn);
       <?php foreach ($solicitudes as $s): ?>
         <form method="POST" class="rqst-row">
           <div class="rqst-type">
-            <?= htmlspecialchars(strtoupper($s['tipo'] ?? '')) ?>
+            <?= htmlspecialchars(strtoupper($s['tipo'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
           </div>
 
           <div class="rqst-desc">
             <?php if (!empty($s['codigoProducto'])): ?>
-              <div class="rqst-code"><?= htmlspecialchars($s['codigoProducto']) ?></div>
+              <div class="rqst-code"><?= htmlspecialchars($s['codigoProducto'], ENT_QUOTES, 'UTF-8') ?></div>
             <?php endif; ?>
-            <div class="rqst-text"><?= htmlspecialchars($s['descripcion'] ?? '') ?></div>
+            <div class="rqst-text"><?= htmlspecialchars($s['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
           </div>
 
           <div class="rqst-qty">
             <?= isset($s['cantidad']) && $s['cantidad'] !== null ? (int)$s['cantidad'] : '—' ?>
           </div>
 
+          <div class="rqst-comment">
+            <textarea name="comentario" rows="2" placeholder="Comentario del administrador (opcional)"></textarea>
+          </div>
+
           <div class="rqst-actions">
-            <input type="hidden" name="idNotificacion" value="<?= (int)$s['idNotificacion'] ?>">
-            <button type="submit" name="accion" value="confirmar" class="rqst-confirm" data-id="<?= (int)$sol['idNotificacion'] ?>">
+            <input type="hidden" name="idModificacion" value="<?= (int)$s['idModificacion'] ?>">
+            <button type="submit" name="accion" value="confirmar" class="rqst-confirm">
               CONFIRMAR
             </button>
           </div>
@@ -227,6 +252,7 @@ sqlsrv_close($conn);
 </main>
 
 <script>
+  // Menú hamburguesa
   const toggle = document.getElementById('menu-toggle');
   const dropdown = document.getElementById('dropdown-menu');
   toggle.addEventListener('click', () => {
@@ -236,6 +262,7 @@ sqlsrv_close($conn);
     if (!toggle.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
   });
 
+  // Menú usuario
   const userToggle = document.getElementById('user-toggle');
   const userDropdown = document.getElementById('user-dropdown');
   userToggle.addEventListener('click', () => {
@@ -245,6 +272,7 @@ sqlsrv_close($conn);
     if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) userDropdown.style.display = 'none';
   });
 
+  // Notificaciones header
   const notifToggle = document.getElementById('notif-toggle');
   const notifDropdown = document.getElementById('notif-dropdown');
   notifToggle.addEventListener('click', () => {
@@ -253,36 +281,6 @@ sqlsrv_close($conn);
   window.addEventListener('click', (e) => {
     if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) notifDropdown.style.display = 'none';
   });
-</script>
-
-<script>
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('.btn-confirmar');
-  if (!btn) return;
-
-  const id = btn.getAttribute('data-id');
-  btn.disabled = true;
-
-  fetch('php/confirmar_solicitud.php', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
-    body: 'id=' + encodeURIComponent(id)
-  })
-  .then(r => r.json())
-  .then(j => {
-    if (j && j.success) {
-      // Quitas la fila de la lista de admin o refrescas
-      location.reload();
-    } else {
-      alert('No se pudo confirmar: ' + (j.message || 'Error'));
-      btn.disabled = false;
-    }
-  })
-  .catch(() => {
-    alert('Error de red');
-    btn.disabled = false;
-  });
-});
 </script>
 </body>
 </html>
