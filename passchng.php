@@ -4,75 +4,59 @@ session_start();
 
 // Verificar si el usuario está autenticado
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
 
-// Variables para mensajes
+// ------------------ Cambio de contraseña ------------------
 $error = '';
 $success = '';
 
-// Procesar el formulario cuando se envía
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $oldPass = $_POST['old_Pass'] ?? '';
-    $newPass = $_POST['new_pass'] ?? '';
+    $oldPass     = $_POST['old_Pass'] ?? '';
+    $newPass     = $_POST['new_pass'] ?? '';
     $confirmPass = $_POST['confirm-pass'] ?? '';
-    
-    // Validar que las contraseñas no estén vacías
+
     if (empty($oldPass) || empty($newPass) || empty($confirmPass)) {
         $error = "Todos los campos son obligatorios";
-    } 
-    // Validar que las nuevas contraseñas coincidan
-    elseif ($newPass !== $confirmPass) {
+    } elseif ($newPass !== $confirmPass) {
         $error = "Las nuevas contraseñas no coinciden";
-    } 
-    // Validar que la nueva contraseña sea diferente
-    elseif ($oldPass === $newPass) {
+    } elseif ($oldPass === $newPass) {
         $error = "La nueva contraseña debe ser diferente a la actual";
-    } 
-    // Validar longitud mínima
-    elseif (strlen($newPass) < 8) {
+    } elseif (strlen($newPass) < 8) {
         $error = "La contraseña debe tener al menos 8 caracteres";
-    } 
-    // Si todo está bien, procesar el cambio
-    else {
-        // Conectar a la base de datos
+    } else {
         $serverName = "sqlserver-sia.database.windows.net";
-        $connectionOptions = array(
+        $connectionOptions = [
             "Database" => "db_sia",
             "Uid" => "cmapADMIN",
             "PWD" => "@siaADMN56*",
             "Encrypt" => true,
             "TrustServerCertificate" => false
-        );
-        
+        ];
+
         $conn = sqlsrv_connect($serverName, $connectionOptions);
-        
+
         if ($conn === false) {
             $error = "Error de conexión: " . print_r(sqlsrv_errors(), true);
         } else {
-            // Obtener ID de usuario de la sesión
-            $user_id = $_SESSION['user_id'];
-            
-            // Consulta para verificar contraseña actual
+            $user_id = (int)$_SESSION['user_id'];
+
             $sql = "SELECT contrasena FROM usuarios WHERE idUsuario = ?";
-            $params = array($user_id);
+            $params = [$user_id];
             $stmt = sqlsrv_query($conn, $sql, $params);
-            
+
             if ($stmt === false) {
                 $error = "Error en la consulta: " . print_r(sqlsrv_errors(), true);
             } else {
                 if (sqlsrv_has_rows($stmt)) {
                     $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
-                    
-                    // Verificar contraseña actual (en un sistema real debería ser con hash)
+                    // Nota: en producción usar hashing (password_hash / password_verify)
                     if ($oldPass === $row['contrasena']) {
-                        // Actualizar contraseña (en un sistema real debería usar hash)
-                        $updateSql = "UPDATE usuarios SET contrasena = ? WHERE idUsuario = ?";
-                        $updateParams = array($newPass, $user_id);
-                        $updateStmt = sqlsrv_query($conn, $updateSql, $updateParams);
-                        
+                        $updateSql    = "UPDATE usuarios SET contrasena = ? WHERE idUsuario = ?";
+                        $updateParams = [$newPass, $user_id];
+                        $updateStmt   = sqlsrv_query($conn, $updateSql, $updateParams);
+
                         if ($updateStmt === false) {
                             $error = "Error al actualizar la contraseña: " . print_r(sqlsrv_errors(), true);
                         } else {
@@ -85,74 +69,98 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $error = "Usuario no encontrado";
                 }
             }
-            
-            sqlsrv_free_stmt($stmt);
+
+            if (isset($stmt) && $stmt !== false) sqlsrv_free_stmt($stmt);
             sqlsrv_close($conn);
         }
     }
 }
 
+// ------------------ Notificaciones (nuevo sistema) ------------------
 $rolActual   = (int)($_SESSION['rol'] ?? 0);
-$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
-
 $unreadCount = 0;
 $notifList   = [];
 
-$serverName = "sqlserver-sia.database.windows.net";
-$connectionOptions = [
-    "Database" => "db_sia",
-    "Uid" => "cmapADMIN",
-    "PWD" => "@siaADMN56*",
-    "Encrypt" => true,
-    "TrustServerCertificate" => false
-];
-$conn = sqlsrv_connect($serverName, $connectionOptions);
+if (in_array($rolActual, [1,2,3], true)) {
+    $serverName = "sqlserver-sia.database.windows.net";
+    $connectionOptions = [
+        "Database" => "db_sia",
+        "Uid" => "cmapADMIN",
+        "PWD" => "@siaADMN56*",
+        "Encrypt" => true,
+        "TrustServerCertificate" => false
+    ];
+    $connN = sqlsrv_connect($serverName, $connectionOptions);
 
-if ($conn) {
-    if ($rolActual === 1) {
-        // ADMIN: ver SOLO las destinadas a admin (idRol = 1)
-        $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = 1");
-        $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
-                                          FROM Notificaciones
-                                          WHERE solicitudRevisada = 0 AND idRol = 1
-                                          ORDER BY fecha DESC");
-    } else {
-        // USUARIO: ver SOLO las destinadas a su rol (p. ej. 2)
-        $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = ?", [$rolActual]);
-        $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
-                                          FROM Notificaciones
-                                          WHERE solicitudRevisada = 0 AND idRol = ?
-                                          ORDER BY fecha DESC", [$rolActual]);
-    }
-
-    if ($stmtCount) {
-        $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
-        $unreadCount = (int)($row['c'] ?? 0);
-        sqlsrv_free_stmt($stmtCount);
-    }
-
-    if ($stmtList) {
-        while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
-            $notifList[] = $r;
+    if ($connN) {
+        if ($rolActual === 1) {
+            // ADMIN: pendientes desde Modificaciones (solicitudRevisada = 0)
+            $stmtCount = sqlsrv_query(
+                $connN,
+                "SELECT COUNT(*) AS c
+                   FROM Modificaciones
+                  WHERE solicitudRevisada = 0"
+            );
+            $stmtList = sqlsrv_query(
+                $connN,
+                "SELECT TOP 10
+                        M.idModificacion,
+                        M.descripcion,
+                        M.fecha,
+                        M.tipo,
+                        M.cantidad,
+                        P.codigo AS codigoProducto
+                   FROM Modificaciones M
+              LEFT JOIN Productos P ON P.idCodigo = M.idCodigo
+                  WHERE M.solicitudRevisada = 0
+               ORDER BY M.fecha DESC"
+            );
+        } else {
+            // USUARIOS 2 y 3: avisos desde Notificaciones (estatusRevision = 0)
+            $stmtCount = sqlsrv_query(
+                $connN,
+                "SELECT COUNT(*) AS c
+                   FROM Notificaciones
+                  WHERE estatusRevision = 0"
+            );
+            $stmtList = sqlsrv_query(
+                $connN,
+                "SELECT TOP 10
+                        N.idNotificacion,
+                        N.descripcion      AS comentarioAdmin,
+                        N.fechaNotificacion,
+                        P.codigo           AS codigoProducto
+                   FROM Notificaciones N
+              LEFT JOIN Modificaciones M ON M.idModificacion = N.idModificacion
+              LEFT JOIN Productos      P ON P.idCodigo       = M.idCodigo
+                  WHERE N.estatusRevision = 0
+               ORDER BY N.fechaNotificacion DESC"
+            );
         }
-        sqlsrv_free_stmt($stmtList);
-    }
 
-    sqlsrv_close($conn);
+        if ($stmtCount) {
+            $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
+            $unreadCount = (int)($row['c'] ?? 0);
+            sqlsrv_free_stmt($stmtCount);
+        }
+        if ($stmtList) {
+            while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
+                $notifList[] = $r;
+            }
+            sqlsrv_free_stmt($stmtList);
+        }
+        sqlsrv_close($connN);
+    }
 }
 ?>
-
-
 <!DOCTYPE html>
 <html>
-
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
     <title>SIA Password Change</title>
     <link rel="stylesheet" href="css/StylePSCH.css">
 </head>
-
 <body>
 <header>
   <div class="brand">
@@ -164,7 +172,7 @@ if ($conn) {
     <div class="notification-container">
       <button class="icon-btn" id="notif-toggle" type="button" aria-label="Notificaciones">
         <img
-          src="<?= $unreadCount > 0 ? 'img/belldot.png' : 'img/bell.png' ?>"
+          src="<?= ($unreadCount > 0) ? 'img/belldot.png' : 'img/bell.png' ?>"
           class="imgh3"
           alt="Notificaciones"
         />
@@ -173,28 +181,57 @@ if ($conn) {
       <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
         <?php if ($unreadCount === 0): ?>
           <div class="notif-empty" style="padding:10px;">No hay notificaciones nuevas.</div>
-        <?php else: ?>
+
+        <?php elseif ($rolActual === 1): ?>
+          <!-- ADMIN: desde Modificaciones -->
           <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
             <?php foreach ($notifList as $n): ?>
+              <?php
+                $f = $n['fecha'] ?? null;
+                $fechaTxt = ($f instanceof DateTime)
+                              ? $f->format('Y-m-d H:i')
+                              : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
+                $tipoTxt = strtoupper((string)($n['tipo'] ?? ''));
+                $qtyTxt  = isset($n['cantidad']) ? ' • Cant.: '.(int)$n['cantidad'] : '';
+                $codigo  = (string)($n['codigoProducto'] ?? '');
+              ?>
               <li class="notif-item"
                   style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  onclick="window.location.href='<?= $notifTarget ?>'">
+                  onclick="window.location.href='admnrqst.php'">
                 <div class="notif-desc" style="font-size:0.95rem;">
-                  <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+                  [<?= htmlspecialchars($tipoTxt, ENT_QUOTES, 'UTF-8') ?>]
+                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong>
+                  <?= $qtyTxt ?> — <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                 </div>
-                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;">
-                  <?php
-                    $f = $n['fecha'];
-                    if ($f instanceof DateTime) echo $f->format('Y-m-d H:i');
-                    else { $dt = @date_create(is_string($f) ? $f : 'now'); echo $dt ? $dt->format('Y-m-d H:i') : ''; }
-                  ?>
-                </div>
+                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
               </li>
             <?php endforeach; ?>
           </ul>
-          <div style="padding:8px 10px;">
-            <button type="button" class="btn" onclick="window.location.href='<?= $notifTarget ?>'">Ver todas</button>
-          </div>
+
+        <?php else: ?>
+          <!-- USUARIOS 2 y 3: desde Notificaciones -->
+          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
+            <?php foreach ($notifList as $n): ?>
+              <?php
+                $idNoti   = (int)($n['idNotificacion'] ?? 0);
+                $codigo   = (string)($n['codigoProducto'] ?? '');
+                $coment   = (string)($n['comentarioAdmin'] ?? '');
+                $f        = $n['fechaNotificacion'] ?? null;
+                $fechaTxt = ($f instanceof DateTime)
+                          ? $f->format('Y-m-d H:i')
+                          : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
+              ?>
+              <li class="notif-item"
+                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
+                  onclick="ackUserNotif(<?= $idNoti ?>)">
+                <div class="notif-desc" style="font-size:0.95rem;">
+                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong> —
+                  <?= htmlspecialchars($coment, ENT_QUOTES, 'UTF-8') ?>
+                </div>
+                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
+              </li>
+            <?php endforeach; ?>
+          </ul>
         <?php endif; ?>
       </div>
     </div>
@@ -227,85 +264,94 @@ if ($conn) {
     </div>
   </div>
 </header>
+
 <main class="pwd-container">
   <form id="form-pass" method="POST" action="passchng.php">
     <div class="pwd-box">
-       <?php if (!empty($error)): ?>
-            <div class="error-message"><?= $error ?></div>
-        <?php endif; ?>
-        
-        <?php if (!empty($success)): ?>
-            <div class="success-message"><?= $success ?></div>
-        <?php endif; ?>
-        <!-- Contraseña anterior -->
-        <div class="pwd-field">
-            <img src="img/padlock.png" class="pwd-icon" alt="Lock">
-            <input type="password" id="old-pass" name="old_Pass" placeholder="Contraseña Anterior" required>
-        </div>
-        <!-- Contraseña nueva -->
-        <div class="pwd-field">
-            <img src="img/padlock.png" class="pwd-icon" alt="Lock">
-            <input type="password" id="new-pass" name="new_pass" placeholder="Contraseña Nueva" required>
-        </div>
-        
-        <!-- Confirmar contraseña -->
-        <div class="pwd-field">
-            <img src="img/padlock.png" class="pwd-icon" alt="Lock">
-            <input type="password" id="confirm-pass" name="confirm-pass" placeholder="Confirmar Contraseña" required>
-        </div>
-        <!-- Botón aceptar -->
-        <button type="submit" class="accept-btn" id="pwd-accept">ACEPTAR</button>
-        <!-- Mensaje de resultado -->
-         <div class="password-strength">
-                <div class="strength-bar" id="strength-bar"></div>
-            </div>
-            <div class="strength-text" id="strength-text"></div>
-        </div>
-        <p id="mensaje-resultado" class="mensaje"></p>
+      <?php if (!empty($error)): ?>
+        <div class="error-message"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
+      <?php endif; ?>
+
+      <?php if (!empty($success)): ?>
+        <div class="success-message"><?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?></div>
+      <?php endif; ?>
+
+      <div class="pwd-field">
+        <img src="img/padlock.png" class="pwd-icon" alt="Lock">
+        <input type="password" id="old-pass" name="old_Pass" placeholder="Contraseña Anterior" required>
+      </div>
+
+      <div class="pwd-field">
+        <img src="img/padlock.png" class="pwd-icon" alt="Lock">
+        <input type="password" id="new-pass" name="new_pass" placeholder="Contraseña Nueva" required>
+      </div>
+
+      <div class="pwd-field">
+        <img src="img/padlock.png" class="pwd-icon" alt="Lock">
+        <input type="password" id="confirm-pass" name="confirm-pass" placeholder="Confirmar Contraseña" required>
+      </div>
+
+      <button type="submit" class="accept-btn" id="pwd-accept">ACEPTAR</button>
+
+      <div class="password-strength">
+        <div class="strength-bar" id="strength-bar"></div>
+      </div>
+      <div class="strength-text" id="strength-text"></div>
+
+      <p id="mensaje-resultado" class="mensaje"></p>
     </div>
   </form>
 </main>
 
 <script>
-  const toggle = document.getElementById('menu-toggle');
-  const dropdown = document.getElementById('dropdown-menu');
-  toggle.addEventListener('click', () => {
-    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
-  });
-  window.addEventListener('click', (e) => {
-    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
-      dropdown.style.display = 'none';
-    }
-  });
-</script>
+// Menú hamburguesa
+const toggle = document.getElementById('menu-toggle');
+const dropdown = document.getElementById('dropdown-menu');
+toggle.addEventListener('click', () => {
+  dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+});
+window.addEventListener('click', (e) => {
+  if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
+    dropdown.style.display = 'none';
+  }
+});
 
-<script>
-  const userToggle = document.getElementById('user-toggle');
-  const userDropdown = document.getElementById('user-dropdown');
-  userToggle.addEventListener('click', () => {
-    userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
-  });
+// Menú usuario
+const userToggle = document.getElementById('user-toggle');
+const userDropdown = document.getElementById('user-dropdown');
+userToggle.addEventListener('click', () => {
+  userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+});
+window.addEventListener('click', (e) => {
+  if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
+    userDropdown.style.display = 'none';
+  }
+});
 
-  // Cerrar el menú al hacer clic fuera
-  window.addEventListener('click', (e) => {
-    if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
-      userDropdown.style.display = 'none';
-    }
-  });
-</script>
-
-<script>
-  const notifToggle = document.getElementById('notif-toggle');
-  const notifDropdown = document.getElementById('notif-dropdown');
+// Notificaciones
+const notifToggle   = document.getElementById('notif-toggle');
+const notifDropdown = document.getElementById('notif-dropdown');
+if (notifToggle && notifDropdown) {
   notifToggle.addEventListener('click', () => {
-    notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
+    notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
   });
   window.addEventListener('click', (e) => {
     if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
       notifDropdown.style.display = 'none';
     }
   });
-</script>  
-</body>
+}
 
+// Confirmar lectura (roles 2 y 3)
+function ackUserNotif(idNotificacion) {
+  fetch('php/ack_user_notif.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+    body: 'id=' + encodeURIComponent(idNotificacion)
+  })
+  .then(r => r.json()).catch(() => ({}))
+  .finally(() => { window.location.href = 'inventory.php'; });
+}
+</script>
+</body>
 </html>
