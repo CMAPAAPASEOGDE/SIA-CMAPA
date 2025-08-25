@@ -7,7 +7,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 }
 
 $idRol = (int)($_SESSION['rol'] ?? 0);
-if (!in_array($idRol, [1, 2])) {
+if (!in_array($idRol, [1, 2], true)) {
     header("Location: acceso_denegado.php");
     exit();
 }
@@ -25,7 +25,7 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'caja_eliminada') {
     echo '<div class="success-message">¡Caja eliminada correctamente! Los productos han sido devueltos al inventario.</div>';
 }
 
-// Conexión SQL Server
+// Conexión SQL Server (una sola vez)
 $serverName = "sqlserver-sia.database.windows.net";
 $connectionOptions = [
     "Database" => "db_sia",
@@ -40,51 +40,65 @@ if ($conn === false) {
 }
 
 /* ================================
-   NOTIFICACIONES (para el header)
+   NOTIFICACIONES (header unificado)
    ================================ */
 $rolActual   = (int)($_SESSION['rol'] ?? 0);
-$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
 $unreadCount = 0;
 $notifList   = [];
+$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'boxes.php';
 
-// Admin ve SOLO notificaciones destinadas a admin (idRol=1).
-// Usuario ve SOLO las destinadas a su rol.
+// Admin: desde Modificaciones (pendientes)
 if ($rolActual === 1) {
-    $sqlCount = "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = 1";
-    $stmtCount = sqlsrv_query($conn, $sqlCount);
-
-    $sqlList = "SELECT TOP 10 idNotificacion, descripcion, fecha
-                FROM Notificaciones
-                WHERE solicitudRevisada = 0 AND idRol = 1
-                ORDER BY fecha DESC";
-    $stmtList = sqlsrv_query($conn, $sqlList);
-} else {
-    $sqlCount = "SELECT COUNT(*) AS c
-                 FROM Notificaciones
-                 WHERE solicitudRevisada = 0 AND idRol = ?";
-    $stmtCount = sqlsrv_query($conn, $sqlCount, [$rolActual]);
-
-    $sqlList = "SELECT TOP 10 idNotificacion, descripcion, fecha
-                FROM Notificaciones
-                WHERE solicitudRevisada = 0 AND idRol = ?
-                ORDER BY fecha DESC";
-    $stmtList = sqlsrv_query($conn, $sqlList, [$rolActual]);
+    $stmtCount = sqlsrv_query($conn,
+        "SELECT COUNT(*) AS c
+           FROM Modificaciones
+          WHERE solicitudRevisada = 0");
+    $stmtList  = sqlsrv_query($conn,
+        "SELECT TOP 10
+                M.idModificacion,
+                M.descripcion,
+                M.fechaSolicitud,
+                M.tipo,
+                M.cantidad,
+                P.codigo AS codigoProducto
+           FROM Modificaciones M
+      LEFT JOIN Productos P ON P.idCodigo = M.idCodigo
+          WHERE M.solicitudRevisada = 0
+       ORDER BY M.fechaSolicitud DESC");
+}
+// Usuario (rol 2): desde Notificaciones (no leídas)
+else {
+    $stmtCount = sqlsrv_query($conn,
+        "SELECT COUNT(*) AS c
+           FROM Notificaciones
+          WHERE estatusRevision = 0");
+    $stmtList  = sqlsrv_query($conn,
+        "SELECT TOP 10
+                N.idNotificacion,
+                N.descripcion      AS comentarioAdmin,
+                N.fechaNotificacion,
+                P.codigo           AS codigoProducto
+           FROM Notificaciones N
+      LEFT JOIN Modificaciones M ON M.idModificacion = N.idModificacion
+      LEFT JOIN Productos      P ON P.idCodigo       = M.idCodigo
+          WHERE N.estatusRevision = 0
+       ORDER BY N.fechaNotificacion DESC");
 }
 
-if ($stmtCount !== false) {
+if ($stmtCount) {
     $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
     $unreadCount = (int)($row['c'] ?? 0);
     sqlsrv_free_stmt($stmtCount);
 }
-if ($stmtList !== false) {
+if ($stmtList) {
     while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
-        $notifList[] = $r; // -> idNotificacion, descripcion, fecha
+        $notifList[] = $r;
     }
     sqlsrv_free_stmt($stmtList);
 }
 
 /* ================================
-   Consulta de Cajas (tu lógica)
+   Consulta de Cajas
    ================================ */
 $sql = "SELECT C.numeroCaja, O.nombreCompleto AS nombreOperador, C.idCaja
         FROM CajaRegistro C
@@ -95,9 +109,7 @@ if ($result === false) {
     die(print_r(sqlsrv_errors(), true));
 }
 ?>
-
 <!DOCTYPE html>
-
 <html>
 <head>
     <meta charset="UTF-8" />
@@ -105,7 +117,6 @@ if ($result === false) {
     <title>SIA Toolbox</title>
     <link rel="stylesheet" href="css/StyleBX.css">
 </head>
-
 <body>
 <header>
   <div class="brand">
@@ -116,38 +127,59 @@ if ($result === false) {
   <div class="header-right">
     <div class="notification-container">
       <button class="icon-btn" id="notif-toggle" type="button" aria-label="Notificaciones">
-        <img
-          src="<?= $unreadCount > 0 ? 'img/belldot.png' : 'img/bell.png' ?>"
-          class="imgh3"
-          alt="Notificaciones"
-        />
+        <img src="<?= $unreadCount > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" class="imgh3" alt="Notificaciones" />
       </button>
 
       <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
         <?php if ($unreadCount === 0): ?>
           <div class="notif-empty" style="padding:10px;">No hay notificaciones nuevas.</div>
-        <?php else: ?>
+
+        <?php elseif ($rolActual === 1): ?>
           <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
-            <?php foreach ($notifList as $n): ?>
+            <?php foreach ($notifList as $n):
+              $f = $n['fechaSolicitud'] ?? null;
+              $fechaTxt = ($f instanceof DateTime)
+                            ? $f->format('Y-m-d H:i')
+                            : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
+              $tipoTxt = strtoupper((string)($n['tipo'] ?? ''));
+              $qtyTxt  = isset($n['cantidad']) ? ' • Cant.: '.(int)$n['cantidad'] : '';
+              $codigo  = (string)($n['codigoProducto'] ?? '');
+            ?>
               <li class="notif-item"
                   style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  onclick="window.location.href='<?= $notifTarget ?>'">
+                  onclick="window.location.href='admnrqst.php'">
                 <div class="notif-desc" style="font-size:0.95rem;">
+                  [<?= htmlspecialchars($tipoTxt, ENT_QUOTES, 'UTF-8') ?>]
+                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong><?= $qtyTxt ?> —
                   <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                 </div>
-                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;">
-                  <?php
-                    $f = $n['fecha'];
-                    if ($f instanceof DateTime) echo $f->format('Y-m-d H:i');
-                    else { $dt = @date_create(is_string($f) ? $f : 'now'); echo $dt ? $dt->format('Y-m-d H:i') : ''; }
-                  ?>
-                </div>
+                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
               </li>
             <?php endforeach; ?>
           </ul>
-          <div style="padding:8px 10px;">
-            <button type="button" class="btn" onclick="window.location.href='<?= $notifTarget ?>'">Ver todas</button>
-          </div>
+
+        <?php else: ?>
+          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
+            <?php foreach ($notifList as $n):
+              $idNoti   = (int)($n['idNotificacion'] ?? 0);
+              $codigo   = (string)($n['codigoProducto'] ?? '');
+              $coment   = (string)($n['comentarioAdmin'] ?? '');
+              $f        = $n['fechaNotificacion'] ?? null;
+              $fechaTxt = ($f instanceof DateTime)
+                            ? $f->format('Y-m-d H:i')
+                            : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
+            ?>
+              <li class="notif-item"
+                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
+                  onclick="ackUserNotif(<?= $idNoti ?>)">
+                <div class="notif-desc" style="font-size:0.95rem;">
+                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong> —
+                  <?= htmlspecialchars($coment, ENT_QUOTES, 'UTF-8') ?>
+                </div>
+                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
+              </li>
+            <?php endforeach; ?>
+          </ul>
         <?php endif; ?>
       </div>
     </div>
@@ -188,7 +220,7 @@ if ($result === false) {
             <div class="caja-card">
                 <img src="img/caja-icono.png" alt="Caja <?= htmlspecialchars($row['numeroCaja']) ?>" class="caja-img" />
                 <p class="caja-clave"><?= htmlspecialchars($row['nombreOperador']) ?></p>
-                <a href="boxinspect.php?idCaja=<?= $row['idCaja'] ?>"><button class="caja-bttn">CAJA <?= htmlspecialchars($row['numeroCaja']) ?></button></a>
+                <a href="boxinspect.php?idCaja=<?= (int)$row['idCaja'] ?>"><button class="caja-bttn">CAJA <?= htmlspecialchars($row['numeroCaja']) ?></button></a>
             </div>
         <?php endwhile; ?>
     </section>
@@ -198,46 +230,58 @@ if ($result === false) {
     </div>
 </main>
 
-
 <script>
+  // Menú hamburguesa
   const toggle = document.getElementById('menu-toggle');
   const dropdown = document.getElementById('dropdown-menu');
-  toggle.addEventListener('click', () => {
-    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
-  });
-  window.addEventListener('click', (e) => {
-    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
-      dropdown.style.display = 'none';
-    }
-  });
-</script>
+  if (toggle && dropdown) {
+    toggle.addEventListener('click', () => {
+      dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+    });
+    window.addEventListener('click', (e) => {
+      if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.style.display = 'none';
+      }
+    });
+  }
 
-<script>
+  // Menú de usuario
   const userToggle = document.getElementById('user-toggle');
   const userDropdown = document.getElementById('user-dropdown');
-  userToggle.addEventListener('click', () => {
-    userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
-  });
+  if (userToggle && userDropdown) {
+    userToggle.addEventListener('click', () => {
+      userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+    });
+    window.addEventListener('click', (e) => {
+      if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
+        userDropdown.style.display = 'none';
+      }
+    });
+  }
 
-  // Cerrar el menú al hacer clic fuera
-  window.addEventListener('click', (e) => {
-    if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
-      userDropdown.style.display = 'none';
-    }
-  });
-</script>
-
-<script>
+  // Notificaciones: toggle dropdown
   const notifToggle = document.getElementById('notif-toggle');
   const notifDropdown = document.getElementById('notif-dropdown');
-  notifToggle.addEventListener('click', () => {
-    notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
-  });
-  window.addEventListener('click', (e) => {
-    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
-      notifDropdown.style.display = 'none';
-    }
-  });
+  if (notifToggle && notifDropdown) {
+    notifToggle.addEventListener('click', () => {
+      notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
+    });
+    window.addEventListener('click', (e) => {
+      if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
+        notifDropdown.style.display = 'none';
+      }
+    });
+  }
+
+  // Confirmar lectura (rol 2)
+  function ackUserNotif(idNotificacion) {
+    fetch('php/ack_user_notif.php', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
+      body: 'id=' + encodeURIComponent(idNotificacion)
+    }).then(r => r.json()).catch(() => ({}))
+      .finally(() => { window.location.href = 'boxes.php'; });
+  }
 </script>
 </body>
 </html>
