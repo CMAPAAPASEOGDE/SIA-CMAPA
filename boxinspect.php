@@ -20,7 +20,7 @@ if ($idCaja <= 0) {
     exit();
 }
 
-// --- Conexión BD ---
+// --- Conexión BD (una sola vez) ---
 $serverName = "sqlserver-sia.database.windows.net";
 $connectionOptions = [
     "Database" => "db_sia",
@@ -127,7 +127,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($errorStock) {
-            // corrige typo del destino (antes decía boxinspecter.php)
             header("Location: boxinspect.php?idCaja={$idCaja}&error=stock&idCodigo=" . $idCodigoError);
             exit();
         }
@@ -190,7 +189,7 @@ if (!$datosCaja) { header("Location: boxes.php?error=caja_not_found"); exit(); }
 $numeroCaja     = $datosCaja['numeroCaja']     ?? '---';
 $nombreOperador = $datosCaja['nombreOperador'] ?? 'SIN OPERADOR';
 
-// Contenido de la caja a arreglo (evitamos re-posicionar puntero)
+// Contenido de la caja a arreglo
 $contenidoRows = [];
 $stmtContenido = sqlsrv_query($conn, "SELECT cc.idCodigo, p.codigo AS codigoProducto, p.descripcion, cc.cantidad
                                       FROM CajaContenido cc
@@ -202,37 +201,65 @@ while ($row = sqlsrv_fetch_array($stmtContenido, SQLSRV_FETCH_ASSOC)) {
 }
 
 /* ===============================
-   NOTIFICACIONES (header)
+   NOTIFICACIONES (header nuevo)
    =============================== */
 $rolActual   = (int)($_SESSION['rol'] ?? 0);
-$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'mis_notifs.php';
 $unreadCount = 0;
 $notifList   = [];
 
+// Admin: desde Modificaciones (pendientes)
 if ($rolActual === 1) {
-    $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = 1");
-    $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
-                                      FROM Notificaciones
-                                      WHERE solicitudRevisada = 0 AND idRol = 1
-                                      ORDER BY fecha DESC");
-} else {
-    $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE solicitudRevisada = 0 AND idRol = ?", [$rolActual]);
-    $stmtList  = sqlsrv_query($conn, "SELECT TOP 10 idNotificacion, descripcion, fecha
-                                      FROM Notificaciones
-                                      WHERE solicitudRevisada = 0 AND idRol = ?
-                                      ORDER BY fecha DESC", [$rolActual]);
+    $stmtCount = sqlsrv_query($conn,
+        "SELECT COUNT(*) AS c
+           FROM Modificaciones
+          WHERE solicitudRevisada = 0");
+
+    $stmtList  = sqlsrv_query($conn,
+        "SELECT TOP 10
+                M.idModificacion,
+                M.descripcion,
+                M.fechaSolicitud,
+                M.tipo,
+                M.cantidad,
+                P.codigo AS codigoProducto
+           FROM Modificaciones M
+      LEFT JOIN Productos P ON P.idCodigo = M.idCodigo
+          WHERE M.solicitudRevisada = 0
+       ORDER BY M.fechaSolicitud DESC");
 }
+// Usuario (rol 2): desde Notificaciones (no leídas)
+else {
+    $stmtCount = sqlsrv_query($conn,
+        "SELECT COUNT(*) AS c
+           FROM Notificaciones
+          WHERE estatusRevision = 0");
+
+    $stmtList  = sqlsrv_query($conn,
+        "SELECT TOP 10
+                N.idNotificacion,
+                N.descripcion      AS comentarioAdmin,
+                N.fechaNotificacion,
+                P.codigo           AS codigoProducto
+           FROM Notificaciones N
+      LEFT JOIN Modificaciones M ON M.idModificacion = N.idModificacion
+      LEFT JOIN Productos      P ON P.idCodigo       = M.idCodigo
+          WHERE N.estatusRevision = 0
+       ORDER BY N.fechaNotificacion DESC");
+}
+
 if ($stmtCount) {
     $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
     $unreadCount = (int)($row['c'] ?? 0);
     sqlsrv_free_stmt($stmtCount);
 }
 if ($stmtList) {
-    while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) $notifList[] = $r;
+    while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
+        $notifList[] = $r;
+    }
     sqlsrv_free_stmt($stmtList);
 }
 
-// (CERRAMOS AL FINAL del documento, después de usar $conn en HTML dinámico)
+// (cerramos al final del documento)
 // sqlsrv_close($conn);
 ?>
 <!DOCTYPE html>
@@ -259,27 +286,53 @@ if ($stmtList) {
       <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
         <?php if ($unreadCount === 0): ?>
           <div class="notif-empty" style="padding:10px;">No hay notificaciones nuevas.</div>
-        <?php else: ?>
+
+        <?php elseif ($rolActual === 1): ?>
           <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
-            <?php foreach ($notifList as $n): ?>
-              <li class="notif-item" style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  onclick="window.location.href='<?= $notifTarget ?>'">
+            <?php foreach ($notifList as $n):
+              $f = $n['fechaSolicitud'] ?? null;
+              $fechaTxt = ($f instanceof DateTime)
+                            ? $f->format('Y-m-d H:i')
+                            : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
+              $tipoTxt = strtoupper((string)($n['tipo'] ?? ''));
+              $qtyTxt  = isset($n['cantidad']) ? ' • Cant.: '.(int)$n['cantidad'] : '';
+              $codigo  = (string)($n['codigoProducto'] ?? '');
+            ?>
+              <li class="notif-item"
+                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
+                  onclick="window.location.href='admnrqst.php'">
                 <div class="notif-desc" style="font-size:0.95rem;">
+                  [<?= htmlspecialchars($tipoTxt, ENT_QUOTES, 'UTF-8') ?>]
+                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong><?= $qtyTxt ?> —
                   <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                 </div>
-                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;">
-                  <?php
-                    $f = $n['fecha'];
-                    if ($f instanceof DateTime) echo $f->format('Y-m-d H:i');
-                    else { $dt = @date_create(is_string($f) ? $f : 'now'); echo $dt ? $dt->format('Y-m-d H:i') : ''; }
-                  ?>
-                </div>
+                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
               </li>
             <?php endforeach; ?>
           </ul>
-          <div style="padding:8px 10px;">
-            <button type="button" class="btn" onclick="window.location.href='<?= $notifTarget ?>'">Ver todas</button>
-          </div>
+
+        <?php else: ?>
+          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
+            <?php foreach ($notifList as $n):
+              $idNoti   = (int)($n['idNotificacion'] ?? 0);
+              $codigo   = (string)($n['codigoProducto'] ?? '');
+              $coment   = (string)($n['comentarioAdmin'] ?? '');
+              $f        = $n['fechaNotificacion'] ?? null;
+              $fechaTxt = ($f instanceof DateTime)
+                            ? $f->format('Y-m-d H:i')
+                            : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
+            ?>
+              <li class="notif-item"
+                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
+                  onclick="ackUserNotif(<?= $idNoti ?>)">
+                <div class="notif-desc" style="font-size:0.95rem;">
+                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong> —
+                  <?= htmlspecialchars($coment, ENT_QUOTES, 'UTF-8') ?>
+                </div>
+                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
+              </li>
+            <?php endforeach; ?>
+          </ul>
         <?php endif; ?>
       </div>
     </div>
@@ -328,7 +381,6 @@ if ($stmtList) {
         <select name="nuevo_responsable" required>
           <option value="">Seleccionar nuevo responsable</option>
           <?php
-          // usamos la conexión aún abierta
           $stmtOp = sqlsrv_query($conn, "SELECT idOperador, nombreCompleto FROM Operativo");
           while ($op = sqlsrv_fetch_array($stmtOp, SQLSRV_FETCH_ASSOC)) {
               echo '<option value="'.$op['idOperador'].'">'.htmlspecialchars($op['nombreCompleto']).'</option>';
@@ -451,6 +503,17 @@ if (notifToggle && notifDropdown) {
     if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) notifDropdown.style.display = 'none';
   });
 }
+
+// Confirmar lectura (rol 2)
+function ackUserNotif(idNotificacion) {
+  fetch('php/ack_user_notif.php', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
+    body: 'id=' + encodeURIComponent(idNotificacion)
+  }).then(r => r.json()).catch(() => ({}))
+    .finally(() => { window.location.href = 'boxinspect.php?idCaja=<?= $idCaja ?>'; });
+}
+
 function confirmarEliminacion() {
   return confirm("¿Estás seguro de que deseas eliminar esta caja? Esta acción no se puede deshacer.");
 }
