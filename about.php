@@ -222,7 +222,7 @@ if (in_array($rolActual, [1,2,3], true)) {
         <p><strong>Version SSMS:</strong> 21.4.12</p>
         <p><strong>Version PHP:</strong> 8.2</p>
         <p><strong>Version HTML:</strong> 5</p>
-        <p>Este software pertenece al Comite Municipal de Agua Potable de Apaseo el Grande</p>
+        <p>Este software pertenece al Comite Municipal de Agua Potable y Alcantarillado de Apaseo el Grande</p>
         <p>PROHIBIDO SU VENTA, USO Y/O DISTRIBUCIÓN NO AUTORIZADO.</p>
     </div>
 </main>
