@@ -95,7 +95,7 @@ if ($idRol !== 1) {
         <div class="fila">
             <div class="campo">
                 <label for="usuario">USUARIO</label>
-                <input type="text" id="usuario" value="00005" />
+                <input type="text" id="usuario" value="" />
             </div>
             <div class="campo">
                 <label for="tipo">TIPO DE USUARIO</label>
@@ -110,21 +110,21 @@ if ($idRol !== 1) {
                 <label for="cambiar-contra">CONTRASEÑA</label>
                 <div class="grupo-check">
                     <input type="checkbox" id="cambiar-contra" />
-                    <input type="password" placeholder="so558Sd35$f6XS" disabled />
+                    <input type="password" placeholder="" disabled />
                 </div>
             </div>
             <div class="campo-check">
                 <label for="confirmar">CONFIRMAR CONTRASEÑA</label>
                 <div class="grupo-check">
                     <input type="checkbox" disabled />
-                    <input type="password" placeholder="so558Sd35$f6XS" disabled />
+                    <input type="password" placeholder="" disabled />
                 </div>
             </div>
         </div>
         <div class="fila">
             <div class="campo">
                 <label for="apodo">APODO</label>
-                <input type="text" id="apodo" value="Jose Luis" />
+                <input type="text" id="apodo" value="" />
             </div>
             <div class="campo-estatus">
                 <label>ESTATUS</label>
