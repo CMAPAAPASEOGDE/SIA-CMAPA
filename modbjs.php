@@ -2,16 +2,15 @@
 // Iniciar sesión
 session_start();
 
-// Verificar si el usuario está autenticado
+// Verificar sesión
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
 
-// Verificar el rol del usuario
+// Verificar rol
 $idRol = (int)($_SESSION['rol'] ?? 0);
-if (!in_array($idRol, [1, 2])) {
+if (!in_array($idRol, [1, 2, 3], true)) {
     header("Location: acceso_denegado.php");
     exit();
 }
@@ -30,6 +29,7 @@ if ($conn === false) {
     die(print_r(sqlsrv_errors(), true));
 }
 
+// Productos para selector
 $productos = [];
 $sqlProd = "SELECT idCodigo, codigo, descripcion FROM Productos ORDER BY codigo";
 $stmtProd = sqlsrv_query($conn, $sqlProd);
@@ -38,10 +38,65 @@ while ($row = sqlsrv_fetch_array($stmtProd, SQLSRV_FETCH_ASSOC)) {
     $productos[] = $row;
 }
 sqlsrv_free_stmt($stmtProd);
+
+/* ===============================
+   NOTIFICACIONES (header nuevo)
+   =============================== */
+$rolActual   = (int)($_SESSION['rol'] ?? 0);
+$unreadCount = 0;
+$notifList   = [];
+
+if ($rolActual === 1) {
+    // Admin: desde Modificaciones (pendientes)
+    $stmtCount = sqlsrv_query($conn,
+        "SELECT COUNT(*) AS c
+           FROM Modificaciones
+          WHERE solicitudRevisada = 0");
+    $stmtList  = sqlsrv_query($conn,
+        "SELECT TOP 10
+                M.idModificacion,
+                M.descripcion,
+                M.fechaSolicitud,
+                M.tipo,
+                M.cantidad,
+                P.codigo AS codigoProducto
+           FROM Modificaciones M
+      LEFT JOIN Productos P ON P.idCodigo = M.idCodigo
+          WHERE M.solicitudRevisada = 0
+       ORDER BY M.fechaSolicitud DESC");
+} else {
+    // Roles 2/3: desde Notificaciones (no leídas)
+    $stmtCount = sqlsrv_query($conn,
+        "SELECT COUNT(*) AS c
+           FROM Notificaciones
+          WHERE estatusRevision = 0");
+    $stmtList  = sqlsrv_query($conn,
+        "SELECT TOP 10
+                N.idNotificacion,
+                N.descripcion      AS comentarioAdmin,
+                N.fechaNotificacion,
+                P.codigo           AS codigoProducto
+           FROM Notificaciones N
+      LEFT JOIN Modificaciones M ON M.idModificacion = N.idModificacion
+      LEFT JOIN Productos      P ON P.idCodigo       = M.idCodigo
+          WHERE N.estatusRevision = 0
+       ORDER BY N.fechaNotificacion DESC");
+}
+if ($stmtCount) {
+    $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
+    $unreadCount = (int)($row['c'] ?? 0);
+    sqlsrv_free_stmt($stmtCount);
+}
+if ($stmtList) {
+    while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
+        $notifList[] = $r;
+    }
+    sqlsrv_free_stmt($stmtList);
+}
+
+// (cerramos al final)
 ?>
-
 <!DOCTYPE html>
-
 <html>
 <head>
     <meta charset="UTF-8" />
@@ -49,27 +104,92 @@ sqlsrv_free_stmt($stmtProd);
     <title>SIA Modifications Downs</title>
     <link rel="stylesheet" href="css/StyleMDFBJS.css">
 </head>
-
 <body>
 <header>
   <div class="brand">
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
   </div>
+
   <div class="header-right">
+    <div class="notification-container">
+      <button class="icon-btn" id="notif-toggle" type="button" aria-label="Notificaciones">
+        <img
+          src="<?= $unreadCount > 0 ? 'img/belldot.png' : 'img/bell.png' ?>"
+          class="imgh3"
+          alt="Notificaciones"
+        />
+      </button>
+
+      <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
+
+        <?php if ($unreadCount === 0): ?>
+          <div class="notif-empty" style="padding:10px;">No hay notificaciones nuevas.</div>
+
+        <?php elseif ($rolActual === 1): ?>
+          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
+            <?php foreach ($notifList as $n):
+              $f = $n['fechaSolicitud'] ?? null;
+              $fechaTxt = ($f instanceof DateTime)
+                            ? $f->format('Y-m-d H:i')
+                            : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
+              $tipoTxt = strtoupper((string)($n['tipo'] ?? ''));
+              $qtyTxt  = isset($n['cantidad']) ? ' • Cant.: '.(int)$n['cantidad'] : '';
+              $codigo  = (string)($n['codigoProducto'] ?? '');
+            ?>
+              <li class="notif-item"
+                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
+                  onclick="window.location.href='admnrqst.php'">
+                <div class="notif-desc" style="font-size:0.95rem;">
+                  [<?= htmlspecialchars($tipoTxt, ENT_QUOTES, 'UTF-8') ?>]
+                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong><?= $qtyTxt ?> —
+                  <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+                </div>
+                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+
+        <?php else: ?>
+          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
+            <?php foreach ($notifList as $n):
+              $idNoti   = (int)($n['idNotificacion'] ?? 0);
+              $codigo   = (string)($n['codigoProducto'] ?? '');
+              $coment   = (string)($n['comentarioAdmin'] ?? '');
+              $f        = $n['fechaNotificacion'] ?? null;
+              $fechaTxt = ($f instanceof DateTime)
+                            ? $f->format('Y-m-d H:i')
+                            : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
+            ?>
+              <li class="notif-item"
+                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
+                  onclick="ackUserNotif(<?= $idNoti ?>)">
+                <div class="notif-desc" style="font-size:0.95rem;">
+                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong> —
+                  <?= htmlspecialchars($coment, ENT_QUOTES, 'UTF-8') ?>
+                </div>
+                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        <?php endif; ?>
+
+      </div>
     </div>
-    <p> <?= $_SESSION['usuario'] ?> </p>
+
+    <p> <?= htmlspecialchars($_SESSION['usuario'] ?? '', ENT_QUOTES, 'UTF-8') ?> </p>
+
     <div class="user-menu-container">
       <button class="icon-btn" id="user-toggle">
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
       </button>
       <div class="user-dropdown" id="user-dropdown">
-        <p><strong>Usuario:</strong> <?= $_SESSION[ 'rol' ]?></p>
-        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'])?></p>
+        <p><strong>Usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
+        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
         <a href="passchng.php"><button class="user-option">CAMBIAR CONTRASEÑA</button></a>
       </div>
     </div>
-    <!-- botón hamburguesa -->
+
     <div class="menu-container">
       <button class="icon-btn" id="menu-toggle">
         <img src="img/menu.png" alt="Menú" />
@@ -83,7 +203,7 @@ sqlsrv_free_stmt($stmtProd);
         <a href="logout.php">Cerrar Sesion</a>
       </div>
     </div>
-</div>
+  </div>
 </header>
 
 <main class="altas-container">
@@ -121,7 +241,6 @@ sqlsrv_free_stmt($stmtProd);
       <div class="altas-column">
         <label for="fechaVista">FECHA DE SOLICITUD</label>
         <input type="date" id="fechaVista" value="<?= date('Y-m-d') ?>" readonly>
-        <!-- la fecha real la pondrá el servidor con SYSDATETIME() -->
       </div>
     </div>
 
@@ -134,53 +253,43 @@ sqlsrv_free_stmt($stmtProd);
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-  const toggle = document.getElementById('menu-toggle');
-  const dropdown = document.getElementById('dropdown-menu');
-  toggle.addEventListener('click', () => {
-    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
-  });
-  window.addEventListener('click', (e) => {
-    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
-      dropdown.style.display = 'none';
-    }
-  });
-</script>
+// Menús + usuario
+const toggle = document.getElementById('menu-toggle');
+const dropdown = document.getElementById('dropdown-menu');
+toggle.addEventListener('click', () => {
+  dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+});
+window.addEventListener('click', (e) => {
+  if (!toggle.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
+});
+const userToggle = document.getElementById('user-toggle');
+const userDropdown = document.getElementById('user-dropdown');
+userToggle.addEventListener('click', () => {
+  userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+});
+window.addEventListener('click', (e) => {
+  if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) userDropdown.style.display = 'none';
+});
 
-<script>
-  const userToggle = document.getElementById('user-toggle');
-  const userDropdown = document.getElementById('user-dropdown');
-  userToggle.addEventListener('click', () => {
-    userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
-  });
-
-  // Cerrar el menú al hacer clic fuera
-  window.addEventListener('click', (e) => {
-    if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
-      userDropdown.style.display = 'none';
-    }
-  });
-</script>
-
-<script>
-  const notifToggle = document.getElementById('notif-toggle');
-  const notifDropdown = document.getElementById('notif-dropdown');
+// Campanita
+const notifToggle   = document.getElementById('notif-toggle');
+const notifDropdown = document.getElementById('notif-dropdown');
+if (notifToggle && notifDropdown) {
   notifToggle.addEventListener('click', () => {
-    notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
+    notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
   });
   window.addEventListener('click', (e) => {
-    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
-      notifDropdown.style.display = 'none';
-    }
+    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) notifDropdown.style.display = 'none';
   });
-</script>
+}
 
-<script>
-  $('#idCodigo').on('change', function () {
+// Mostrar código seleccionado
+$('#idCodigo').on('change', function () {
   const sel = $(this).find('option:selected');
   $('#codigoVista').val(sel.data('codigo') || '');
 });
 
-// Envío AJAX - crea notificación de BAJA para admin
+// Envío AJAX - registra solicitud de BAJA en Modificaciones
 $('#formBajas').on('submit', function (e) {
   e.preventDefault();
 
@@ -198,12 +307,11 @@ $('#formBajas').on('submit', function (e) {
     url: 'php/procesar_modbjs.php',
     data: {
       idCodigo: idCodigo,
-      descripcion: motivo, // Notificaciones.descripcion
-      cantidad: cantidad   // Notificaciones.cantidad
-      // fecha la pone SYSDATETIME() en el servidor
+      descripcion: motivo,
+      cantidad: cantidad
+      // tipo lo pondrá el servidor en 'baja'
+      // fechaSolicitud = SYSDATETIME() en servidor
       // solicitudRevisada = 0
-      // idRol destino = 1 (admins)
-      // tipo = 'baja'
     },
     dataType: 'json'
   }).done(function(resp){
@@ -216,6 +324,18 @@ $('#formBajas').on('submit', function (e) {
     alert('Error al enviar la solicitud.');
   });
 });
+
+// Confirmar lectura (roles 2/3): marca estatusRevision=1 y redirige a inventario
+function ackUserNotif(idNotificacion) {
+  fetch('php/ack_user_notif.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+    body: 'id=' + encodeURIComponent(idNotificacion)
+  })
+  .then(r => r.json()).catch(() => ({}))
+  .finally(() => { window.location.href = 'inventory.php'; });
+}
 </script>
+<?php sqlsrv_close($conn); ?>
 </body>
 </html>
