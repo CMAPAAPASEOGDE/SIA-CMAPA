@@ -246,13 +246,13 @@ if (in_array($rolActual, [1,2,3], true)) {
                 <label for="cambiar-contra">CONTRASEÑA</label>
                 <div class="grupo-check">
                     <input type="checkbox" id="cambiar-contra" name="cambiar_contra" value="1" />
-                    <input type="password" name="password" placeholder="Nueva contraseña" disabled />
+                    <input type="password" name="password" placeholder="Nueva contraseña" disabled minlength="8" />
                 </div>
             </div>
             <div class="campo-check">
                 <label for="confirmar">CONFIRMAR CONTRASEÑA</label>
                 <div class="grupo-check">
-                    <input type="password" name="confirm_password" placeholder="Confirmar nueva contraseña" disabled />
+                    <input type="password" name="confirm_password" placeholder="Confirmar nueva contraseña" disabled minlength="8" />
                 </div>
             </div>
         </div>
@@ -348,25 +348,6 @@ function ackUserNotif(idNotificacion) {
   .then(r => r.json()).catch(() => ({}))
   .finally(() => { window.location.href = 'inventory.php'; });
 }
-</script>
-
-<script>
-  const checkboxContra = document.getElementById('cambiar-contra');
-  const inputContra = checkboxContra.nextElementSibling;
-  const inputConfirm = document.querySelectorAll('.grupo-check input[type="password"]')[1];
-  const confirmCheckbox = inputConfirm.previousElementSibling;
-
-  checkboxContra.addEventListener('change', () => {
-    if (checkboxContra.checked) {
-      inputContra.disabled = false;
-      inputConfirm.disabled = false;
-      confirmCheckbox.disabled = false;
-    } else {
-      inputContra.disabled = true;
-      inputConfirm.disabled = true;
-      confirmCheckbox.disabled = true;
-    }
-  });
 </script>
 </body>
 </html>
