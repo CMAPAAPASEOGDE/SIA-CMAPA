@@ -5,6 +5,8 @@ header('Content-Type: application/json');
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     echo json_encode(['success' => false, 'message' => 'Sesión no válida']); exit;
 }
+
+// Roles permitidos que pueden solicitar bajas
 $idRolSesion = (int)($_SESSION['rol'] ?? 0);
 if (!in_array($idRolSesion, [1,2,3], true)) {
     echo json_encode(['success' => false, 'message' => 'Sin permisos']); exit;
@@ -33,18 +35,24 @@ if ($conn === false) {
 
 /*
  * Registrar BAJA en Modificaciones:
+ * - idRol = 1 (destinatario admin)
  * - tipo = 'baja'
- * - solicitudRevisada = 0  (pendiente para admin)
- * - fechaSolicitud = SYSDATETIME()
+ * - fecha = SYSDATETIME()
+ * - solicitudRevisada = 0 (pendiente)
  */
-$sql = "INSERT INTO Modificaciones (idCodigo, tipo, descripcion, cantidad, fechaSolicitud, solicitudRevisada)
-        VALUES (?, 'baja', ?, ?, SYSDATETIME(), 0)";
-$params = [$idCodigo, $descripcion, $cantidad];
+$sql = "INSERT INTO Modificaciones
+        (idRol, descripcion, fecha, solicitudRevisada, cantidad, idCodigo, tipo)
+        VALUES (1, ?, SYSDATETIME(), 0, ?, ?, 'baja')";
+$params = [$descripcion, $cantidad, $idCodigo];
 
 $stmt = sqlsrv_query($conn, $sql, $params);
 if ($stmt === false) {
-    echo json_encode(['success' => false, 'message' => 'No se pudo registrar la solicitud', 'detail' => print_r(sqlsrv_errors(), true)]);
+    echo json_encode([
+        'success' => false,
+        'message' => 'No se pudo registrar la solicitud',
+        'detail'  => print_r(sqlsrv_errors(), true)
+    ]);
     exit;
 }
 
-echo json_encode(['success' => true]); exit;
+echo json_encode(['success' => true]);

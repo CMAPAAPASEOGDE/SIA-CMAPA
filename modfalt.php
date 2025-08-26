@@ -40,14 +40,18 @@ while ($row = sqlsrv_fetch_array($stmtProd, SQLSRV_FETCH_ASSOC)) {
 sqlsrv_free_stmt($stmtProd);
 sqlsrv_close($conn);
 ?>
+
 <!DOCTYPE html>
+
 <html>
+
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
     <title>SIA Modifications Registers</title>
     <link rel="stylesheet" href="css/StyleMDFAL.css">
 </head>
+
 <body>
 <header>
   <div class="brand">

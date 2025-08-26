@@ -96,100 +96,36 @@ if ($stmtList) {
 
 // (cerramos al final)
 ?>
+
 <!DOCTYPE html>
+
 <html>
+
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
     <title>SIA Modifications Downs</title>
     <link rel="stylesheet" href="css/StyleMDFBJS.css">
 </head>
+
 <body>
 <header>
   <div class="brand">
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
   </div>
-
   <div class="header-right">
-    <div class="notification-container">
-      <button class="icon-btn" id="notif-toggle" type="button" aria-label="Notificaciones">
-        <img
-          src="<?= $unreadCount > 0 ? 'img/belldot.png' : 'img/bell.png' ?>"
-          class="imgh3"
-          alt="Notificaciones"
-        />
-      </button>
-
-      <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
-
-        <?php if ($unreadCount === 0): ?>
-          <div class="notif-empty" style="padding:10px;">No hay notificaciones nuevas.</div>
-
-        <?php elseif ($rolActual === 1): ?>
-          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
-            <?php foreach ($notifList as $n):
-              $f = $n['fechaSolicitud'] ?? null;
-              $fechaTxt = ($f instanceof DateTime)
-                            ? $f->format('Y-m-d H:i')
-                            : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
-              $tipoTxt = strtoupper((string)($n['tipo'] ?? ''));
-              $qtyTxt  = isset($n['cantidad']) ? ' • Cant.: '.(int)$n['cantidad'] : '';
-              $codigo  = (string)($n['codigoProducto'] ?? '');
-            ?>
-              <li class="notif-item"
-                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  onclick="window.location.href='admnrqst.php'">
-                <div class="notif-desc" style="font-size:0.95rem;">
-                  [<?= htmlspecialchars($tipoTxt, ENT_QUOTES, 'UTF-8') ?>]
-                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong><?= $qtyTxt ?> —
-                  <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
-                </div>
-                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-
-        <?php else: ?>
-          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
-            <?php foreach ($notifList as $n):
-              $idNoti   = (int)($n['idNotificacion'] ?? 0);
-              $codigo   = (string)($n['codigoProducto'] ?? '');
-              $coment   = (string)($n['comentarioAdmin'] ?? '');
-              $f        = $n['fechaNotificacion'] ?? null;
-              $fechaTxt = ($f instanceof DateTime)
-                            ? $f->format('Y-m-d H:i')
-                            : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
-            ?>
-              <li class="notif-item"
-                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  onclick="ackUserNotif(<?= $idNoti ?>)">
-                <div class="notif-desc" style="font-size:0.95rem;">
-                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong> —
-                  <?= htmlspecialchars($coment, ENT_QUOTES, 'UTF-8') ?>
-                </div>
-                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-        <?php endif; ?>
-
-      </div>
-    </div>
-
-    <p> <?= htmlspecialchars($_SESSION['usuario'] ?? '', ENT_QUOTES, 'UTF-8') ?> </p>
-
+    <p> <?= $_SESSION['usuario'] ?> </p>
     <div class="user-menu-container">
       <button class="icon-btn" id="user-toggle">
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
       </button>
       <div class="user-dropdown" id="user-dropdown">
-        <p><strong>Usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
-        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
+        <p><strong>Usuario:</strong> <?= $_SESSION[ 'rol' ]?></p>
+        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'])?></p>
         <a href="passchng.php"><button class="user-option">CAMBIAR CONTRASEÑA</button></a>
       </div>
     </div>
-
     <div class="menu-container">
       <button class="icon-btn" id="menu-toggle">
         <img src="img/menu.png" alt="Menú" />
@@ -203,7 +139,7 @@ if ($stmtList) {
         <a href="logout.php">Cerrar Sesion</a>
       </div>
     </div>
-  </div>
+</div>
 </header>
 
 <main class="altas-container">
@@ -318,7 +254,8 @@ $('#formBajas').on('submit', function (e) {
     if (resp && resp.success) {
       window.location.href = 'modbjscnf.php';
     } else {
-      alert('Error: ' + (resp.message || 'No se pudo registrar la solicitud'));
+      alert('Error: ' + (resp.message || 'No se pudo registrar la solicitud')
+          + (resp.detail ? '\n\nDetalle:\n' + resp.detail : ''));
     }
   }).fail(function(){
     alert('Error al enviar la solicitud.');
