@@ -108,7 +108,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
   <a href="reports.php"><button type="button">CANCELAR</button></a>
 
   <!-- PDF -->
-  <a class="btn" href="php/report_inventory_pdf.php">GENERAR PDF</a>
+  <button type="button" id="btn-pdf">GENERAR PDF</button>
 
   <!-- XLSX -->
   <button type="button" id="btn-xlsx">GENERAR XLSX</button>
