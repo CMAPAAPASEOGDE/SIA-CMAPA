@@ -2,16 +2,13 @@
 // Iniciar sesión
 session_start();
 
-// Verificar si el usuario está autenticado
+// Verificar autenticación
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
 ?>
-
 <!DOCTYPE html>
-
 <html>
 <head>
     <meta charset="UTF-8" />
@@ -19,37 +16,40 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     <title>SIA Inventory Reports</title>
     <link rel="stylesheet" href="css/StyleRPIV.css">
 </head>
-
 <body>
+
 <header>
   <div class="brand">
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
   </div>
+
   <div class="header-right">
     <div class="notification-container">
-      <button class="icon-btn" id="notif-toggle">
+      <button class="icon-btn" id="notif-toggle" type="button">
         <img src="img/bell.png" class="imgh3" alt="Notificaciones" />
       </button>
-      <div class="notification-dropdown" id="notif-dropdown"></div>
+      <div class="notification-dropdown" id="notif-dropdown" style="display:none;"></div>
     </div>
-    <p> <?= $_SESSION['usuario'] ?> </p>
+
+    <p><?= htmlspecialchars($_SESSION['usuario'] ?? '') ?></p>
+
     <div class="user-menu-container">
-      <button class="icon-btn" id="user-toggle">
+      <button class="icon-btn" id="user-toggle" type="button">
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
       </button>
-      <div class="user-dropdown" id="user-dropdown">
-        <p><strong>Usuario:</strong> <?= $_SESSION[ 'rol' ]?></p>
-        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'])?></p>
-        <a href="passchng.php"><button class="user-option">CAMBIAR CONTRASEÑA</button></a>
+      <div class="user-dropdown" id="user-dropdown" style="display:none;">
+        <p><strong>Usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
+        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '') ?></p>
+        <a href="passchng.php"><button class="user-option" type="button">CAMBIAR CONTRASEÑA</button></a>
       </div>
     </div>
-    <!-- botón hamburguesa -->
+
     <div class="menu-container">
-      <button class="icon-btn" id="menu-toggle">
+      <button class="icon-btn" id="menu-toggle" type="button">
         <img src="img/menu.png" alt="Menú" />
       </button>
-      <div class="dropdown" id="dropdown-menu">
+      <div class="dropdown" id="dropdown-menu" style="display:none;">
         <a href="homepage.php">Inicio</a>
         <a href="mnthclsr.php">Cierre de mes</a>
         <a href="admin.php">Menu de administador</a>
@@ -58,7 +58,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
         <a href="logout.php">Cerrar Sesion</a>
       </div>
     </div>
-</div>
+  </div>
 </header>
 
 <main class="reportes-container">
@@ -66,99 +66,83 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
   <h3 class="reportes-subtitle">INVENTARIO DEL ALMACÉN</h3>
   <p class="reportes-filtro">FILTRAR POR</p>
 
-  <form class="reporte-filtros">
+  <!-- IMPORTANTE: este form hace GET a export_inventario.php y descarga PDF/XLSX -->
+  <form class="reporte-filtros" action="php/export_inventario.php" method="get" target="_blank">
     <div class="form-grid">
       <label>CÓDIGO
-        <select><option>ABCDEFGHIJKLMNÑOPQRSTUVWXZY01234</option></select>
+        <input type="text" name="codigo" placeholder="Ej. 12000689543">
       </label>
+
       <label>NOMBRE
-        <input type="text" value="" />
+        <input type="text" name="nombre" placeholder="Descripción contiene...">
       </label>
+
       <label>LINEA
-        <input type="text" value="" />
+        <input type="text" name="linea" placeholder="Ej. Hidráulica">
       </label>
-      <label>SUBLINEA
-        <input type="text" value="" />
+
+      <label>SUBLÍNEA
+        <input type="text" name="sublinea" placeholder="Ej. Medidores">
       </label>
-      <label>CANTIDAD
-        <select><option>TODAS</option></select>
-      </label>
-      <label>UNIDAD
-        <select><option>TODAS</option></select>
-      </label>
-      <label>PRECIO
-        <input type="password" value="********" />
-      </label>
-      <label>PUNTO DE REORDEN
-        <select><option>5</option></select>
-      </label>
-      <label>STOCK MÁXIMO
-        <select><option>60</option></select>
-      </label>
+
       <label>TIPO
-        <select><option>Material</option></select>
+        <select name="tipo">
+          <option value="">Todos</option>
+          <option value="Material">Material</option>
+          <option value="Herramienta">Herramienta</option>
+        </select>
       </label>
-      <label>ESTATUS
-        <select><option>Punto de reorden</option></select>
-      </label>
-      <label>MES
-        <select><option>ABRIL</option></select>
-      </label>
-      <label>AÑO
-        <select><option>2025</option></select>
-      </label>
-      <label>FECHA ESPECÍFICA
-        <input type="text" value="" />
+
+      <label>ESTADO
+        <select name="estado">
+          <option value="">Todos</option>
+          <option value="En stock">En stock</option>
+          <option value="Bajo stock">Bajo stock</option>
+          <option value="Fuera de stock">Fuera de stock</option>
+          <option value="Sobre stock">Sobre stock</option>
+        </select>
       </label>
     </div>
 
     <div class="report-buttons">
-      <a href="reports.php"><button type="button">CANCELAR</button></a>
-      <a href="#"><button type="button">GENERAR PDF</button></a>
-      <a href="#"><button type="button">GENERAR XLSX</button></a>
-    </div>
+  <a href="reports.php"><button type="button">CANCELAR</button></a>
+
+  <!-- PDF -->
+  <a class="btn" href="php/report_inventory_pdf.php">GENERAR PDF</a>
+
+  <!-- XLSX -->
+  <a class="btn" href="php/report_inventory_xlsx.php">GENERAR XLSX</a>
+</div>
   </form>
 </main>
 
-
 <script>
+  // menús
   const toggle = document.getElementById('menu-toggle');
   const dropdown = document.getElementById('dropdown-menu');
   toggle.addEventListener('click', () => {
     dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
   });
   window.addEventListener('click', (e) => {
-    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
-      dropdown.style.display = 'none';
-    }
+    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
   });
-</script>
 
-<script>
   const userToggle = document.getElementById('user-toggle');
   const userDropdown = document.getElementById('user-dropdown');
   userToggle.addEventListener('click', () => {
     userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
   });
-
-  // Cerrar el menú al hacer clic fuera
   window.addEventListener('click', (e) => {
-    if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
-      userDropdown.style.display = 'none';
-    }
+    if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) userDropdown.style.display = 'none';
   });
-</script>
 
-<script>
   const notifToggle = document.getElementById('notif-toggle');
   const notifDropdown = document.getElementById('notif-dropdown');
   notifToggle.addEventListener('click', () => {
     notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
   });
   window.addEventListener('click', (e) => {
-    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
-      notifDropdown.style.display = 'none';
-    }
+    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) notifDropdown.style.display = 'none';
   });
 </script>
 </body>
