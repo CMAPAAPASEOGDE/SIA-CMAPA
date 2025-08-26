@@ -279,16 +279,20 @@ if (in_array($rolActual, [1,2,3], true)) {
 </main>
 
 <script>
-  // Habilitar campos de contraseña cuando se marca el checkbox
-  const checkboxContra = document.getElementById('cambiar-contra');
-  const inputsContra = document.querySelectorAll('input[type="password"]');
-  
-  checkboxContra.addEventListener('change', () => {
-    inputsContra.forEach(input => {
-        input.disabled = !checkboxContra.checked;
-        if (!checkboxContra.checked) input.value = '';
+  // Habilitar/Deshabilitar contraseña desde el checkbox
+  const cambiarChk = document.getElementById('cambiar-contra');
+  const pwdInputs  = document.querySelectorAll('input[name="password"], input[name="confirm_password"]');
+
+  function togglePwdFields() {
+    const on = cambiarChk.checked;
+    pwdInputs.forEach(i => {
+      i.disabled = !on;
+      if (!on) i.value = '';
     });
-  });
+  }
+  cambiarChk.addEventListener('change', togglePwdFields);
+  // estado inicial
+  togglePwdFields();
 </script>
 
 <script>
