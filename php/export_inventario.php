@@ -183,6 +183,7 @@ if ($format === 'xlsx') {
     $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
     $col++;
   }
+
   // Filas
   $rowNum = 2;
   foreach ($rows as $row) {
@@ -203,19 +204,29 @@ if ($format === 'xlsx') {
     $rowNum++;
   }
 
-  // Primera fila en bold
-  $sheet->getStyle('A1:'. $sheet->getHighestColumn() .'1')->getFont()->setBold(true);
+  // Encabezado en negritas
+  $sheet->getStyle('A1:' . $sheet->getHighestColumn() . '1')->getFont()->setBold(true);
 
-  // Descargar
+  // --- STREAM ROBUSTO: a archivo temporal y luego readfile() ---
   $filename = 'inventario_' . date('Ymd_His') . '.xlsx';
-  header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  header('Content-Disposition: attachment; filename="'.$filename.'"');
-  header('Cache-Control: max-age=0');
+  $tmpFile  = sys_get_temp_dir() . '/' . $filename;
 
   $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-  if (ob_get_length()) { ob_end_clean(); }
-  $writer->save('php://output');
-  exit();
+  $writer->save($tmpFile);
+
+  // Cierra la sesión y limpia TODOS los buffers antes de enviar headers
+  if (session_status() === PHP_SESSION_ACTIVE) { session_write_close(); }
+  while (ob_get_level()) { ob_end_clean(); }
+
+  header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  header('Content-Disposition: attachment; filename="' . $filename . '"');
+  header('Content-Length: ' . filesize($tmpFile));
+  header('Cache-Control: private, max-age=0, must-revalidate');
+  header('Pragma: public');
+
+  readfile($tmpFile);
+  @unlink($tmpFile);
+  exit;
 }
 
 // Formato no soportado
