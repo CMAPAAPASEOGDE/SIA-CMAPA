@@ -139,7 +139,7 @@ $targetPage = 'modedtdtls.php';
     <input id="filtro" class="input-ancho-grande" type="text" placeholder="Escribe para filtrar…" oninput="filtrar()">
 
     <!-- Formulario real -->
-    <form id="formBuscar" method="get" action="<?= $targetPage ?>">
+    <form id="formBuscar" method="get" action="admnedted.php">
       <label for="codigo">CÓDIGO</label>
       <select id="codigo" name="idCodigo" class="input-ancho-grande" required size="10">
         <?php foreach ($productos as $p): ?>
