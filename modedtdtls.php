@@ -211,7 +211,8 @@ $('#formDetalles').on('submit', function (e) {
     if (resp && resp.success) {
       window.location.href = 'modeddtcf.php';
     } else {
-      alert('Error: ' + (resp.message || 'No se pudo registrar la solicitud'));
+      alert('Error: ' + (resp.message || 'No se pudo registrar la solicitud') +
+      (resp.detail ? '\n\nDetalle:\n' + resp.detail : ''));
     }
   }).fail(function(){
     alert('Error al enviar la solicitud.');
