@@ -104,44 +104,13 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
       </label>
     </div>
 
-<div class="report-buttons">
-  <a href="reports.php"><button type="button">CANCELAR</button></a>
-
-  <!-- PDF -->
-  <button type="submit" name="format" value="pdf">GENERAR PDF</button>
-
-  <!-- XLSX -->
-  <button type="submit" name="format" value="xlsx">GENERAR XLSX</button>
-</div>
+  <div class="report-buttons">
+    <a href="reports.php"><button type="button">CANCELAR</button></a>
+    <button type="submit" name="format" value="pdf">GENERAR PDF</button>
+    <button type="submit" name="format" value="xlsx">GENERAR XLSX</button>
+  </div>
   </form>
 </main>
-
-<script>
-  // Verifica que la ruta sea correcta
-function buildUrl(format){
-  const form = document.querySelector('.reporte-filtros');
-  const formData = new FormData(form);
-  formData.set('format', format);
-  
-  const params = new URLSearchParams();
-  for (let [key, value] of formData) {
-    params.append(key, value);
-  }
-  
-  return `php/export_inventario.php?${params.toString()}`;
-}
-
-document.getElementById('btn-pdf').onclick = () => {
-  window.open(buildUrl('pdf'), '_blank');
-};
-
-document.getElementById('btn-xlsx').onclick = () => {
-  const url = buildUrl('xlsx');
-  console.log('URL de descarga:', url);
-  alert('URL: ' + url); // ← Esto te mostrará la URL exacta
-  window.open(url, '_blank');
-};
-</script>
 
 <script>
   // menús
