@@ -73,14 +73,24 @@ while ($r = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) { $rows[] = $r; }
 sqlsrv_free_stmt($stmt);
 sqlsrv_close($conn);
 
-// Encabezados
-$headers = ['Código','Descripción','Línea','Sublínea','Cantidad','Unidad'];
-if ($includePrecio) { $headers[] = 'Precio'; }
-$headers = array_merge($headers, ['Pto. Reorden','Stock Máx.','Tipo','Estado']);
-
+// ---------- Composer ----------
 $autoload = __DIR__ . '/../vendor/autoload.php';
 if (!file_exists($autoload)) { http_response_code(500); exit('Falta autoload de Composer'); }
 require $autoload;
+
+// ---------- Diagnóstico rápido ----------
+$format = strtolower($_GET['format'] ?? 'pdf');
+if ($format === 'diag') {
+  header('Content-Type: text/plain; charset=utf-8');
+  echo "PHP: " . PHP_VERSION . "\n";
+  echo "ZipArchive: " . (class_exists('ZipArchive') ? 'OK' : 'FALTA') . "\n";
+  echo "mbstring: " . (extension_loaded('mbstring') ? 'OK' : 'FALTA') . "\n";
+  echo "xml: " . (extension_loaded('xml') ? 'OK' : 'FALTA') . "\n";
+  echo "xmlwriter: " . (extension_loaded('xmlwriter') ? 'OK' : 'FALTA') . "\n";
+  echo "simplexml: " . (extension_loaded('simplexml') ? 'OK' : 'FALTA') . "\n";
+  echo "vendor autoload: OK\n";
+  exit;
+}
 
 // ---------- PDF ----------
 if ($format === 'pdf') {
@@ -147,47 +157,68 @@ if ($format === 'pdf') {
 
 // ---------- XLSX ----------
 if ($format === 'xlsx') {
-  $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-  $sheet = $spreadsheet->getActiveSheet()->setTitle('Inventario');
+  // Comprobación de extensión zip (requerida para XLSX)
+  $zipOk = class_exists('ZipArchive');
 
-  // Encabezados
-  $c = 1;
-  foreach ($headers as $h) {
-    $sheet->setCellValueByColumnAndRow($c, 1, $h);
-    $sheet->getColumnDimensionByColumn($c)->setAutoSize(true);
-    $c++;
-  }
+  try {
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet()->setTitle('Inventario');
 
-  // Filas
-  $r = 2;
-  foreach ($rows as $row) {
+    // Encabezados
     $c = 1;
-    $sheet->setCellValueByColumnAndRow($c++, $r, $row['codigo']);
-    $sheet->setCellValueByColumnAndRow($c++, $r, $row['descripcion']);
-    $sheet->setCellValueByColumnAndRow($c++, $r, $row['linea']);
-    $sheet->setCellValueByColumnAndRow($c++, $r, $row['sublinea']);
-    $sheet->setCellValueByColumnAndRow($c++, $r, (int)$row['cantidad']);
-    $sheet->setCellValueByColumnAndRow($c++, $r, $row['unidad']);
-    if ($includePrecio) { $sheet->setCellValueByColumnAndRow($c++, $r, (float)$row['precio']); }
-    $sheet->setCellValueByColumnAndRow($c++, $r, (int)$row['puntoReorden']);
-    $sheet->setCellValueByColumnAndRow($c++, $r, (int)$row['stockMaximo']);
-    $sheet->setCellValueByColumnAndRow($c++, $r, $row['tipo']);
-    $sheet->setCellValueByColumnAndRow($c++, $r, $row['estado']);
-    $r++;
+    foreach ($headers as $h) {
+      $sheet->setCellValueByColumnAndRow($c, 1, $h);
+      $sheet->getColumnDimensionByColumn($c)->setAutoSize(true);
+      $c++;
+    }
+
+    // Filas
+    $r = 2;
+    foreach ($rows as $row) {
+      $c = 1;
+      $sheet->setCellValueByColumnAndRow($c++, $r, $row['codigo']);
+      $sheet->setCellValueByColumnAndRow($c++, $r, $row['descripcion']);
+      $sheet->setCellValueByColumnAndRow($c++, $r, $row['linea']);
+      $sheet->setCellValueByColumnAndRow($c++, $r, $row['sublinea']);
+      $sheet->setCellValueByColumnAndRow($c++, $r, (int)$row['cantidad']);
+      $sheet->setCellValueByColumnAndRow($c++, $r, $row['unidad']);
+      if ($includePrecio) { $sheet->setCellValueByColumnAndRow($c++, $r, (float)$row['precio']); }
+      $sheet->setCellValueByColumnAndRow($c++, $r, (int)$row['puntoReorden']);
+      $sheet->setCellValueByColumnAndRow($c++, $r, (int)$row['stockMaximo']);
+      $sheet->setCellValueByColumnAndRow($c++, $r, $row['tipo']);
+      $sheet->setCellValueByColumnAndRow($c++, $r, $row['estado']);
+      $r++;
+    }
+
+    $sheet->getStyle('A1:' . $sheet->getHighestColumn() . '1')->getFont()->setBold(true);
+
+    if ($zipOk) {
+      // XLSX (recomendado)
+      $filename = 'inventario_' . date('Ymd_His') . '.xlsx';
+      if (ob_get_length()) { ob_end_clean(); }
+      header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      header('Content-Disposition: attachment; filename="'.$filename.'"');
+      header('Cache-Control: max-age=0');
+      $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+      $writer->save('php://output');
+    } else {
+      // Fallback temporal: XLS (no requiere ZipArchive)
+      $filename = 'inventario_' . date('Ymd_His') . '.xls';
+      if (ob_get_length()) { ob_end_clean(); }
+      header('Content-Type: application/vnd.ms-excel');
+      header('Content-Disposition: attachment; filename="'.$filename.'"');
+      header('Cache-Control: max-age=0');
+      $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xls($spreadsheet);
+      $writer->save('php://output');
+    }
+    exit;
+
+  } catch (\Throwable $e) {
+    if (!headers_sent()) header('Content-Type: text/plain; charset=utf-8', true, 500);
+    echo "Error generando Excel: " . $e->getMessage() . "\n";
+    echo $e->getTraceAsString();
+    exit;
   }
-
-  // Bold primera fila
-  $sheet->getStyle('A1:' . $sheet->getHighestColumn() . '1')->getFont()->setBold(true);
-
-  $filename = 'inventario_' . date('Ymd_His') . '.xlsx';
-  if (ob_get_length()) { ob_end_clean(); }
-  header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  header('Content-Disposition: attachment; filename="'.$filename.'"');
-  header('Cache-Control: max-age=0');
-
-  $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-  $writer->save('php://output');
-  exit;
 }
 
 http_response_code(400);
