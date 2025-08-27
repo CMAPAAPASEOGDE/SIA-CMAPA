@@ -117,6 +117,30 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 </main>
 
 <script>
+  // Verifica que la ruta sea correcta
+function buildUrl(format){
+  const form = document.querySelector('.reporte-filtros');
+  const formData = new FormData(form);
+  formData.set('format', format);
+  
+  const params = new URLSearchParams();
+  for (let [key, value] of formData) {
+    params.append(key, value);
+  }
+  
+  return `php/export_inventario.php?${params.toString()}`;
+}
+
+document.getElementById('btn-pdf').onclick = () => {
+  window.open(buildUrl('pdf'), '_blank');
+};
+
+document.getElementById('btn-xlsx').onclick = () => {
+  window.open(buildUrl('xlsx'), '_blank');
+};
+</script>
+
+<script>
   // menús
   const toggle = document.getElementById('menu-toggle');
   const dropdown = document.getElementById('dropdown-menu');
