@@ -104,35 +104,17 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
       </label>
     </div>
 
-    <div class="report-buttons">
+<div class="report-buttons">
   <a href="reports.php"><button type="button">CANCELAR</button></a>
 
   <!-- PDF -->
-  <button type="button" id="btn-pdf">GENERAR PDF</button>
+  <button type="submit" name="format" value="pdf">GENERAR PDF</button>
 
   <!-- XLSX -->
-  <button type="button" id="btn-xlsx">GENERAR XLSX</button>
+  <button type="submit" name="format" value="xlsx">GENERAR XLSX</button>
 </div>
   </form>
 </main>
-
-<script>
-  function q(v){ return encodeURIComponent(v || ''); }
-  function buildUrl(format){
-    // Lee aquí tus filtros reales del formulario:
-    const codigo   = document.querySelector('[name="codigo"]')?.value || '';
-    const nombre   = document.querySelector('[name="nombre"]')?.value || '';
-    const linea    = document.querySelector('[name="linea"]')?.value || '';
-    const sublinea = document.querySelector('[name="sublinea"]')?.value || '';
-    const tipo     = document.querySelector('[name="tipo"]')?.value || '';
-    const estado   = document.querySelector('[name="estado"]')?.value || '';
-    return `php/export_inventario.php?format=${format}`+
-           `&codigo=${q(codigo)}&nombre=${q(nombre)}&linea=${q(linea)}`+
-           `&sublinea=${q(sublinea)}&tipo=${q(tipo)}&estado=${q(estado)}`;
-  }
-  document.getElementById('btn-pdf').onclick  = () => window.open(buildUrl('pdf'),  '_blank');
-  document.getElementById('btn-xlsx').onclick = () => window.open(buildUrl('xlsx'), '_blank');
-</script>
 
 <script>
   // menús
