@@ -136,7 +136,10 @@ document.getElementById('btn-pdf').onclick = () => {
 };
 
 document.getElementById('btn-xlsx').onclick = () => {
-  window.open(buildUrl('xlsx'), '_blank');
+  const url = buildUrl('xlsx');
+  console.log('URL de descarga:', url);
+  alert('URL: ' + url); // ← Esto te mostrará la URL exacta
+  window.open(url, '_blank');
 };
 </script>
 
