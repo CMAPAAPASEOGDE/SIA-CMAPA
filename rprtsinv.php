@@ -141,5 +141,34 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) notifDropdown.style.display = 'none';
   });
 </script>
+
+<script>
+  const form = document.querySelector('.reporte-filtros');
+  const btnPdf  = document.querySelector('button[name="format"][value="pdf"]');
+  const btnXlsx = document.querySelector('button[name="format"][value="xlsx"]');
+  if (btnPdf)  btnPdf.addEventListener('click',  () => { form.target = '_blank'; });
+  if (btnXlsx) btnXlsx.addEventListener('click', () => { form.target = '_self';  });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const form    = document.querySelector('.reporte-filtros');
+  const btnPdf  = document.querySelector('button[name="format"][value="pdf"]');
+  const btnXlsx = document.querySelector('button[name="format"][value="xlsx"]');
+
+  // Por defecto descargamos en la misma pestaña
+  form.target = '_self';
+
+  // Si hacen clic en PDF, abrimos en nueva pestaña
+  if (btnPdf)  btnPdf.addEventListener('click',  () => { form.target = '_blank'; });
+  if (btnXlsx) btnXlsx.addEventListener('click', () => { form.target = '_self';  });
+
+  // Extra: si envían con Enter, decidimos según el "submitter"
+  form.addEventListener('submit', (e) => {
+    const s = e.submitter;
+    form.target = (s && s.name === 'format' && s.value === 'pdf') ? '_blank' : '_self';
+  });
+});
+</script>
 </body>
 </html>
