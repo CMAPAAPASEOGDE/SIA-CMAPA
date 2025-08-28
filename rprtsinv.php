@@ -67,9 +67,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
   <p class="reportes-filtro">FILTRAR POR</p>
 
   <!-- IMPORTANTE: este form hace GET a export_inventario.php y descarga PDF/XLSX -->
-  <form class="reporte-filtros"
-      action="<?= rtrim(dirname($_SERVER['SCRIPT_NAME']),'/') ?>/php/export_inventario.php"
-      method="get">
+  <form class="reporte-filtros" action="export_inventario.php" method="get" target="_blank">
     <div class="form-grid">
       <label>CÓDIGO
         <input type="text" name="codigo" placeholder="Ej. 12000689543">
