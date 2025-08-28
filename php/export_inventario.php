@@ -1,6 +1,14 @@
 <?php
 // php/export_inventario.php
 session_start();
+
+error_log("Export inventario llamado: " . print_r($_GET, true));
+
+// Si hay algún error, registralo
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../php_errors.log');
+
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
   http_response_code(403);
   echo "No autorizado";

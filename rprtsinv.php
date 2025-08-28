@@ -67,7 +67,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
   <p class="reportes-filtro">FILTRAR POR</p>
 
   <!-- IMPORTANTE: este form hace GET a export_inventario.php y descarga PDF/XLSX -->
-  <form class="reporte-filtros" action="php/export_inventario.php" method="get" target="_blank">
+  <form class="reporte-filtros" id="reportForm">
     <div class="form-grid">
       <label>CÓDIGO
         <input type="text" name="codigo" placeholder="Ej. 12000689543">
@@ -104,11 +104,11 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
       </label>
     </div>
 
-  <div class="report-buttons">
-    <a href="reports.php"><button type="button">CANCELAR</button></a>
-    <button type="submit" name="format" value="pdf">GENERAR PDF</button>
-    <button type="submit" name="format" value="xlsx">GENERAR XLSX</button>
-  </div>
+    <div class="report-buttons">
+      <a href="reports.php"><button type="button">CANCELAR</button></a>
+      <button type="button" onclick="generateReport('pdf')">GENERAR PDF</button>
+      <button type="button" onclick="generateReport('xlsx')">GENERAR XLSX</button>
+    </div>
   </form>
 </main>
 
@@ -143,12 +143,30 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 </script>
 
 <script>
-  const form = document.querySelector('.reporte-filtros');
-  const btnPdf  = document.querySelector('button[name="format"][value="pdf"]');
-  const btnXlsx = document.querySelector('button[name="format"][value="xlsx"]');
-  if (btnPdf)  btnPdf.addEventListener('click',  () => { form.target = '_blank'; });
-  if (btnXlsx) btnXlsx.addEventListener('click', () => { form.target = '_self';  });
+function generateReport(format) {
+  const form = document.getElementById('reportForm');
+  const formData = new FormData();
+  
+  // Recoger todos los valores del formulario
+  const inputs = form.querySelectorAll('input, select');
+  inputs.forEach(input => {
+    formData.append(input.name, input.value);
+  });
+  
+  // Agregar el formato
+  formData.append('format', format);
+  
+  // Construir URL
+  const params = new URLSearchParams();
+  for (let [key, value] of formData) {
+    params.append(key, value);
+  }
+  
+  const url = `php/export_inventario.php?${params.toString()}`;
+  
+  // Siempre abrir en nueva pestaña
+  window.open(url, '_blank');
+}
 </script>
-
 </body>
 </html>
