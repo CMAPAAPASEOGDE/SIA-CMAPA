@@ -8,6 +8,10 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
 }
+
+require_once __DIR__ . 'php/reportes_whms_utils.php';
+$conn = db_conn_or_die();
+$productos = get_product_catalog($conn);
 ?>
 
 <!DOCTYPE html>
@@ -26,20 +30,13 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
   </div>
-  <div class="header-right">
-    <div class="notification-container">
-      <button class="icon-btn" id="notif-toggle">
-        <img src="img/bell.png" class="imgh3" alt="Notificaciones" />
-      </button>
-      <div class="notification-dropdown" id="notif-dropdown"></div>
-    </div>
     <p> <?= $_SESSION['usuario'] ?> </p>
     <div class="user-menu-container">
       <button class="icon-btn" id="user-toggle">
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
       </button>
       <div class="user-dropdown" id="user-dropdown">
-        <p><strong>Usuario:</strong> <?= $_SESSION[ 'rol' ]?></p>
+        <p><strong>Tipo de Usuario:</strong> <?= $_SESSION[ 'rol' ]?></p>
         <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'])?></p>
         <a href="passchng.php"><button class="user-option">CAMBIAR CONTRASEÑA</button></a>
       </div>
@@ -62,33 +59,55 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 </header>
 
 <main class="reportes-container">
-    <h2 class="reportes-title">Reportes</h2>
-    <h3 class="reportes-subtitle">MOVIMIENTOS DEL ALMACÉN</h3>
-    <p class="reportes-filtro">FILTRAR POR</p>
-    <form class="reporte-filtros">
-        <div class="form-grid grid-3">
-            <label>CÓDIGO
-                <select>
-                    <option>ABCDEFGHIJKLMNÑOPQRSTUVWXZY201234</option>
-                </select>
-            </label>
-            <label>MES
-                <select>
-                    <option>ABRIL</option>
-                </select>
-            </label>
-            <label>AÑO
-                <select>
-                    <option>2025</option>
-                </select>
-            </label>
-        </div>
-        <div class="report-buttons">
-            <a href="reports.php"><button type="button">CANCELAR</button></a>
-            <a href="#"><button type="button">GENERAR PDF</button></a>
-            <a href="#"><button type="button">GENERAR XLSX</button></a>
-        </div>
-    </form>
+  <h2 class="reportes-title">Reportes</h2>
+  <h3 class="reportes-subtitle">MOVIMIENTOS DEL ALMACÉN</h3>
+  <p class="reportes-filtro">FILTRAR POR</p>
+
+  <form class="reporte-filtros" method="post" action="generar_whms.php">
+    <div class="form-grid grid-3">
+      <label>CÓDIGO
+        <select name="idCodigo">
+          <option value="">-- TODOS --</option>
+          <?php foreach ($productos as $p): ?>
+            <option value="<?= (int)$p['idCodigo'] ?>">
+              <?= htmlspecialchars($p['codigo'] . ' — ' . $p['descripcion']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </label>
+
+      <label>MES
+        <select name="mes" required>
+          <?php
+          $meses = ['01'=>'ENERO','02'=>'FEBRERO','03'=>'MARZO','04'=>'ABRIL','05'=>'MAYO','06'=>'JUNIO','07'=>'JULIO','08'=>'AGOSTO','09'=>'SEPTIEMBRE','10'=>'OCTUBRE','11'=>'NOVIEMBRE','12'=>'DICIEMBRE'];
+          $mesActual = date('m');
+          foreach ($meses as $k=>$v) {
+              $sel = ($k === $mesActual) ? 'selected' : '';
+              echo "<option value=\"$k\" $sel>$v</option>";
+          }
+          ?>
+        </select>
+      </label>
+
+      <label>AÑO
+        <select name="anio" required>
+          <?php
+          $y = (int)date('Y');
+          for ($yy = $y; $yy >= $y-5; $yy--) {
+              echo "<option value=\"$yy\">$yy</option>";
+          }
+          ?>
+        </select>
+      </label>
+    </div>
+
+    <div class="report-buttons">
+      <a href="reports.php"><button type="button">CANCELAR</button></a>
+      <button type="submit" name="action" value="preview">PREVISUALIZAR</button>
+      <button type="submit" formaction="exportar_whms_pdf.php"  name="action" value="pdf">GENERAR PDF</button>
+      <button type="submit" formaction="exportar_whms_excel.php" name="action" value="xlsx">GENERAR XLSX</button>
+    </div>
+  </form>
 </main>
 
 <script>
