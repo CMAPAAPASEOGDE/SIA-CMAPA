@@ -228,11 +228,23 @@ if ($format === 'xlsx') {
     $sheet = $spreadsheet->getActiveSheet();
     $sheet->setTitle('Inventario');
 
+    // Helper function to convert column number to letter
+    function getColumnLetter($col) {
+      $letter = '';
+      while ($col > 0) {
+        $col--;
+        $letter = chr(65 + ($col % 26)) . $letter;
+        $col = intval($col / 26);
+      }
+      return $letter;
+    }
+
     // Encabezados
     $col = 1;
     foreach ($headers as $h) {
-      $sheet->setCellValueByColumnAndRow($col, 1, $h);
-      $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+      $cellAddress = getColumnLetter($col) . '1';
+      $sheet->setCellValue($cellAddress, $h);
+      $sheet->getColumnDimension(getColumnLetter($col))->setAutoSize(true);
       $col++;
     }
     
@@ -240,24 +252,29 @@ if ($format === 'xlsx') {
     $rowNum = 2;
     foreach ($rows as $row) {
       $col = 1;
-      $sheet->setCellValueByColumnAndRow($col++, $rowNum, $row['codigo']);
-      $sheet->setCellValueByColumnAndRow($col++, $rowNum, $row['descripcion']);
-      $sheet->setCellValueByColumnAndRow($col++, $rowNum, $row['linea']);
-      $sheet->setCellValueByColumnAndRow($col++, $rowNum, $row['sublinea']);
-      $sheet->setCellValueByColumnAndRow($col++, $rowNum, (int)$row['cantidad']);
-      $sheet->setCellValueByColumnAndRow($col++, $rowNum, $row['unidad']);
+      
+      $sheet->setCellValue(getColumnLetter($col++) . $rowNum, $row['codigo']);
+      $sheet->setCellValue(getColumnLetter($col++) . $rowNum, $row['descripcion']);
+      $sheet->setCellValue(getColumnLetter($col++) . $rowNum, $row['linea']);
+      $sheet->setCellValue(getColumnLetter($col++) . $rowNum, $row['sublinea']);
+      $sheet->setCellValue(getColumnLetter($col++) . $rowNum, (int)$row['cantidad']);
+      $sheet->setCellValue(getColumnLetter($col++) . $rowNum, $row['unidad']);
+      
       if ($includePrecio) {
-        $sheet->setCellValueByColumnAndRow($col++, $rowNum, (float)$row['precio']);
+        $sheet->setCellValue(getColumnLetter($col++) . $rowNum, (float)$row['precio']);
       }
-      $sheet->setCellValueByColumnAndRow($col++, $rowNum, (int)$row['puntoReorden']);
-      $sheet->setCellValueByColumnAndRow($col++, $rowNum, (int)$row['stockMaximo']);
-      $sheet->setCellValueByColumnAndRow($col++, $rowNum, $row['tipo']);
-      $sheet->setCellValueByColumnAndRow($col++, $rowNum, $row['estado']);
+      
+      $sheet->setCellValue(getColumnLetter($col++) . $rowNum, (int)$row['puntoReorden']);
+      $sheet->setCellValue(getColumnLetter($col++) . $rowNum, (int)$row['stockMaximo']);
+      $sheet->setCellValue(getColumnLetter($col++) . $rowNum, $row['tipo']);
+      $sheet->setCellValue(getColumnLetter($col++) . $rowNum, $row['estado']);
+      
       $rowNum++;
     }
 
     // Primera fila en bold
-    $sheet->getStyle('A1:'. $sheet->getHighestColumn() .'1')->getFont()->setBold(true);
+    $lastColumn = getColumnLetter(count($headers));
+    $sheet->getStyle('A1:' . $lastColumn . '1')->getFont()->setBold(true);
     
     error_log("XLSX data prepared, starting download");
 
