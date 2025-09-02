@@ -67,7 +67,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
   <p class="reportes-filtro">FILTRAR POR</p>
 
   <!-- IMPORTANTE: este form hace GET a export_inventario.php y descarga PDF/XLSX -->
-  <form class="reporte-filtros" action="export_inventario.php">
+  <form class="reporte-filtros" id="reportForm" action="export_inventario.php">
     <div class="form-grid">
       <label>CÓDIGO
         <input type="text" name="codigo" placeholder="Ej. 12000689543">
@@ -144,13 +144,21 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 
 <script>
 function generateReport(format) {
-  const form = document.getElementById('reportForm');
+  const form = document.querySelector('.reporte-filtros');
+
+if (!form) {
+  alert('Error: No se encontro el formulario');
+  return;
+}
+
   const formData = new FormData();
   
   // Recoger todos los valores del formulario
   const inputs = form.querySelectorAll('input, select');
   inputs.forEach(input => {
-    formData.append(input.name, input.value);
+    if (input.name) { // Only add inputs with name attribute
+      formData.append(input.name, input.value || '');
+    }
   });
   
   // Agregar el formato
@@ -159,13 +167,28 @@ function generateReport(format) {
   // Construir URL
   const params = new URLSearchParams();
   for (let [key, value] of formData) {
-    params.append(key, value);
+    if (value !== '') { // Only add non-empty values
+      params.append(key, value);
+    }
   }
+
+  params.append('format', format);
   
-  const url = `php/export_inventario.php?${params.toString()}`;
+  let url = `export_inventario.php?${params.toString()}`;
   
-  // Siempre abrir en nueva pestaña
-  window.open(url, '_blank');
+  // If export_inventario.php is in a php/ subdirectory, use:
+  //let url = `php/export_inventario.php?${params.toString()}`;
+  
+  console.log('Generated URL:', url); // Debug line - remove in production
+  
+  // Create a temporary anchor element for download
+  const link = document.createElement('a');
+  link.href = url;
+  link.target = '_blank';
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 </script>
 </body>

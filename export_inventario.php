@@ -88,7 +88,7 @@ if ($includePrecio) { $headers[] = 'Precio'; }
 $headers = array_merge($headers, ['Pto. Reorden','Stock Máx.','Tipo','Estado']);
 
 // Autoload (PDF/XLSX)
-$autoload = __DIR__ . '/vendor/autoload.php'; 
+$autoload = __DIR__ . '/../vendor/autoload.php'; 
 if (!file_exists($autoload)) { http_response_code(500); die('Falta autoload de Composer.'); }
 require $autoload;
 
