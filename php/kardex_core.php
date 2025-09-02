@@ -228,13 +228,3 @@ function render_kardex_html($conn, $productoInfo, $desde, $hasta, $rows, $totale
   return ob_get_clean();
 }
 
-// Inserta notificación de reporte generado (usa tu tabla Notificaciones)
-function notificar_kardex($conn, $idCodigo, $desde, $hasta, $usuario, $idRolObjetivo = 1) {
-  // columnas esperadas: idRol, descripcion, fecha, solicitudRevisada, cantidad, idCodigo
-  $sql = "INSERT INTO dbo.Notificaciones (idRol, descripcion, fecha, solicitudRevisada, cantidad, idCodigo)
-          VALUES (?, ?, GETDATE(), 0, NULL, ?)";
-  $desc = "Reporte Kardex generado por {$usuario} para ".($idCodigo==='ALL'?'TODOS':$idCodigo)." del {$desde} al {$hasta}.";
-  $params = [$idRolObjetivo, $desc, ($idCodigo==='ALL'?null:$idCodigo)];
-  $stmt = sqlsrv_query($conn, $sql, $params);
-  if ($stmt) sqlsrv_free_stmt($stmt);
-}

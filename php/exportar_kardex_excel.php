@@ -3,7 +3,7 @@ session_start();
 if (!isset($_SESSION['user_id'])) { header("Location: index.php"); exit(); }
 
 require_once __DIR__ . '/kardex_core.php';
-require_once __DIR__ . '/vendor/autoload.php'; // phpoffice/phpspreadsheet
+require_once dirname(__DIR__) . '/vendor/autoload.php'; // phpoffice/phpspreadsheet
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;

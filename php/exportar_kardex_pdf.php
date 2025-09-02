@@ -3,7 +3,7 @@ session_start();
 if (!isset($_SESSION['user_id'])) { header("Location: index.php"); exit(); }
 
 require_once __DIR__ . '/kardex_core.php';
-require_once __DIR__ . '/vendor/autoload.php'; // dompdf/dompdf
+require_once dirname(__DIR__) . '/vendor/autoload.php'; // dompdf/dompdf
 
 use Dompdf\Dompdf;
 

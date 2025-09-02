@@ -108,8 +108,8 @@ if ($stmt) {
     </div>
     <div class="report-buttons">
       <a href="reports.php"><button type="button">CANCELAR</button></a>
-      <button type="submit" formaction="exportar_kardex_pdf.php">GENERAR PDF</button>
-      <button type="submit" formaction="exportar_kardex_excel.php">GENERAR XLSX</button>
+      <button type="submit" formaction="php/exportar_kardex_pdf.php">GENERAR PDF</button>
+      <button type="submit" formaction="php/exportar_kardex_excel.php">GENERAR XLSX</button>
     </div>
   </form>
 </main>
