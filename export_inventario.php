@@ -2,20 +2,13 @@
 // php/export_inventario.php
 session_start();
 
-error_log("Export inventario llamado: " . print_r($_GET, true));
-
-// Si hay algún error, registralo
-ini_set('display_errors', 0);
-ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/../php_errors.log');
-
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
   http_response_code(403);
   echo "No autorizado";
   exit();
 }
 
-// ----------- Filtros ----------
+// ----------- Leer filtros ----------
 $format   = strtolower($_GET['format'] ?? 'pdf'); // pdf | xlsx
 $codigo   = trim((string)($_GET['codigo']   ?? ''));
 $nombre   = trim((string)($_GET['nombre']   ?? ''));
@@ -24,7 +17,7 @@ $sublinea = trim((string)($_GET['sublinea'] ?? ''));
 $tipo     = trim((string)($_GET['tipo']     ?? ''));
 $estado   = trim((string)($_GET['estado']   ?? ''));
 
-$includePrecio = ((int)($_SESSION['rol'] ?? 0) !== 2); // rol 2 no ve precio
+$includePrecio = ((int)($_SESSION['rol'] ?? 0) !== 2); // Almacenista (2) no ve precio
 
 // ----------- DB -----------
 $serverName = "sqlserver-sia.database.windows.net";
@@ -36,9 +29,9 @@ $connectionOptions = [
   "TrustServerCertificate" => false
 ];
 $conn = sqlsrv_connect($serverName, $connectionOptions);
-if (!$conn) { http_response_code(500); die("Error de conexión"); }
+if (!$conn) { die("Error de conexión"); }
 
-// SQL (subconsulta para estado)
+// Query como subconsulta para poder filtrar por 'estado'
 $sql = "
 SELECT * FROM (
   SELECT
@@ -63,6 +56,7 @@ SELECT * FROM (
 ) AS T
 WHERE 1=1
 ";
+
 $params = [];
 if ($codigo   !== '') { $sql .= " AND T.codigo LIKE ?";        $params[] = "%$codigo%"; }
 if ($nombre   !== '') { $sql .= " AND T.descripcion LIKE ?";   $params[] = "%$nombre%"; }
@@ -70,30 +64,41 @@ if ($linea    !== '') { $sql .= " AND T.linea = ?";            $params[] = $line
 if ($sublinea !== '') { $sql .= " AND T.sublinea = ?";         $params[] = $sublinea; }
 if ($tipo     !== '') { $sql .= " AND T.tipo = ?";             $params[] = $tipo; }
 if ($estado   !== '') { $sql .= " AND T.estado = ?";           $params[] = $estado; }
+
 $sql .= " ORDER BY T.codigo ASC";
 
 $stmt = sqlsrv_query($conn, $sql, $params);
-if (!$stmt) { sqlsrv_close($conn); http_response_code(500); die("Error en consulta"); }
+if (!$stmt) { die("Error en consulta"); }
 
 $rows = [];
-while ($r = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) { $rows[] = $r; }
+while ($r = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+  $rows[] = $r;
+}
 sqlsrv_free_stmt($stmt);
 sqlsrv_close($conn);
 
-// ----------- Datos comunes -----------
-$fecha   = (new DateTime('now'))->format('Y-m-d H:i');
+// ------------- Salidas -------------
+$fecha = (new DateTime('now'))->format('Y-m-d H:i');
 $usuario = (string)($_SESSION['usuario'] ?? '');
-$headers = ['Código','Descripción','Línea','Sublínea','Cantidad','Unidad'];
+
+// Encabezados comunes
+$headers = [
+  'Código','Descripción','Línea','Sublínea','Cantidad','Unidad'
+];
 if ($includePrecio) { $headers[] = 'Precio'; }
 $headers = array_merge($headers, ['Pto. Reorden','Stock Máx.','Tipo','Estado']);
 
-// Autoload (PDF/XLSX)
-$autoload = __DIR__ . '/../vendor/autoload.php'; 
-if (!file_exists($autoload)) { http_response_code(500); die('Falta autoload de Composer.'); }
+// Carga Composer (lo usamos en PDF/XLSX)
+$autoload = __DIR__ . '/../vendor/autoload.php';
+if (!file_exists($autoload)) {
+  die('Falta autoload de Composer. Ejecuta: composer install');
+}
 require $autoload;
 
-// ----------- PDF -----------
+// ------------------ PDF ------------------
 if ($format === 'pdf') {
+
+  // Armar HTML
   ob_start();
   ?>
   <html>
@@ -117,27 +122,33 @@ if ($format === 'pdf') {
     <table>
       <thead>
         <tr>
-          <?php foreach ($headers as $h): ?><th><?= htmlspecialchars($h) ?></th><?php endforeach; ?>
+          <?php foreach ($headers as $h): ?>
+            <th><?= htmlspecialchars($h) ?></th>
+          <?php endforeach; ?>
         </tr>
       </thead>
       <tbody>
         <?php if (empty($rows)): ?>
           <tr><td colspan="<?= count($headers) ?>">Sin resultados</td></tr>
-        <?php else: foreach ($rows as $row): ?>
-          <tr>
-            <td><?= htmlspecialchars($row['codigo']) ?></td>
-            <td><?= htmlspecialchars($row['descripcion']) ?></td>
-            <td><?= htmlspecialchars($row['linea']) ?></td>
-            <td><?= htmlspecialchars($row['sublinea']) ?></td>
-            <td class="right"><?= (int)$row['cantidad'] ?></td>
-            <td><?= htmlspecialchars($row['unidad']) ?></td>
-            <?php if ($includePrecio): ?><td class="right"><?= number_format((float)$row['precio'], 2) ?></td><?php endif; ?>
-            <td class="right"><?= (int)$row['puntoReorden'] ?></td>
-            <td class="right"><?= (int)$row['stockMaximo'] ?></td>
-            <td><?= htmlspecialchars($row['tipo']) ?></td>
-            <td><?= htmlspecialchars($row['estado']) ?></td>
-          </tr>
-        <?php endforeach; endif; ?>
+        <?php else: ?>
+          <?php foreach ($rows as $row): ?>
+            <tr>
+              <td><?= htmlspecialchars($row['codigo']) ?></td>
+              <td><?= htmlspecialchars($row['descripcion']) ?></td>
+              <td><?= htmlspecialchars($row['linea']) ?></td>
+              <td><?= htmlspecialchars($row['sublinea']) ?></td>
+              <td class="right"><?= (int)$row['cantidad'] ?></td>
+              <td><?= htmlspecialchars($row['unidad']) ?></td>
+              <?php if ($includePrecio): ?>
+                <td class="right"><?= number_format((float)$row['precio'], 2) ?></td>
+              <?php endif; ?>
+              <td class="right"><?= (int)$row['puntoReorden'] ?></td>
+              <td class="right"><?= (int)$row['stockMaximo'] ?></td>
+              <td><?= htmlspecialchars($row['tipo']) ?></td>
+              <td><?= htmlspecialchars($row['estado']) ?></td>
+            </tr>
+          <?php endforeach; ?> 
+        <?php endif; ?>
       </tbody>
     </table>
   </body>
@@ -145,68 +156,68 @@ if ($format === 'pdf') {
   <?php
   $html = ob_get_clean();
 
-  $opt = new \Dompdf\Options(); $opt->set('isRemoteEnabled', true);
+  // Dompdf (FQCN)
+  $opt = new \Dompdf\Options();
+  $opt->set('isRemoteEnabled', true);
   $dompdf = new \Dompdf\Dompdf($opt);
   $dompdf->loadHtml($html);
   $dompdf->setPaper('A4', 'landscape');
   $dompdf->render();
-  $dompdf->stream('inventario_'.date('Ymd_His').'.pdf', ['Attachment' => true]);
-  exit;
+
+  $filename = 'inventario_' . date('Ymd_His') . '.pdf';
+  $dompdf->stream($filename, ['Attachment' => true]);
+  exit();
 }
 
-// ----------- XLSX -----------
+// ------------------ XLSX ------------------
 if ($format === 'xlsx') {
-  try {
-    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-    $sheet = $spreadsheet->getActiveSheet()->setTitle('Inventario');
 
-    // encabezados
-    $c = 1;
-    foreach ($headers as $h) {
-      $sheet->setCellValueByColumnAndRow($c, 1, $h);
-      $sheet->getColumnDimensionByColumn($c)->setAutoSize(true);
-      $c++;
-    }
-    // filas
-    $r = 2;
-    foreach ($rows as $row) {
-      $c = 1;
-      $sheet->setCellValueByColumnAndRow($c++, $r, $row['codigo']);
-      $sheet->setCellValueByColumnAndRow($c++, $r, $row['descripcion']);
-      $sheet->setCellValueByColumnAndRow($c++, $r, $row['linea']);
-      $sheet->setCellValueByColumnAndRow($c++, $r, $row['sublinea']);
-      $sheet->setCellValueByColumnAndRow($c++, $r, (int)$row['cantidad']);
-      $sheet->setCellValueByColumnAndRow($c++, $r, $row['unidad']);
-      if ($includePrecio) $sheet->setCellValueByColumnAndRow($c++, $r, (float)$row['precio']);
-      $sheet->setCellValueByColumnAndRow($c++, $r, (int)$row['puntoReorden']);
-      $sheet->setCellValueByColumnAndRow($c++, $r, (int)$row['stockMaximo']);
-      $sheet->setCellValueByColumnAndRow($c++, $r, $row['tipo']);
-      $sheet->setCellValueByColumnAndRow($c++, $r, $row['estado']);
-      $r++;
-    }
-    $sheet->getStyle('A1:' . $sheet->getHighestColumn() . '1')->getFont()->setBold(true);
+  $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+  $sheet = $spreadsheet->getActiveSheet();
+  $sheet->setTitle('Inventario');
 
-    // limpia buffers antes de headers
-    while (ob_get_level()) { ob_end_clean(); }
-
-    $filename = 'inventario_' . date('Ymd_His') . '.xlsx';
-    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    header('Content-Disposition: attachment; filename="'.$filename.'"');
-    header('Cache-Control: max-age=0');
-
-    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-    $writer->save('php://output');
-    exit;
-
-  } catch (\Throwable $e) {
-    if (!headers_sent()) {
-      header('Content-Type: text/plain; charset=utf-8', true, 500);
-    }
-    echo "Error generando Excel: ".$e->getMessage()."\n".$e->getTraceAsString();
-    exit;
+  // Encabezados
+  $col = 1;
+  foreach ($headers as $h) {
+    $sheet->setCellValueByColumnAndRow($col, 1, $h);
+    $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+    $col++;
   }
+  // Filas
+  $rowNum = 2;
+  foreach ($rows as $row) {
+    $col = 1;
+    $sheet->setCellValueByColumnAndRow($col++, $rowNum, $row['codigo']);
+    $sheet->setCellValueByColumnAndRow($col++, $rowNum, $row['descripcion']);
+    $sheet->setCellValueByColumnAndRow($col++, $rowNum, $row['linea']);
+    $sheet->setCellValueByColumnAndRow($col++, $rowNum, $row['sublinea']);
+    $sheet->setCellValueByColumnAndRow($col++, $rowNum, (int)$row['cantidad']);
+    $sheet->setCellValueByColumnAndRow($col++, $rowNum, $row['unidad']);
+    if ($includePrecio) {
+      $sheet->setCellValueByColumnAndRow($col++, $rowNum, (float)$row['precio']);
+    }
+    $sheet->setCellValueByColumnAndRow($col++, $rowNum, (int)$row['puntoReorden']);
+    $sheet->setCellValueByColumnAndRow($col++, $rowNum, (int)$row['stockMaximo']);
+    $sheet->setCellValueByColumnAndRow($col++, $rowNum, $row['tipo']);
+    $sheet->setCellValueByColumnAndRow($col++, $rowNum, $row['estado']);
+    $rowNum++;
+  }
+
+  // Primera fila en bold
+  $sheet->getStyle('A1:'. $sheet->getHighestColumn() .'1')->getFont()->setBold(true);
+
+  // Descargar
+  $filename = 'inventario_' . date('Ymd_His') . '.xlsx';
+  header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  header('Content-Disposition: attachment; filename="'.$filename.'"');
+  header('Cache-Control: max-age=0');
+
+  $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+  if (ob_get_length()) { ob_end_clean(); }
+  $writer->save('php://output');
+  exit();
 }
 
-// formato inválido
+// Formato no soportado
 http_response_code(400);
 echo "Formato inválido.";

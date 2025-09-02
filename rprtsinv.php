@@ -67,7 +67,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
   <p class="reportes-filtro">FILTRAR POR</p>
 
   <!-- IMPORTANTE: este form hace GET a export_inventario.php y descarga PDF/XLSX -->
-  <form class="reporte-filtros" id="reportForm" action="export_inventario.php">
+  <form class="reporte-filtros" action="php/export_inventario.php" method="get" target="_blank">
     <div class="form-grid">
       <label>CÓDIGO
         <input type="text" name="codigo" placeholder="Ej. 12000689543">
@@ -105,12 +105,34 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     </div>
 
     <div class="report-buttons">
-      <a href="reports.php"><button type="button">CANCELAR</button></a>
-      <button type="button" onclick="generateReport('pdf')">GENERAR PDF</button>
-      <button type="button" onclick="generateReport('xlsx')">GENERAR XLSX</button>
-    </div>
+  <a href="reports.php"><button type="button">CANCELAR</button></a>
+
+  <!-- PDF -->
+  <button type="button" id="btn-pdf">GENERAR PDF</button>
+
+  <!-- XLSX -->
+  <button type="button" id="btn-xlsx">GENERAR XLSX</button>
+</div>
   </form>
 </main>
+
+<script>
+  function q(v){ return encodeURIComponent(v || ''); }
+  function buildUrl(format){
+    // Lee aquí tus filtros reales del formulario:
+    const codigo   = document.querySelector('[name="codigo"]')?.value || '';
+    const nombre   = document.querySelector('[name="nombre"]')?.value || '';
+    const linea    = document.querySelector('[name="linea"]')?.value || '';
+    const sublinea = document.querySelector('[name="sublinea"]')?.value || '';
+    const tipo     = document.querySelector('[name="tipo"]')?.value || '';
+    const estado   = document.querySelector('[name="estado"]')?.value || '';
+    return `php/export_inventario.php?format=${format}`+
+           `&codigo=${q(codigo)}&nombre=${q(nombre)}&linea=${q(linea)}`+
+           `&sublinea=${q(sublinea)}&tipo=${q(tipo)}&estado=${q(estado)}`;
+  }
+  document.getElementById('btn-pdf').onclick  = () => window.open(buildUrl('pdf'),  '_blank');
+  document.getElementById('btn-xlsx').onclick = () => window.open(buildUrl('xlsx'), '_blank');
+</script>
 
 <script>
   // menús
@@ -140,56 +162,6 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
   window.addEventListener('click', (e) => {
     if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) notifDropdown.style.display = 'none';
   });
-</script>
-
-<script>
-function generateReport(format) {
-  const form = document.querySelector('.reporte-filtros');
-
-if (!form) {
-  alert('Error: No se encontro el formulario');
-  return;
-}
-
-  const formData = new FormData();
-  
-  // Recoger todos los valores del formulario
-  const inputs = form.querySelectorAll('input, select');
-  inputs.forEach(input => {
-    if (input.name) { // Only add inputs with name attribute
-      formData.append(input.name, input.value || '');
-    }
-  });
-  
-  // Agregar el formato
-  formData.append('format', format);
-  
-  // Construir URL
-  const params = new URLSearchParams();
-  for (let [key, value] of formData) {
-    if (value !== '') { // Only add non-empty values
-      params.append(key, value);
-    }
-  }
-
-  params.append('format', format);
-  
-  let url = `export_inventario.php?${params.toString()}`;
-  
-  // If export_inventario.php is in a php/ subdirectory, use:
-  //let url = `php/export_inventario.php?${params.toString()}`;
-  
-  console.log('Generated URL:', url); // Debug line - remove in production
-  
-  // Create a temporary anchor element for download
-  const link = document.createElement('a');
-  link.href = url;
-  link.target = '_blank';
-  link.style.display = 'none';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
 </script>
 </body>
 </html>
