@@ -8,6 +8,27 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
 }
+
+// Conexión
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = [
+  "Database" => "db_sia",
+  "Uid"      => "cmapADMIN",
+  "PWD"      => "@siaADMN56*",
+  "Encrypt"  => true,
+  "TrustServerCertificate" => false
+];
+$conn = sqlsrv_connect($serverName, $connectionOptions);
+if ($conn === false) { die(print_r(sqlsrv_errors(), true)); }
+
+// Cargar productos
+$productos = [];
+$sqlProd = "SELECT idCodigo, descripcion, codigo FROM dbo.Productos ORDER BY descripcion";
+$stmt = sqlsrv_query($conn, $sqlProd);
+if ($stmt) {
+  while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) $productos[] = $row;
+  sqlsrv_free_stmt($stmt);
+}
 ?>
 
 <!DOCTYPE html>
@@ -62,47 +83,35 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 </header>
 
 <main class="reportes-container">
-    <h2 class="reportes-title">Reportes</h2>
-    <h3 class="reportes-subtitle">KARDEX DE PRODUCTOS</h3>
-    <p class="reportes-filtro">FILTRAR POR</p>
-    <form class="reporte-filtros">
-        <div class="form-grid">
-            <label>CÓDIGO
-                <select>
-                    <option>ABCDEFGHIJKLMNÑOPQRSTUVWXZY01234</option>
-                </select>
-            </label>
-            <label>NOMBRE
-                <input type="text" value="" />
-            </label>
-            <label>LINEA
-                <input type="text" value="" />
-            </label>
-            <label>SUBLINEA
-                <input type="text" value="" />
-            </label>
-            <label>MES
-                <select>
-                    <option>ABRIL</option>
-                </select>
-            </label>
-            <label>AÑO
-                <select>
-                    <option>2025</option>
-                </select>
-            </label>
-            <label>PROVEEDOR
-                <select>
-                    <option>FERREMAQUINAS</option>
-                </select>
-            </label>
-        </div>
-        <div class="report-buttons">
-            <a href="reports.php"><button type="button">CANCELAR</button></a>
-            <a href="#"><button type="button">GENERAR PDF</button></a>
-            <a href="#"><button type="button">GENERAR XLSX</button></a>
-        </div>
-    </form>
+  <h2 class="reportes-title">Reportes</h2>
+  <h3 class="reportes-subtitle">KARDEX DE PRODUCTOS</h3>
+  <p class="reportes-filtro">FILTRAR POR</p>
+
+  <form class="reporte-filtros" method="POST">
+    <div class="form-grid">
+      <label>CÓDIGO
+        <select name="idCodigo" required>
+          <option value="ALL">-- TODOS --</option>
+          <?php foreach ($productos as $p): ?>
+            <option value="<?= htmlspecialchars($p['idCodigo']) ?>">
+              <?= htmlspecialchars($p['idCodigo'].' - '.$p['descripcion'].($p['codigo']?' ('.$p['codigo'].')':'')) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </label>
+      <label>DESDE
+        <input type="date" name="desde" required />
+      </label>
+      <label>HASTA
+        <input type="date" name="hasta" required />
+      </label>
+    </div>
+    <div class="report-buttons">
+      <a href="reports.php"><button type="button">CANCELAR</button></a>
+      <button type="submit" formaction="exportar_kardex_pdf.php">GENERAR PDF</button>
+      <button type="submit" formaction="exportar_kardex_excel.php">GENERAR XLSX</button>
+    </div>
+  </form>
 </main>
 
 <script>
