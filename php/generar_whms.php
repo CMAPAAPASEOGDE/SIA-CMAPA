@@ -1,6 +1,9 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) { header("Location: index.php"); exit(); }
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) { 
+    header("Location: ../index.php"); 
+    exit(); 
+}
 
 require_once __DIR__ . '/reportes_whms_utils.php';
 $conn = db_conn_or_die();
@@ -24,32 +27,44 @@ $periodoTxt = date('Y-m-d', strtotime($start)) . " a " . date('Y-m-d', strtotime
 <head>
   <meta charset="UTF-8">
   <title>Previsualización Movimientos Almacén</title>
-  <link rel="stylesheet" href="css/StyleRPWHMS.css">
+  <link rel="stylesheet" href="../css/StyleRPWHMS.css">
   <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
     table.report { width:100%; border-collapse: collapse; }
     table.report th, table.report td { border:1px solid #ddd; padding:6px; font-size: 14px; }
     table.report th { background:#f2f2f2; text-align:left; }
     .meta { margin:12px 0; font-size:14px; }
+    .buttons { margin: 15px 0; }
+    .buttons form { display: inline-block; margin-right: 10px; }
+    .buttons button { padding: 8px 16px; cursor: pointer; }
   </style>
 </head>
 <body>
   <h2>Movimientos de Almacén</h2>
-  <div class="meta"><strong>Periodo:</strong> <?= htmlspecialchars($periodoTxt) ?> 
+  <div class="meta">
+    <strong>Periodo:</strong> <?= htmlspecialchars($periodoTxt) ?> 
     &nbsp;|&nbsp; <strong>Producto:</strong> <?= $idCodigo ? (int)$idCodigo : 'Todos' ?>
   </div>
 
-  <form method="post" action="exportar_whms_pdf.php" style="display:inline;">
-    <input type="hidden" name="idCodigo" value="<?= $idCodigo ?>">
-    <input type="hidden" name="mes" value="<?= htmlspecialchars($mes) ?>">
-    <input type="hidden" name="anio" value="<?= htmlspecialchars($anio) ?>">
-    <button type="submit">Descargar PDF</button>
-  </form>
-  <form method="post" action="exportar_whms_excel.php" style="display:inline;">
-    <input type="hidden" name="idCodigo" value="<?= $idCodigo ?>">
-    <input type="hidden" name="mes" value="<?= htmlspecialchars($mes) ?>">
-    <input type="hidden" name="anio" value="<?= htmlspecialchars($anio) ?>">
-    <button type="submit">Descargar XLSX</button>
-  </form>
+  <div class="buttons">
+    <form method="post" action="exportar_whms_pdf.php">
+      <input type="hidden" name="idCodigo" value="<?= $idCodigo ?>">
+      <input type="hidden" name="mes" value="<?= htmlspecialchars($mes) ?>">
+      <input type="hidden" name="anio" value="<?= htmlspecialchars($anio) ?>">
+      <button type="submit">Descargar PDF</button>
+    </form>
+    
+    <form method="post" action="exportar_whms_excel.php">
+      <input type="hidden" name="idCodigo" value="<?= $idCodigo ?>">
+      <input type="hidden" name="mes" value="<?= htmlspecialchars($mes) ?>">
+      <input type="hidden" name="anio" value="<?= htmlspecialchars($anio) ?>">
+      <button type="submit">Descargar XLSX</button>
+    </form>
+    
+    <form method="get" action="../rprtswhms.php">
+      <button type="submit">Volver</button>
+    </form>
+  </div>
 
   <table class="report" style="margin-top:14px;">
     <thead>
@@ -59,7 +74,7 @@ $periodoTxt = date('Y-m-d', strtotime($start)) . " a " . date('Y-m-d', strtotime
         <th>Código</th>
         <th>Descripción</th>
         <th>Cantidad</th>
-        <th>idHerramienta</th>
+        <th>ID Herramienta</th>
         <th>Identificador Único</th>
         <th>Detalle</th>
       </tr>
@@ -70,11 +85,11 @@ $periodoTxt = date('Y-m-d', strtotime($start)) . " a " . date('Y-m-d', strtotime
       <?php else: ?>
         <?php foreach ($rows as $r): ?>
           <tr>
-            <td><?= htmlspecialchars($r['fecha']) ?></td>
-            <td><?= htmlspecialchars($r['tipoMovimiento']) ?></td>
-            <td><?= htmlspecialchars($r['sku']) ?></td>
-            <td><?= htmlspecialchars($r['descripcion']) ?></td>
-            <td><?= (int)$r['cantidad'] ?></td>
+            <td><?= htmlspecialchars($r['fecha'] ?? '') ?></td>
+            <td><?= htmlspecialchars($r['tipoMovimiento'] ?? '') ?></td>
+            <td><?= htmlspecialchars($r['sku'] ?? '') ?></td>
+            <td><?= htmlspecialchars($r['descripcion'] ?? '') ?></td>
+            <td><?= number_format((float)($r['cantidad'] ?? 0), 2) ?></td>
             <td><?= htmlspecialchars($r['idHerramienta'] ?? '') ?></td>
             <td><?= htmlspecialchars($r['identificadorUnico'] ?? '') ?></td>
             <td><?= htmlspecialchars($r['detalle'] ?? '') ?></td>
@@ -83,5 +98,9 @@ $periodoTxt = date('Y-m-d', strtotime($start)) . " a " . date('Y-m-d', strtotime
       <?php endif; ?>
     </tbody>
   </table>
+  
+  <div style="margin-top: 20px; text-align: center;">
+    <strong>Total de movimientos:</strong> <?= count($rows) ?>
+  </div>
 </body>
 </html>

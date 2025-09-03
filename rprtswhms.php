@@ -63,14 +63,14 @@ $productos = get_product_catalog($conn);
   <h3 class="reportes-subtitle">MOVIMIENTOS DEL ALMACÉN</h3>
   <p class="reportes-filtro">FILTRAR POR</p>
 
-  <form class="reporte-filtros" method="post" action="generar_whms.php">
+  <form class="reporte-filtros" method="post" action="php/generar_whms.php">
     <div class="form-grid grid-3">
       <label>CÓDIGO
         <select name="idCodigo">
           <option value="">-- TODOS --</option>
           <?php foreach ($productos as $p): ?>
             <option value="<?= (int)$p['idCodigo'] ?>">
-              <?= htmlspecialchars($p['codigo'] . ' — ' . $p['descripcion']) ?>
+              <?= htmlspecialchars(($p['codigo'] ?? '') . ' — ' . ($p['descripcion'] ?? '')) ?>
             </option>
           <?php endforeach; ?>
         </select>
@@ -104,8 +104,8 @@ $productos = get_product_catalog($conn);
     <div class="report-buttons">
       <a href="reports.php"><button type="button">CANCELAR</button></a>
       <button type="submit" name="action" value="preview">PREVISUALIZAR</button>
-      <button type="submit" formaction="exportar_whms_pdf.php"  name="action" value="pdf">GENERAR PDF</button>
-      <button type="submit" formaction="exportar_whms_excel.php" name="action" value="xlsx">GENERAR XLSX</button>
+      <button type="submit" formaction="php/exportar_whms_pdf.php" name="action" value="pdf">GENERAR PDF</button>
+      <button type="submit" formaction="php/exportar_whms_excel.php" name="action" value="xlsx">GENERAR XLSX</button>
     </div>
   </form>
 </main>
