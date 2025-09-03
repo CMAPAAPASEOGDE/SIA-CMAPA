@@ -9,7 +9,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     exit();
 }
 
-require_once __DIR__ . 'php/reportes_whms_utils.php';
+require_once __DIR__ . '/php/reportes_whms_utils.php';
 $conn = db_conn_or_die();
 $productos = get_product_catalog($conn);
 ?>
