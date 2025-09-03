@@ -103,7 +103,6 @@ $productos = get_product_catalog($conn);
 
     <div class="report-buttons">
       <a href="reports.php"><button type="button">CANCELAR</button></a>
-      <button type="submit" name="action" value="preview">PREVISUALIZAR</button>
       <button type="submit" formaction="php/exportar_whms_pdf.php" name="action" value="pdf">GENERAR PDF</button>
       <button type="submit" formaction="php/exportar_whms_excel.php" name="action" value="xlsx">GENERAR XLSX</button>
     </div>
