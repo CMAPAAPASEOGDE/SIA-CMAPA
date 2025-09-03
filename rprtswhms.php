@@ -30,6 +30,7 @@ $productos = get_product_catalog($conn);
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
   </div>
+  <div class="header-right">
     <p> <?= $_SESSION['usuario'] ?> </p>
     <div class="user-menu-container">
       <button class="icon-btn" id="user-toggle">
@@ -41,7 +42,6 @@ $productos = get_product_catalog($conn);
         <a href="passchng.php"><button class="user-option">CAMBIAR CONTRASEÑA</button></a>
       </div>
     </div>
-    <!-- botón hamburguesa -->
     <div class="menu-container">
       <button class="icon-btn" id="menu-toggle">
         <img src="img/menu.png" alt="Menú" />
