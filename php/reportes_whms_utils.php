@@ -32,115 +32,136 @@ function get_product_catalog($conn) {
 }
 
 function range_from_month_year($mes, $anio) {
-    $start = "$anio-$mes-01";
-    $endNext = date('Y-m-d', strtotime("$start +1 month"));
+    $start   = sprintf('%04d-%02d-01 00:00:00', (int)$anio, (int)$mes);
+    $endNext = date('Y-m-d 00:00:00', strtotime("$start +1 month"));
     return [$start, $endNext];
 }
 
+/**
+ * Devuelve filas normalizadas:
+ *   fecha, tipoMovimiento, sku, descripcion, cantidad, idCodigo, idHerramienta, identificadorUnico, detalle
+ */
 function fetch_movimientos_almacen($conn, $mes, $anio, $idCodigo = null) {
     list($start, $endNext) = range_from_month_year($mes, $anio);
-    
-    // Base query for warehouse movements (similar to kardex but without prices)
-    $sql = "
-    SELECT 
-        fecha,
-        'Entrada' as tipoMovimiento,
-        p.codigo as sku,
-        p.descripcion,
-        CAST(e.cantidad AS FLOAT) as cantidad,
-        e.idHerramienta,
-        e.identificadorUnico,
-        CONCAT('Entrada - ', COALESCE(e.observaciones, '')) as detalle,
-        p.idCodigo
-    FROM dbo.Entradas e
-    INNER JOIN dbo.Productos p ON e.idCodigo = p.idCodigo
-    WHERE e.fecha >= ? AND e.fecha < ?
-    " . ($idCodigo ? " AND e.idCodigo = ?" : "") . "
-    
-    UNION ALL
-    
-    SELECT 
-        fechaSalida as fecha,
-        'Salida' as tipoMovimiento,
-        p.codigo as sku,
-        p.descripcion,
-        CAST(s.cantidad AS FLOAT) as cantidad,
-        s.idHerramienta,
-        s.identificadorUnico,
-        CONCAT('Salida - ', COALESCE(s.observaciones, '')) as detalle,
-        p.idCodigo
-    FROM dbo.Salidas s
-    INNER JOIN dbo.Productos p ON s.idCodigo = p.idCodigo
-    WHERE s.fechaSalida >= ? AND s.fechaSalida < ?
-    " . ($idCodigo ? " AND s.idCodigo = ?" : "") . "
-    
-    UNION ALL
-    
-    SELECT 
-        fecha,
-        'Salida Sin Orden' as tipoMovimiento,
-        p.codigo as sku,
-        p.descripcion,
-        CAST(sso.cantidad AS FLOAT) as cantidad,
-        sso.idHerramienta,
-        sso.identificadorUnico,
-        CONCAT('Salida Sin Orden - ', COALESCE(sso.observaciones, '')) as detalle,
-        p.idCodigo
-    FROM dbo.SalidaSinorden sso
-    INNER JOIN dbo.Productos p ON sso.idCodigo = p.idCodigo
-    WHERE sso.fecha >= ? AND sso.fecha < ?
-    " . ($idCodigo ? " AND sso.idCodigo = ?" : "") . "
-    
-    ORDER BY fecha ASC, tipoMovimiento ASC
-    ";
-    
-    // Prepare parameters
-    $params = [$start, $endNext, $start, $endNext, $start, $endNext];
-    if ($idCodigo) {
-        // Insert idCodigo parameters at the right positions
-        array_splice($params, 2, 0, [$idCodigo]);
-        array_splice($params, 5, 0, [$idCodigo]);
-        array_splice($params, 8, 0, [$idCodigo]);
-    }
-    
-    $stmt = sqlsrv_query($conn, $sql, $params);
-    if ($stmt === false) {
-        error_log("Query failed: " . print_r(sqlsrv_errors(), true));
-        return [];
-    }
-    
+    $paramsCommon = [$start, $endNext];
+
+    // ENTRADAS
+    $sqlEnt = "SELECT 
+                e.fecha AS fecha,
+                CAST('ENTRADA' AS VARCHAR(40)) AS tipoMovimiento,
+                p.codigo AS sku,
+                p.descripcion,
+                e.cantidad,
+                e.idCodigo,
+                e.idHerramienta,
+                hu.identificadorUnico,
+                CONCAT('ProveedorId: ', COALESCE(CAST(e.idProveedor AS VARCHAR(20)),'') ) AS detalle
+              FROM dbo.Entradas e
+              INNER JOIN dbo.Productos p ON p.idCodigo = e.idCodigo
+              LEFT  JOIN dbo.HerramientasUnicas hu ON hu.idHerramienta = e.idHerramienta
+              WHERE e.fecha >= ? AND e.fecha < ?";
+    $paramsEnt = $paramsCommon;
+    if (!empty($idCodigo)) { $sqlEnt .= " AND e.idCodigo = ?"; $paramsEnt[] = $idCodigo; }
+
+    // SALIDA (ORDEN) sin herramienta
+    $sqlSal = "SELECT 
+                s.fechaSalida AS fecha,
+                CAST('SALIDA (ORDEN)' AS VARCHAR(40)) AS tipoMovimiento,
+                p.codigo AS sku,
+                p.descripcion,
+                s.cantidad,
+                s.idCodigo,
+                NULL AS idHerramienta,
+                NULL AS identificadorUnico,
+                CONCAT('Orden: ', COALESCE(CAST(s.numeroOrden AS VARCHAR(50)),''), 
+                       ' | RPU: ', COALESCE(s.rpuUsuario,''), 
+                       ' | Operador: ', COALESCE(CAST(s.idOperador AS VARCHAR(20)),''),
+                       ' | Comentarios: ', COALESCE(s.comentarios,'')
+                ) AS detalle
+              FROM dbo.Salidas s
+              INNER JOIN dbo.Productos p ON p.idCodigo = s.idCodigo
+              WHERE s.idHerramienta IS NULL
+                AND s.fechaSalida >= ? AND s.fechaSalida < ?";
+    $paramsSal = $paramsCommon;
+    if (!empty($idCodigo)) { $sqlSal .= " AND s.idCodigo = ?"; $paramsSal[] = $idCodigo; }
+
+    // SALIDA (SIN ORDEN) sin herramienta
+    $sqlSso = "SELECT 
+                so.fecha AS fecha,
+                CAST('SALIDA (SIN ORDEN)' AS VARCHAR(40)) AS tipoMovimiento,
+                p.codigo AS sku,
+                p.descripcion,
+                so.cantidad,
+                so.idCodigo,
+                NULL AS idHerramienta,
+                NULL AS identificadorUnico,
+                CONCAT('Área: ', COALESCE(so.areaSolicitante,''), 
+                       ' | Encargado: ', COALESCE(so.encargadoArea,''), 
+                       ' | Comentarios: ', COALESCE(so.comentarios,'')
+                ) AS detalle
+              FROM dbo.SalidaSinorden so
+              INNER JOIN dbo.Productos p ON p.idCodigo = so.idCodigo
+              WHERE so.idHerramienta IS NULL
+                AND so.fecha >= ? AND so.fecha < ?";
+    $paramsSso = $paramsCommon;
+    if (!empty($idCodigo)) { $sqlSso .= " AND so.idCodigo = ?"; $paramsSso[] = $idCodigo; }
+
+    // HERRAMIENTA PRESTADA (salida con idHerramienta)
+    $sqlHP = "SELECT 
+                s.fechaSalida AS fecha,
+                CAST('HERRAMIENTA PRESTADA' AS VARCHAR(40)) AS tipoMovimiento,
+                p.codigo AS sku,
+                p.descripcion,
+                s.cantidad,
+                s.idCodigo,
+                s.idHerramienta,
+                hu.identificadorUnico,
+                CONCAT('Orden: ', COALESCE(CAST(s.numeroOrden AS VARCHAR(50)),''), 
+                       ' | RPU: ', COALESCE(s.rpuUsuario,''), 
+                       ' | Operador: ', COALESCE(CAST(s.idOperador AS VARCHAR(20)),''),
+                       ' | Comentarios: ', COALESCE(s.comentarios,'')
+                ) AS detalle
+              FROM dbo.Salidas s
+              INNER JOIN dbo.Productos p ON p.idCodigo = s.idCodigo
+              INNER JOIN dbo.HerramientasUnicas hu ON hu.idHerramienta = s.idHerramienta
+              WHERE s.idHerramienta IS NOT NULL
+                AND s.fechaSalida >= ? AND s.fechaSalida < ?";
+    $paramsHP = $paramsCommon;
+    if (!empty($idCodigo)) { $sqlHP .= " AND s.idCodigo = ?"; $paramsHP[] = $idCodigo; }
+
+    // HERRAMIENTA DEVUELTA
+    $sqlHD = "SELECT 
+                d.fechaRetorno AS fecha,
+                CAST('HERRAMIENTA DEVUELTA' AS VARCHAR(40)) AS tipoMovimiento,
+                p.codigo AS sku,
+                p.descripcion,
+                CAST(1 AS INT) AS cantidad,
+                hu.idCodigo,
+                d.idHerramienta,
+                hu.identificadorUnico,
+                CONCAT('Estado: ', COALESCE(d.estado,''), 
+                       ' | Obs: ', COALESCE(d.observaciones,''), 
+                       ' | Registrado por: ', COALESCE(d.registradoPor,'')
+                ) AS detalle
+              FROM dbo.Devoluciones d
+              INNER JOIN dbo.HerramientasUnicas hu ON hu.idHerramienta = d.idHerramienta
+              INNER JOIN dbo.Productos p ON p.idCodigo = hu.idCodigo
+              WHERE d.fechaRetorno >= ? AND d.fechaRetorno < ?";
+    $paramsHD = $paramsCommon;
+    if (!empty($idCodigo)) { $sqlHD .= " AND hu.idCodigo = ?"; $paramsHD[] = $idCodigo; }
+
     $rows = [];
-    while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-        // Format fecha if it's a DateTime object
-        if (is_object($row['fecha']) && method_exists($row['fecha'], 'format')) {
-            $row['fecha'] = $row['fecha']->format('Y-m-d H:i:s');
+    foreach ([[$sqlEnt,$paramsEnt],[$sqlSal,$paramsSal],[$sqlSso,$paramsSso],[$sqlHP,$paramsHP],[$sqlHD,$paramsHD]] as $pair) {
+        [$sql,$params] = $pair;
+        $stmt = sqlsrv_query($conn, $sql, $params);
+        if ($stmt === false) { error_log("Query err: " . print_r(sqlsrv_errors(), true)); continue; }
+        while ($r = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            if ($r['fecha'] instanceof DateTime) $r['fecha'] = $r['fecha']->format('Y-m-d H:i:s');
+            $rows[] = $r;
         }
-        $rows[] = $row;
+        sqlsrv_free_stmt($stmt);
     }
-    sqlsrv_free_stmt($stmt);
-    
+
+    usort($rows, fn($a,$b) => strcmp($a['fecha'], $b['fecha']));
     return $rows;
 }
-
-function insert_notification($conn, $descripcion, $idCodigo = null, $idOperario = null, $idRol = 1) {
-    try {
-        // Log the notification (simple logging approach)
-        error_log("Warehouse Movement Report: " . $descripcion);
-        
-        // If you have a notifications table, you can uncomment and modify this:
-        /*
-        $sql = "INSERT INTO Notificaciones (descripcion, idCodigo, idOperario, idRol, fecha) 
-                VALUES (?, ?, ?, ?, GETDATE())";
-        $stmt = sqlsrv_query($conn, $sql, [$descripcion, $idCodigo, $idOperario, $idRol]);
-        if ($stmt) {
-            sqlsrv_free_stmt($stmt);
-        }
-        */
-        
-        return true;
-    } catch (Exception $e) {
-        error_log("Error inserting notification: " . $e->getMessage());
-        return false;
-    }
-}
-?>

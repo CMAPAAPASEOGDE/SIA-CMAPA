@@ -1,9 +1,22 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) { header("Location: index.php"); exit(); }
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    header("Location: ../index.php"); // << clave: subir un nivel
+    exit();
+}
 
 require_once __DIR__ . '/reportes_whms_utils.php';
-require_once __DIR__ . '/vendor/autoload.php'; // dompdf
+
+// autoload de composer: primero intenta ../vendor y si no, ./vendor
+$autoloadRoot = __DIR__ . '/../vendor/autoload.php';
+$autoloadHere = __DIR__ . '/vendor/autoload.php';
+if (file_exists($autoloadRoot)) {
+    require_once $autoloadRoot;
+} elseif (file_exists($autoloadHere)) {
+    require_once $autoloadHere;
+} else {
+    die('No se encontró vendor/autoload.php');
+}
 
 use Dompdf\Dompdf;
 
@@ -14,7 +27,7 @@ $anio     = $_POST['anio'] ?? date('Y');
 
 $rows = fetch_movimientos_almacen($conn, $mes, $anio, $idCodigo);
 list($start, $endNext) = range_from_month_year($mes, $anio);
-$periodoTxt = date('Y-m-d', strtotime($start)) . " a " . date('Y-m-d', strtotime($endNext . ' -1 day'));
+$periodoTxt = date('Y-m-d', strtotime($start)) . " a " . date('Y-m-d', strtotime("$endNext -1 day"));
 
 $html = '<html><head><meta charset="UTF-8"><style>
   body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 12px; }

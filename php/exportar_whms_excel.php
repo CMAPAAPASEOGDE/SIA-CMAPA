@@ -1,9 +1,22 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) { header("Location: index.php"); exit(); }
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    header("Location: ../index.php"); // << clave
+    exit();
+}
 
 require_once __DIR__ . '/reportes_whms_utils.php';
-require_once __DIR__ . '/vendor/autoload.php'; // PhpSpreadsheet
+
+// autoload de composer
+$autoloadRoot = __DIR__ . '/../vendor/autoload.php';
+$autoloadHere = __DIR__ . '/vendor/autoload.php';
+if (file_exists($autoloadRoot)) {
+    require_once $autoloadRoot;
+} elseif (file_exists($autoloadHere)) {
+    require_once $autoloadHere;
+} else {
+    die('No se encontró vendor/autoload.php');
+}
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -35,15 +48,11 @@ foreach ($rows as $row) {
     $r++;
 }
 
-// Ancho auto
 foreach (range('A','H') as $col) { $sheet->getColumnDimension($col)->setAutoSize(true); }
-
-// Bordes ligeros al header
 $sheet->getStyle('A1:H1')->getFont()->setBold(true);
 
 $filename = 'Movimientos_Almacen_' . $anio . '-' . $mes . ($idCodigo ? ('_prod'.$idCodigo) : '') . '.xlsx';
 
-// Envío al navegador
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 header('Content-Disposition: attachment; filename="'.$filename.'"');
 header('Cache-Control: max-age=0');
@@ -51,3 +60,4 @@ header('Cache-Control: max-age=0');
 $writer = new Xlsx($spreadsheet);
 $writer->save('php://output');
 exit;
+ 
