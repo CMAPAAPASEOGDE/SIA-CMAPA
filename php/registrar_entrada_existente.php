@@ -96,5 +96,5 @@ if ($row) {
 
 sqlsrv_commit($conn);
 
-header("Location: ../admnedtetcf.php");
+header("Location: ../extetcnf.php");
 exit();
