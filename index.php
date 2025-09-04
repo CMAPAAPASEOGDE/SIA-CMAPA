@@ -15,12 +15,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         "Encrypt" => true,
         "TrustServerCertificate" => false
     );
-    $conn = sqlsrv_connect($serverName, $connectionOptions);
-    if ($conn === false) { die(print_r(sqlsrv_errors(), true)); }
-
-    require_once __DIR__.'/php/log_utils.php';
+        require_once __DIR__.'/php/log_utils.php';
     $conn = db_conn_or_die();
     logs_boot($conn); // retención 30 días (1 vez/día)
+    $conn = sqlsrv_connect($serverName, $connectionOptions);
+    if ($conn === false) { die(print_r(sqlsrv_errors(), true)); }
 
     // Consulta con parámetros
     $sql = "SELECT idUsuario, usuario, idRol, apodo
