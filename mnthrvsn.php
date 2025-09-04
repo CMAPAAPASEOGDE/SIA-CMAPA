@@ -219,10 +219,8 @@ if (in_array($rolActual, [1,2,3], true)) {
         <a href="mnthcnf.php"><button class="cierre-btn">CONFIRMAR CIERRE DE MES</button></a>
         <a href="mnthclsr.php"><button class="cierre-btn cancel">CANCELAR</button></a>
     </div>
-    <div class="mensaje-verde">
-        <p>EL REPORTE SE HA GENERADO CORRECTAMENTE, POR FAVOR ESPERE A</p>
-        <p>LA DESCARGA AUTOMÁTICA, SI LA DESCARGA NO SE REALIZA</p>
-        <p><a href="docs/reporte_previo.pdf" download>HAZ CLICK AQUÍ</a></p>
+    <div>
+            <!-- AQUI VA EL ESPACIO DE PREVISUALIZACION -->
     </div>
     <p class="mensaje-rojo">
         RECUERDA QUE ESTE ES UN REPORTE PREVIO Y NO ES EL REPORTE FINAL DEL MES<br>

@@ -74,16 +74,16 @@ if (!in_array($idRol, [1, 2])) {
         <h2>Reportes</h2>
     </div>
     <div class="reportes-menu">
-        <a href="rprtsinv.php"><button class="report-btn">INVENTARIO DEL ALMACÉN</button></a>
-        <a href="rprtskrdx.php"><button class="report-btn">KARDEX DEL PRODUCTO</button></a>
-        <a href="rprtswhms.php"><button class="report-btn">MOVIMIENTOS DEL ALMACÉN</button></a>
-        <button class="report-btn">CIERRE DE MES</button>
+        <a href="#"><button class="report-btn">INVENTARIO DEL ALMACÉN</button></a>
+        <a href="#"><button class="report-btn">KARDEX DEL PRODUCTO</button></a>
+        <a href="#"><button class="report-btn">MOVIMIENTOS DEL ALMACÉN</button></a>
+        <a href="#"><button class="report-btn">CIERRE DE MES</button></a>
     </div>
     <p class="descarga-exito">
-        EL REPORTE SE HA GENERADO CORRECTAMENTE, POR FAVOR ESPERE A<br>
-        LA DESCARGA AUTOMÁTICA, SI LA DESCARGA NO SE REALIZA<br>
-        <a href="docs/reporte_previo.pdf">HAZ CLICK AQUÍ</a>
+        SELECCIONE EL FORMATO PARA DESCARGAR
     </p>
+    <a><button class="report-btn">PDF</button></a>
+    <a><button class="report-btn">XLSX</button></a>
 </main>
 
 <script>

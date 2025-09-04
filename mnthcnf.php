@@ -231,8 +231,7 @@ if (in_array($rolActual, [1,2,3], true)) {
     <!-- Mensaje de confirmación oculto -->
     <p class="mensaje-verde" id="mensaje-confirmacion" style="display: none;">
         EL CIERRE DE MES SE HA CONFIRMADO CORRECTAMENTE,<br>
-        A PARTIR DE AHORA TODAS LAS ENTRADAS Y SALIDAS SE<br>
-        REGISTRARÁN EN SIGUIENTE MES.
+        YA PUEDES DESCARGARLO DESDE EL APARTADO DE REPORTES.<br>
     </p>
 </main>
 
