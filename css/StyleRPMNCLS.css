@@ -221,10 +221,12 @@ header p {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  width: 220px;
 }
 
 .report-btn:hover {
   background-color: #222;
+  transform: scale(1.02);
 }
 
 .descarga-exito {
