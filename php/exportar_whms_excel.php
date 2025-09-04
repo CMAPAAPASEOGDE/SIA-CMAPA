@@ -5,6 +5,12 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     exit();
 }
 
+require_once __DIR__ . '/log_utils.php';
+$conn = db_conn_or_die(); logs_boot($conn);
+log_event($conn, (int)$_SESSION['user_id'], 'REP_WHMS_PDF',
+          'WHMS PDF mes='.$mes.' anio='.$anio.' idCodigo='.($idCodigo ?? 'Todos'),
+          'REPORTES', 1);
+
 require_once __DIR__ . '/reportes_whms_utils.php';
 
 // autoload de composer

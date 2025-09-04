@@ -18,6 +18,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $conn = sqlsrv_connect($serverName, $connectionOptions);
     if ($conn === false) { die(print_r(sqlsrv_errors(), true)); }
 
+    require_once __DIR__.'/php/log_utils.php';
+    $conn = db_conn_or_die();
+    logs_boot($conn); // retención 30 días (1 vez/día)
+
     // Consulta con parámetros
     $sql = "SELECT idUsuario, usuario, idRol, apodo
             FROM dbo.usuarios
@@ -39,8 +43,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['usuario'] = $row['usuario'];
             header("Location: homepage.php");
             exit();
+            log_event($conn, (int)$row['idUsuario'], 'LOGIN_OK', 'Inicio de sesión correcto: '.$row['usuario'], 'AUTH', 1);
         } else {
             $error = "Credenciales inválidas o cuenta inactiva, si el problema persiste contacte al administrador del sistema";
+            log_event($conn, 0, 'LOGIN_FAIL', 'Fallo de login usuario='.$usuario, 'AUTH', 0);
         }
     }
     if ($stmt) { sqlsrv_free_stmt($stmt); }

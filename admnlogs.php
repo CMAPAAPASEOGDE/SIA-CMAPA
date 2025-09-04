@@ -94,6 +94,58 @@ if (in_array($rolActual, [1,2,3], true)) {
         sqlsrv_close($conn);
     }
 }
+
+require_once __DIR__.'/php/log_utils.php';
+$conn = db_conn_or_die(); logs_boot($conn);
+
+$modulos = ['','AUTH','ALMACEN','CAJAS','REPORTES','CIERRE','SISTEMA'];
+
+$desde = $_GET['desde'] ?? date('Y-m-d', strtotime('-7 days'));
+$hasta = $_GET['hasta'] ?? date('Y-m-d');           // inclusive; en SQL sumo +1 día
+$mod   = $_GET['modulo'] ?? '';
+$acc   = $_GET['accion'] ?? '';
+$est   = isset($_GET['estado']) ? (int)$_GET['estado'] : -1;  // -1 = todos
+$q     = trim($_GET['q'] ?? '');
+$page  = max(1, (int)($_GET['page'] ?? 1));
+$per   = 50;
+$off   = ($page - 1) * $per;
+
+$sqlBase = "
+  SELECT L.idLog, L.accion, L.descripcion, L.modulo, L.fechaHora, L.ipUsuario, L.estado,
+         U.usuario, U.apodo
+    FROM dbo.Logs L
+    LEFT JOIN dbo.usuarios U ON U.idUsuario = L.idUsuario
+   WHERE L.fechaHora >= ? AND L.fechaHora < DATEADD(day, 1, ?)";
+$params = [$desde, $hasta];
+
+if ($mod !== '') { $sqlBase .= " AND L.modulo = ?"; $params[] = $mod; }
+if ($acc !== '') { $sqlBase .= " AND L.accion = ?"; $params[] = $acc; }
+if ($est === 0 || $est === 1) { $sqlBase .= " AND L.estado = ?"; $params[] = $est; }
+if ($q !== '') {
+  $sqlBase .= " AND (L.descripcion LIKE ? OR U.usuario LIKE ? OR U.apodo LIKE ?)";
+  $like = '%'.$q.'%'; array_push($params, $like, $like, $like);
+}
+
+$sqlCount = "SELECT COUNT(*) AS c FROM ($sqlBase) T";
+$total = 0;
+if ($stmt = sqlsrv_query($conn, $sqlCount, $params)) {
+  $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+  $total = (int)($row['c'] ?? 0);
+  sqlsrv_free_stmt($stmt);
+}
+
+$sql = $sqlBase." ORDER BY L.fechaHora DESC OFFSET $off ROWS FETCH NEXT $per ROWS ONLY";
+$rows = [];
+if ($stmt = sqlsrv_query($conn, $sql, $params)) {
+  while ($r = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    if ($r['fechaHora'] instanceof DateTime) {
+      $r['fechaHora'] = $r['fechaHora']->format('Y-m-d H:i:s');
+    }
+    $rows[] = $r;
+  }
+  sqlsrv_free_stmt($stmt);
+}
+$totalPages = max(1, (int)ceil($total / $per));
 ?>
 
 <!DOCTYPE html>
@@ -211,22 +263,87 @@ if (in_array($rolActual, [1,2,3], true)) {
 </header>
 
 <main class="main-logs">
-    <div class="contenedor-titulo-logs">
-        <img src="img/log.png" alt="Icono Logs" class="icono-logs" />
-        <h1 class="titulo">REGISTROS DEL SISTEMA</h1>
+  <div class="contenedor-titulo-logs">
+    <img src="img/log.png" alt="Icono Logs" class="icono-logs" />
+    <h1 class="titulo">REGISTROS DEL SISTEMA</h1>
+  </div>
+
+  <form method="get" class="filtros-logs" style="display:grid;grid-template-columns:repeat(6,minmax(140px,1fr));gap:8px;margin:12px 0;">
+    <label>Desde
+      <input type="date" name="desde" value="<?= htmlspecialchars($desde) ?>">
+    </label>
+    <label>Hasta
+      <input type="date" name="hasta" value="<?= htmlspecialchars($hasta) ?>">
+    </label>
+    <label>Módulo
+      <select name="modulo">
+        <?php foreach($modulos as $m): ?>
+          <option value="<?= $m ?>" <?= $m===$mod? 'selected':'' ?>><?= $m===''? 'Todos' : $m ?></option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+    <label>Acción
+      <input type="text" name="accion" placeholder="p.ej. LOGIN_OK" value="<?= htmlspecialchars($acc) ?>">
+    </label>
+    <label>Estado
+      <select name="estado">
+        <option value="-1" <?= $est===-1?'selected':'' ?>>Todos</option>
+        <option value="1"  <?= $est===1?'selected':'' ?>>OK</option>
+        <option value="0"  <?= $est===0?'selected':'' ?>>ERROR</option>
+      </select>
+    </label>
+    <label>Búsqueda
+      <input type="text" name="q" placeholder="usuario / apodo / texto" value="<?= htmlspecialchars($q) ?>">
+    </label>
+    <div style="grid-column:1/-1;text-align:right;margin-top:4px;">
+      <button type="submit" class="report-btn">FILTRAR</button>
     </div>
-        <div class="contenedor-logs">
-        <div class="log">USER 00001 MVMNT IN MAIN DB DELETE FROM USERS ID 00005 AT 10/04/25 14:23:05.23</div>
-        <div class="log">USER 00003 MVMNT IN SYS NW ENTRY DB ID 56 AT 10/04/25 15:01:36.55</div>
-        <div class="log">USER 00003 MVMNT IN SYS NW EXIT DB ID 98 AT 11/04/25 07:05:59.75</div>
-        <div class="log">{SYSTEM} SYSTEM BACKUP STARTED AT 11/04/25 07:08:23.25</div>
-        <div class="log">{SYSTEM} SYSTEM BACKUP FINISHED AT 11/04/25 07:12:52.86</div>
-        <div class="log">{SYSTEM} USER 00003 DICTD PERMISSIONS ERROR AT 11/04/25 08:02:53.10</div>
-        <div class="log">USER 00003 MVMNT IN SYS SYSTEM LOG OUT AT 11/04/25 08:03:32.03</div>
-        <div class="log">USER 00002 MVMNT IN SYS SYSTEM LOG IN AT 11/04/25 08:04:25.84 FROM 192.168.1.56</div>
-        <!-- Puedes añadir más registros aquí -->
-    </div>
+  </form>
+
+  <div class="contenedor-logs" style="overflow:auto; max-height:64vh;">
+    <table class="tabla-logs" style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:6px;border-bottom:1px solid #ddd;">Fecha/Hora</th>
+          <th style="text-align:left;padding:6px;border-bottom:1px solid #ddd;">Usuario</th>
+          <th style="text-align:left;padding:6px;border-bottom:1px solid #ddd;">Módulo</th>
+          <th style="text-align:left;padding:6px;border-bottom:1px solid #ddd;">Acción</th>
+          <th style="text-align:left;padding:6px;border-bottom:1px solid #ddd;">Descripción</th>
+          <th style="text-align:left;padding:6px;border-bottom:1px solid #ddd;">IP</th>
+          <th style="text-align:left;padding:6px;border-bottom:1px solid #ddd;">Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php if (!$rows): ?>
+          <tr><td colspan="7" style="padding:12px;text-align:center;color:#666;">Sin resultados</td></tr>
+        <?php else: foreach($rows as $L): ?>
+          <tr>
+            <td style="padding:6px;border-bottom:1px solid #eee;white-space:nowrap;"><?= htmlspecialchars($L['fechaHora']) ?></td>
+            <td style="padding:6px;border-bottom:1px solid #eee;">
+              <?= htmlspecialchars($L['usuario'] ?? '---') ?>
+              <?php if(!empty($L['apodo'])): ?> (<?= htmlspecialchars($L['apodo']) ?>)<?php endif; ?>
+            </td>
+            <td style="padding:6px;border-bottom:1px solid #eee;"><?= htmlspecialchars($L['modulo']) ?></td>
+            <td style="padding:6px;border-bottom:1px solid #eee;"><?= htmlspecialchars($L['accion']) ?></td>
+            <td style="padding:6px;border-bottom:1px solid #eee;"><?= htmlspecialchars($L['descripcion']) ?></td>
+            <td style="padding:6px;border-bottom:1px solid #eee;"><?= htmlspecialchars($L['ipUsuario']) ?></td>
+            <td style="padding:6px;border-bottom:1px solid #eee;"><?= ((int)$L['estado']===1?'OK':'ERROR') ?></td>
+          </tr>
+        <?php endforeach; endif; ?>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="paginacion" style="margin-top:10px;display:flex;gap:6px;justify-content:center;">
+    <?php for($p=1;$p<=$totalPages;$p++): ?>
+      <a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$p])) ?>"
+         style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;<?= $p===$page?'background:#eee;font-weight:bold;':'' ?>">
+        <?= $p ?>
+      </a>
+    <?php endfor; ?>
+  </div>
 </main>
+
 
 <script>
   const toggle = document.getElementById('menu-toggle');

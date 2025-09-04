@@ -1,6 +1,10 @@
 <?php
 session_start();
 
+require_once __DIR__.'/php/log_utils.php';
+$conn = db_conn_or_die(); logs_boot($conn);
+log_event($conn, (int)($_SESSION['user_id'] ?? 0), 'LOGOUT', 'Cierre de sesión', 'AUTH', 1);
+
 // Destruir todas las variables de sesión
 $_SESSION = array();
 

@@ -2,6 +2,12 @@
 // php/export_inventario.php
 session_start();
 
+require_once __DIR__ . '/log_utils.php';
+$conn = db_conn_or_die(); logs_boot($conn);
+log_event($conn, (int)$_SESSION['user_id'], 'REP_WHMS_PDF',
+          'WHMS PDF mes='.$mes.' anio='.$anio.' idCodigo='.($idCodigo ?? 'Todos'),
+          'REPORTES', 1);
+
 // Enable error reporting for debugging (remove in production)
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
