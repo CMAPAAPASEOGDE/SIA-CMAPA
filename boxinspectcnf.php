@@ -87,7 +87,7 @@ if (!in_array($idRol, [1, 2])) {
     </div>
     <section class="responsable-section">
         <label for="responsable">RESPONSABLE</label>
-        <input type="text" id="responsable" value="ABCDE FGHIJKL MIÑO PQR STUVWXYZ">
+        <input type="text" id="responsable" value="">
         <button class="btn-secundario">CAMBIAR RESPONSABLE</button>
     </section>
     <section class="elementos-section">
@@ -97,24 +97,24 @@ if (!in_array($idRol, [1, 2])) {
             <span>CANTIDAD</span>
         </div>
         <div class="elemento-row">
-            <input type="text" value="ABCDEFGHIJKLMNÑOPQRSTUVWXYZ">
-            <input type="text" value="MEDIDOR DE AGUA">
+            <input type="text" value="Z">
+            <input type="text" value="">
             <div class="cantidad-control">
-                <input type="number" value="1" min="0">
+                <input type="number" value="" min="0">
             </div>
         </div>
         <div class="elemento-row">
-            <input type="text" value="ABCDEFGHIJKLMNÑOPQRSTUVWXYZ">
-            <input type="text" value="Llave de presión">
+            <input type="text" value="">
+            <input type="text" value="">
             <div class="cantidad-control">
-                <input type="number" value="1" min="0">
+                <input type="number" value="" min="0">
             </div>
         </div>
         <div class="elemento-row">
-            <input type="text" value="ABCDEFGHIJKLMNÑOPQRSTUVWXYZ">
-            <input type="text" value="Codos de cobre">
+            <input type="text" value="">
+            <input type="text" value="">
             <div class="cantidad-control">
-                <input type="number" value="3" min="0">
+                <input type="number" value="" min="0">
             </div>
         </div>
     </section>
