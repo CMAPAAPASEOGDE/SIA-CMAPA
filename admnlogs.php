@@ -344,7 +344,6 @@ $totalPages = max(1, (int)ceil($total / $per));
   </div>
 </main>
 
-
 <script>
   const toggle = document.getElementById('menu-toggle');
   const dropdown = document.getElementById('dropdown-menu');
