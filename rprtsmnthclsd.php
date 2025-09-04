@@ -15,6 +15,9 @@ if (!in_array($idRol, [1, 2])) {
     header("Location: acceso_denegado.php");
     exit();
 }
+require_once __DIR__.'/php/month_close_utils.php';
+$conn = db_conn_or_die();
+$cierres = list_cierres($conn);
 ?>
 
 <!DOCTYPE html>
@@ -69,21 +72,37 @@ if (!in_array($idRol, [1, 2])) {
 </header>
 
 <main class="reportes-container">
-    <div class="reportes-title">
-        <img src="img/documentation.png" alt="Icono Reportes" />
-        <h2>Reportes</h2>
+  <div class="reportes-title">
+    <img src="img/documentation.png" alt="Icono Reportes" />
+    <h2>Reportes</h2>
+  </div>
+  <div class="reportes-menu">
+    <a href="rprtsinv.php"><button class="report-btn">INVENTARIO DEL ALMACÉN</button></a>
+    <a href="rprtskrdx.php"><button class="report-btn">KARDEX DEL PRODUCTO</button></a>
+    <a href="rprtswhms.php"><button class="report-btn">MOVIMIENTOS DEL ALMACÉN</button></a>
+    <button class="report-btn">CIERRE DE MES</button>
+  </div>
+
+  <p class="descarga-exito">SELECCIONA EL CIERRE CONFIRMADO A DESCARGAR</p>
+
+  <form method="post" style="text-align:center;">
+    <label>CIERRE
+      <select name="idCierre" required>
+        <?php foreach($cierres as $c):
+          $fi = ($c['fechaInicio'] instanceof DateTime) ? $c['fechaInicio']->format('Y-m-d') : substr((string)$c['fechaInicio'],0,10);
+          $ff = ($c['fechaFin']    instanceof DateTime) ? $c['fechaFin']->format('Y-m-d')    : substr((string)$c['fechaFin'],0,10);
+          $txt = $fi.' a '.$ff.' — '.$c['etiqueta'];
+        ?>
+          <option value="<?= (int)$c['idCierre'] ?>"><?= htmlspecialchars($txt) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+
+    <div class="report-buttons" style="margin-top:12px;">
+      <button formaction="php/exportar_cierre_pdf.php"  type="submit">PDF</button>
+      <button formaction="php/exportar_cierre_excel.php" type="submit">XLSX</button>
     </div>
-    <div class="reportes-menu">
-        <a href="#"><button class="report-btn">INVENTARIO DEL ALMACÉN</button></a>
-        <a href="#"><button class="report-btn">KARDEX DEL PRODUCTO</button></a>
-        <a href="#"><button class="report-btn">MOVIMIENTOS DEL ALMACÉN</button></a>
-        <a href="#"><button class="report-btn">CIERRE DE MES</button></a>
-    </div>
-    <p class="descarga-exito">
-        SELECCIONE EL FORMATO PARA DESCARGAR
-    </p>
-    <a><button class="report-btn">PDF</button></a>
-    <a><button class="report-btn">XLSX</button></a>
+  </form>
 </main>
 
 <script>

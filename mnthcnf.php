@@ -225,14 +225,18 @@ if (in_array($rolActual, [1,2,3], true)) {
             ¿ESTÁS SEGURO DE QUE DESEAS CERRAR<br>
             EL MES CON FECHA <strong><?php echo $fecha_actual; ?></strong>?
         </p>
-        <button class="cierre-btn" id="btn-confirmar">CONFIRMAR</button>
-        <a href="mnthclsr.php"><button class="cierre-btn cancel">CANCELAR</button></a>
+        <form method="post" action="php/confirmar_cierre_mes.php" style="display:inline;">
+          <button class="cierre-btn" type="submit">CONFIRMAR</button>
+        </form>
+        <a href="mnthclsr.php"><button class="cierre-btn cancel" type="button">CANCELAR</button></a>
     </div>
     <!-- Mensaje de confirmación oculto -->
-    <p class="mensaje-verde" id="mensaje-confirmacion" style="display: none;">
-        EL CIERRE DE MES SE HA CONFIRMADO CORRECTAMENTE,<br>
-        YA PUEDES DESCARGARLO DESDE EL APARTADO DE REPORTES.<br>
-    </p>
+    <?php if (!empty($_GET['ok'])): ?>
+      <p class="mensaje-verde" id="mensaje-confirmacion" style="display:block;">
+        EL CIERRE DE MES SE HA CONFIRMADO CORRECTAMENTE (ID <?= (int)$_GET['idCierre'] ?>).<br>
+        YA PUEDES DESCARGARLO DESDE EL APARTADO DE REPORTES.
+      </p>
+    <?php endif; ?>
 </main>
 
 <script>

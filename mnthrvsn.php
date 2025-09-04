@@ -219,9 +219,11 @@ if (in_array($rolActual, [1,2,3], true)) {
         <a href="mnthcnf.php"><button class="cierre-btn">CONFIRMAR CIERRE DE MES</button></a>
         <a href="mnthclsr.php"><button class="cierre-btn cancel">CANCELAR</button></a>
     </div>
-    <div>
-            <!-- AQUI VA EL ESPACIO DE PREVISUALIZACION -->
-    </div>
+      <div class="cierre-preview" style="text-align:center;margin-top:12px;">
+        <form method="post" action="php/preview_cierre.php" target="_blank">
+          <button class="cierre-btn" type="submit">PREVISUALIZAR CIERRE</button>
+        </form>
+      </div>
     <p class="mensaje-rojo">
         RECUERDA QUE ESTE ES UN REPORTE PREVIO Y NO ES EL REPORTE FINAL DEL MES<br>
         EL REPORTE FINAL LO PODRÁS DESCARGAR EN EL APARTADO DE REPORTES UNA VEZ SE HAYA CONFIRMADO EL CIERRE DEL MES
