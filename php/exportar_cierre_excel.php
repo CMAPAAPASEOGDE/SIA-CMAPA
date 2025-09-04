@@ -3,12 +3,6 @@ session_start();
 if (!isset($_SESSION['user_id'])) { header("Location: ../index.php"); exit(); }
 require_once __DIR__.'/month_close_utils.php';
 
-require_once __DIR__ . '/log_utils.php';
-$conn = db_conn_or_die(); logs_boot($conn);
-log_event($conn, (int)$_SESSION['user_id'], 'REP_WHMS_PDF',
-          'WHMS PDF mes='.$mes.' anio='.$anio.' idCodigo='.($idCodigo ?? 'Todos'),
-          'REPORTES', 1);
-
 $autoloadRoot = __DIR__.'/../vendor/autoload.php';
 $autoloadHere = __DIR__.'/vendor/autoload.php';
 if (file_exists($autoloadRoot)) require_once $autoloadRoot;
