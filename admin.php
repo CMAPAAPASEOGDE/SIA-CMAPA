@@ -219,7 +219,6 @@ if (in_array($rolActual, [1,2,3], true)) {
         <a href="admnedt.php"><button class="admin-btn">EDITAR ELEMENTOS</button></a>
         <a href="admnusrs.php"><button class="admin-btn">ADMINISTRACIÓN DE USUARIOS</button></a>
         <a href="admnrqst.php"><button class="admin-btn">SOLICITUDES DE MODIFICACION</button></a>
-        <a href="admnlogs.php"><button class="admin-btn">REGISTROS DEL SISTEMA</button></a>
         <button class="admin-btn">
             <a href="https://www.outlook.com" class="btn-link">OUTLOOK</a>
         </button>
