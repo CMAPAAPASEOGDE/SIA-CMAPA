@@ -26,97 +26,106 @@ if ($conn === false) {
     die(print_r(sqlsrv_errors(), true));
 }
 
-// Obtener datos del formulario
-$area = trim($_POST['areaSolicitante'] ?? '');
-$encargado = trim($_POST['encargadoArea'] ?? '');
+// Helpers (mismos que arriba, copiados)
+function total_stock(sqlsrv $conn, int $idCodigo): float {
+  $stmt = sqlsrv_query($conn, "SELECT SUM(cantidadActual) AS total FROM Inventario WHERE idCodigo = ?", [$idCodigo]);
+  if (!$stmt) return 0;
+  $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+  sqlsrv_free_stmt($stmt);
+  return (float)($row['total'] ?? 0);
+}
+function es_unica(sqlsrv $conn, int $idCodigo): bool {
+  $stmt = sqlsrv_query($conn, "SELECT TOP 1 tipo FROM Productos WHERE idCodigo = ?", [$idCodigo]);
+  $tipo = '';
+  if ($stmt) { $r = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC); $tipo = strtoupper(trim((string)($r['tipo'] ?? ''))); sqlsrv_free_stmt($stmt); }
+  if (in_array($tipo, ['H','HERRAMIENTA','HERRAMIENTAS','UNICA','ÚNICA','UNICO','ÚNICO'], true)) return true;
+  $stmt2 = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM HerramientasUnicas WHERE idCodigo = ?", [$idCodigo]);
+  if ($stmt2) { $r2 = sqlsrv_fetch_array($stmt2, SQLSRV_FETCH_ASSOC); sqlsrv_free_stmt($stmt2); return ((int)($r2['c'] ?? 0) > 0); }
+  return false;
+}
+function descontar_inventario(sqlsrv $conn, int $idCodigo, int $cantidad, string $fecha): bool {
+  $restante = $cantidad;
+  $stmt = sqlsrv_query($conn,
+    "SELECT idInventario, cantidadActual
+       FROM Inventario
+      WHERE idCodigo = ? AND cantidadActual > 0
+   ORDER BY cantidadActual DESC, idInventario ASC",
+    [$idCodigo]
+  );
+  if (!$stmt) return false;
+  while ($restante > 0 && ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC))) {
+    $idInv = (int)$row['idInventario']; $enFila = (float)$row['cantidadActual'];
+    if ($enFila <= 0) continue;
+    $quita = (int)min($restante, $enFila);
+    $ok = sqlsrv_query($conn,
+      "UPDATE Inventario SET cantidadActual = cantidadActual - ?, ultimaActualizacion = ? WHERE idInventario = ?",
+      [$quita, $fecha, $idInv]
+    );
+    if (!$ok) return false;
+    $restante -= $quita;
+  }
+  sqlsrv_free_stmt($stmt);
+  return $restante === 0;
+}
+
+// Datos del formulario
+$area        = trim($_POST['areaSolicitante'] ?? '');
+$encargado   = trim($_POST['encargadoArea'] ?? '');
 $comentarios = trim($_POST['comentarios'] ?? '');
-$fecha = date('Y-m-d H:i:s');
+$fecha       = date('Y-m-d H:i:s');
 
-if ($area === '' || $encargado === '' || $comentarios === '') {
-    header("Location: ../exitnoorder.php");
-    exit();
-}
+if ($area === '' || $encargado === '' || $comentarios === '') { header("Location: ../exitnoord.php"); exit(); }
 
-// Elementos
 $elementos = $_POST['elementos'] ?? [];
-if (empty($elementos)) {
-    header("Location: ../exitnoorder.php");
-    exit();
-}
+if (empty($elementos)) { header("Location: ../exitnoord.php"); exit(); }
 
-// Verificar stock antes de registrar
+sqlsrv_begin_transaction($conn);
+
 foreach ($elementos as $item) {
-    $idCodigo = (int)($item['idCodigo'] ?? 0);
-    $cantidad = (int)($item['cantidad'] ?? 0);
+  $idCodigo = (int)($item['idCodigo'] ?? 0);
+  $cantidad = (int)($item['cantidad'] ?? 0);
+  if ($idCodigo === 0 || $cantidad <= 0) { sqlsrv_rollback($conn); header("Location: ../exitnoord.php"); exit(); }
 
-    if ($idCodigo === 0 || $cantidad <= 0) {
-        header("Location: ../exitnoorder.php");
-        exit();
-    }
+  // 1) Stock total
+  if (total_stock($conn, $idCodigo) < $cantidad) { sqlsrv_rollback($conn); header("Location: ../exitnoorder2.php"); exit(); }
 
-    $sqlCheck = "SELECT cantidadActual FROM Inventario WHERE idCodigo = ?";
-    $stmtCheck = sqlsrv_query($conn, $sqlCheck, [$idCodigo]);
-    if ($stmtCheck === false) die(print_r(sqlsrv_errors(), true));
+  // 2) Herramientas únicas (solo si aplica)
+  $toolIds = [];
+  if (es_unica($conn, $idCodigo)) {
+    $stmtGetTools = sqlsrv_query(
+      $conn,
+      "SELECT TOP (?) idHerramienta FROM HerramientasUnicas WHERE idCodigo = ? AND enInventario = 1 ORDER BY idHerramienta ASC",
+      [$cantidad, $idCodigo]
+    );
+    if (!$stmtGetTools) { sqlsrv_rollback($conn); die(print_r(sqlsrv_errors(), true)); }
+    while ($t = sqlsrv_fetch_array($stmtGetTools, SQLSRV_FETCH_ASSOC)) { $toolIds[] = (int)$t['idHerramienta']; }
+    sqlsrv_free_stmt($stmtGetTools);
+    if (count($toolIds) < $cantidad) { sqlsrv_rollback($conn); header("Location: ../exitnoorder2.php"); exit(); }
+  }
 
-    $row = sqlsrv_fetch_array($stmtCheck, SQLSRV_FETCH_ASSOC);
-    if (!$row || $row['cantidadActual'] < $cantidad) {
-        header("Location: ../exitnoorder2.php");
-        exit();
-    }
-}
+  // 3) Registrar salida
+  $stmtInsert = sqlsrv_query(
+    $conn,
+    "INSERT INTO SalidaSinorden (areaSolicitante, encargadoArea, fecha, comentarios, idCodigo, cantidad)
+     VALUES (?, ?, ?, ?, ?, ?)",
+    [$area, $encargado, $fecha, $comentarios, $idCodigo, $cantidad]
+  );
+  if (!$stmtInsert) { sqlsrv_rollback($conn); die(print_r(sqlsrv_errors(), true)); }
 
-// Si hay stock suficiente, registrar en SalidaSinorden y actualizar Inventario
-foreach ($elementos as $item) {
-    $idCodigo = (int)$item['idCodigo'];
-    $cantidad = (int)$item['cantidad'];
+  // 4) Descontar inventario repartiendo
+  if (!descontar_inventario($conn, $idCodigo, $cantidad, $fecha)) {
+    sqlsrv_rollback($conn); header("Location: ../exitnoorder2.php"); exit();
+  }
 
-    // Obtener herramientas únicas para actualizar
-    $sqlGetTools = "SELECT TOP (?) idHerramienta 
-                    FROM HerramientasUnicas 
-                    WHERE idCodigo = ? AND enInventario = 1 
-                    ORDER BY idHerramienta ASC";
-    $paramsGetTools = [$cantidad, $idCodigo];
-    $stmtGetTools = sqlsrv_query($conn, $sqlGetTools, $paramsGetTools);
-    if ($stmtGetTools === false) die(print_r(sqlsrv_errors(), true));
-    
-    $toolIds = [];
-    while ($row = sqlsrv_fetch_array($stmtGetTools, SQLSRV_FETCH_ASSOC)) {
-        $toolIds[] = $row['idHerramienta'];
-    }
-    
-    // Si no hay suficientes herramientas, error
-    if (count($toolIds) < $cantidad) {
-        header("Location: ../exitnoorder2.php");
-        exit();
-    }
-
-    // Registrar salida
-    $sqlInsert = "INSERT INTO SalidaSinorden (areaSolicitante, encargadoArea, fecha, comentarios, idCodigo, cantidad)
-                  VALUES (?, ?, ?, ?, ?, ?)";
-    $paramsInsert = [$area, $encargado, $fecha, $comentarios, $idCodigo, $cantidad];
-    $stmtInsert = sqlsrv_query($conn, $sqlInsert, $paramsInsert);
-    if ($stmtInsert === false) die(print_r(sqlsrv_errors(), true));
-
-    // Actualizar inventario
-    $sqlUpdate = "UPDATE Inventario 
-                  SET cantidadActual = cantidadActual - ?, 
-                      ultimaActualizacion = ?
-                  WHERE idCodigo = ?";
-    $paramsUpdate = [$cantidad, $fecha, $idCodigo];
-    $stmtUpdate = sqlsrv_query($conn, $sqlUpdate, $paramsUpdate);
-    if ($stmtUpdate === false) die(print_r(sqlsrv_errors(), true));
-    
-    // Actualizar herramientas únicas
+  // 5) Marcar herramientas únicas (solo si aplica)
+  if ($toolIds) {
     foreach ($toolIds as $toolId) {
-        $sqlUpdateTool = "UPDATE HerramientasUnicas 
-                          SET enInventario = 0 
-                          WHERE idHerramienta = ?";
-        $stmtUpdateTool = sqlsrv_query($conn, $sqlUpdateTool, [$toolId]);
-        if ($stmtUpdateTool === false) die(print_r(sqlsrv_errors(), true));
+      $okU = sqlsrv_query($conn, "UPDATE HerramientasUnicas SET enInventario = 0 WHERE idHerramienta = ?", [$toolId]);
+      if (!$okU) { sqlsrv_rollback($conn); die(print_r(sqlsrv_errors(), true)); }
     }
+  }
 }
 
-// Todo salió bien
+sqlsrv_commit($conn);
 header("Location: ../exitnoordcnf.php");
 exit();
-?>
