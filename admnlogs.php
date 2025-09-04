@@ -4,104 +4,73 @@ session_start();
 
 // Verificar si el usuario está autenticado
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
-    header("Location: index.php");
-    exit();
+  header("Location: index.php"); exit();
 }
 
-// Verificar el rol del usuario
+// Verificar el rol del usuario (solo Admin)
 $idRol = (int)($_SESSION['rol'] ?? 0);
 if ($idRol !== 1) {
-    header("Location: acceso_denegado.php");
-    exit();
+  header("Location: acceso_denegado.php"); exit();
 }
 
-// -------- Notificaciones (nuevo esquema) --------
+/* ================== CONEXIÓN ÚNICA (y limpieza automática de logs) ================== */
+require_once __DIR__ . '/php/log_utils.php';
+$conn = db_conn_or_die();
+logs_boot($conn); // borra registros con >30 días (una vez por día)
+
+/* ================== Notificaciones (mismo $conn) ================== */
 $rolActual   = (int)($_SESSION['rol'] ?? 0);
 $unreadCount = 0;
 $notifList   = [];
 
 if (in_array($rolActual, [1,2,3], true)) {
-    $serverName = "sqlserver-sia.database.windows.net";
-    $connectionOptions = [
-        "Database" => "db_sia",
-        "Uid"      => "cmapADMIN",
-        "PWD"      => "@siaADMN56*",
-        "Encrypt"  => true,
-        "TrustServerCertificate" => false
-    ];
-    $conn = sqlsrv_connect($serverName, $connectionOptions);
+  if ($rolActual === 1) {
+    // ADMIN: pendientes en Modificaciones
+    $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Modificaciones WHERE solicitudRevisada = 0");
+    $stmtList  = sqlsrv_query(
+      $conn,
+      "SELECT TOP 10 M.idModificacion, M.descripcion, M.fecha, M.tipo, M.cantidad, P.codigo AS codigoProducto
+         FROM Modificaciones M
+    LEFT JOIN Productos P ON P.idCodigo = M.idCodigo
+        WHERE M.solicitudRevisada = 0
+     ORDER BY M.fecha DESC"
+    );
+  } else {
+    // USUARIOS (2 y 3): avisos desde Notificaciones
+    $stmtCount = sqlsrv_query($conn, "SELECT COUNT(*) AS c FROM Notificaciones WHERE estatusRevision = 0");
+    $stmtList  = sqlsrv_query(
+      $conn,
+      "SELECT TOP 10
+              N.idNotificacion,
+              N.descripcion      AS comentarioAdmin,
+              N.fechaNotificacion,
+              P.codigo           AS codigoProducto
+         FROM Notificaciones N
+    LEFT JOIN Modificaciones M ON M.idModificacion = N.idModificacion
+    LEFT JOIN Productos      P ON P.idCodigo       = M.idCodigo
+        WHERE N.estatusRevision = 0
+     ORDER BY N.fechaNotificacion DESC"
+    );
+  }
 
-    if ($conn) {
-        if ($rolActual === 1) {
-            // ADMIN: pendientes en Modificaciones
-            $stmtCount = sqlsrv_query(
-                $conn,
-                "SELECT COUNT(*) AS c
-                   FROM Modificaciones
-                  WHERE solicitudRevisada = 0"
-            );
-            $stmtList = sqlsrv_query(
-                $conn,
-                "SELECT TOP 10
-                        M.idModificacion,
-                        M.descripcion,
-                        M.fecha,
-                        M.tipo,
-                        M.cantidad,
-                        P.codigo AS codigoProducto
-                   FROM Modificaciones M
-              LEFT JOIN Productos P ON P.idCodigo = M.idCodigo
-                  WHERE M.solicitudRevisada = 0
-               ORDER BY M.fecha DESC"
-            );
-        } else {
-            // USUARIOS (2 y 3): avisos desde Notificaciones
-            $stmtCount = sqlsrv_query(
-                $conn,
-                "SELECT COUNT(*) AS c
-                   FROM Notificaciones
-                  WHERE estatusRevision = 0"
-            );
-            $stmtList = sqlsrv_query(
-                $conn,
-                "SELECT TOP 10
-                        N.idNotificacion,
-                        N.descripcion      AS comentarioAdmin,
-                        N.fechaNotificacion,
-                        P.codigo           AS codigoProducto
-                   FROM Notificaciones N
-              LEFT JOIN Modificaciones M ON M.idModificacion = N.idModificacion
-              LEFT JOIN Productos      P ON P.idCodigo       = M.idCodigo
-                  WHERE N.estatusRevision = 0
-               ORDER BY N.fechaNotificacion DESC"
-            );
-        }
-
-        if ($stmtCount) {
-            $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
-            $unreadCount = (int)($row['c'] ?? 0);
-            sqlsrv_free_stmt($stmtCount);
-        }
-
-        if ($stmtList) {
-            while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
-                $notifList[] = $r;
-            }
-            sqlsrv_free_stmt($stmtList);
-        }
-
-        sqlsrv_close($conn);
+  if ($stmtCount) {
+    $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
+    $unreadCount = (int)($row['c'] ?? 0);
+    sqlsrv_free_stmt($stmtCount);
+  }
+  if ($stmtList) {
+    while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
+      $notifList[] = $r;
     }
+    sqlsrv_free_stmt($stmtList);
+  }
 }
 
-require_once __DIR__.'/php/log_utils.php';
-$conn = db_conn_or_die(); logs_boot($conn);
-
+/* ================== Parámetros de filtros y consulta base ================== */
 $modulos = ['','AUTH','ALMACEN','CAJAS','REPORTES','CIERRE','SISTEMA'];
 
 $desde = $_GET['desde'] ?? date('Y-m-d', strtotime('-7 days'));
-$hasta = $_GET['hasta'] ?? date('Y-m-d');           // inclusive; en SQL sumo +1 día
+$hasta = $_GET['hasta'] ?? date('Y-m-d'); // inclusive (en SQL usamos +1 día)
 $mod   = $_GET['modulo'] ?? '';
 $acc   = $_GET['accion'] ?? '';
 $est   = isset($_GET['estado']) ? (int)$_GET['estado'] : -1;  // -1 = todos
@@ -126,6 +95,38 @@ if ($q !== '') {
   $like = '%'.$q.'%'; array_push($params, $like, $like, $like);
 }
 
+/* ================== Exportación CSV (sin paginar) ================== */
+if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+  $sqlCsv = $sqlBase . " ORDER BY L.fechaHora DESC";
+  $stmtCsv = sqlsrv_query($conn, $sqlCsv, $params);
+
+  header('Content-Type: text/csv; charset=UTF-8');
+  header('Content-Disposition: attachment; filename="logs_' . date('Ymd_His') . '.csv"');
+  $out = fopen('php://output', 'w');
+  fputcsv($out, ['FechaHora','Usuario','Apodo','Módulo','Acción','Descripción','IP','Estado']);
+
+  if ($stmtCsv) {
+    while ($r = sqlsrv_fetch_array($stmtCsv, SQLSRV_FETCH_ASSOC)) {
+      $fecha = ($r['fechaHora'] instanceof DateTime) ? $r['fechaHora']->format('Y-m-d H:i:s') : (string)$r['fechaHora'];
+      fputcsv($out, [
+        $fecha,
+        (string)($r['usuario'] ?? ''),
+        (string)($r['apodo'] ?? ''),
+        (string)$r['modulo'],
+        (string)$r['accion'],
+        (string)$r['descripcion'],
+        (string)$r['ipUsuario'],
+        ((int)$r['estado']===1?'OK':'ERROR')
+      ]);
+    }
+    sqlsrv_free_stmt($stmtCsv);
+  }
+  fclose($out);
+  sqlsrv_close($conn);
+  exit;
+}
+
+/* ================== Conteo total y página ================== */
 $sqlCount = "SELECT COUNT(*) AS c FROM ($sqlBase) T";
 $total = 0;
 if ($stmt = sqlsrv_query($conn, $sqlCount, $params)) {
@@ -147,17 +148,14 @@ if ($stmt = sqlsrv_query($conn, $sql, $params)) {
 }
 $totalPages = max(1, (int)ceil($total / $per));
 ?>
-
 <!DOCTYPE html>
-
 <html>
 <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
-    <title>SIA Admin System Logs</title>
-    <link rel="stylesheet" href="css/StyleADLGS.css">
+  <meta charset="UTF-8" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
+  <title>SIA Admin System Logs</title>
+  <link rel="stylesheet" href="css/StyleADLGS.css">
 </head>
-
 <body>
 <header>
   <div class="brand">
@@ -168,45 +166,34 @@ $totalPages = max(1, (int)ceil($total / $per));
   <div class="header-right">
     <div class="notification-container">
       <button class="icon-btn" id="notif-toggle" type="button" aria-label="Notificaciones">
-        <img
-          src="<?= ($unreadCount > 0) ? 'img/belldot.png' : 'img/bell.png' ?>"
-          class="imgh3"
-          alt="Notificaciones"
-        />
+        <img src="<?= ($unreadCount > 0) ? 'img/belldot.png' : 'img/bell.png' ?>" class="imgh3" alt="Notificaciones" />
       </button>
 
       <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
         <?php if ($unreadCount === 0): ?>
           <div class="notif-empty" style="padding:10px;">No hay notificaciones nuevas.</div>
-
         <?php elseif ($rolActual === 1): ?>
-          <!-- ADMIN: desde Modificaciones -->
           <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
             <?php foreach ($notifList as $n): ?>
               <?php
                 $f = $n['fecha'] ?? null;
-                $fechaTxt = ($f instanceof DateTime)
-                              ? $f->format('Y-m-d H:i')
-                              : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
+                $fechaTxt = ($f instanceof DateTime) ? $f->format('Y-m-d H:i') :
+                            (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
                 $tipoTxt = strtoupper((string)($n['tipo'] ?? ''));
                 $qtyTxt  = isset($n['cantidad']) ? ' • Cant.: '.(int)$n['cantidad'] : '';
                 $codigo  = (string)($n['codigoProducto'] ?? '');
               ?>
-              <li class="notif-item"
-                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
+              <li class="notif-item" style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
                   onclick="window.location.href='admnrqst.php'">
                 <div class="notif-desc" style="font-size:0.95rem;">
-                  [<?= htmlspecialchars($tipoTxt, ENT_QUOTES, 'UTF-8') ?>]
-                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong>
-                  <?= $qtyTxt ?> — <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+                  [<?= htmlspecialchars($tipoTxt) ?>] <strong><?= htmlspecialchars($codigo) ?></strong>
+                  <?= $qtyTxt ?> — <?= htmlspecialchars($n['descripcion'] ?? '') ?>
                 </div>
                 <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
               </li>
             <?php endforeach; ?>
           </ul>
-
         <?php else: ?>
-          <!-- USUARIOS 2 y 3: desde Notificaciones -->
           <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
             <?php foreach ($notifList as $n): ?>
               <?php
@@ -214,16 +201,13 @@ $totalPages = max(1, (int)ceil($total / $per));
                 $codigo   = (string)($n['codigoProducto'] ?? '');
                 $coment   = (string)($n['comentarioAdmin'] ?? '');
                 $f        = $n['fechaNotificacion'] ?? null;
-                $fechaTxt = ($f instanceof DateTime)
-                          ? $f->format('Y-m-d H:i')
-                          : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
+                $fechaTxt = ($f instanceof DateTime) ? $f->format('Y-m-d H:i') :
+                            (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
               ?>
-              <li class="notif-item"
-                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
+              <li class="notif-item" style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
                   onclick="ackUserNotif(<?= $idNoti ?>)">
                 <div class="notif-desc" style="font-size:0.95rem;">
-                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong> —
-                  <?= htmlspecialchars($coment, ENT_QUOTES, 'UTF-8') ?>
+                  <strong><?= htmlspecialchars($codigo) ?></strong> — <?= htmlspecialchars($coment) ?>
                 </div>
                 <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
               </li>
@@ -233,7 +217,7 @@ $totalPages = max(1, (int)ceil($total / $per));
       </div>
     </div>
 
-    <p><?= htmlspecialchars($_SESSION['usuario'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
+    <p><?= htmlspecialchars($_SESSION['usuario'] ?? '') ?></p>
 
     <div class="user-menu-container">
       <button class="icon-btn" id="user-toggle" type="button">
@@ -241,7 +225,7 @@ $totalPages = max(1, (int)ceil($total / $per));
       </button>
       <div class="user-dropdown" id="user-dropdown" style="display:none;">
         <p><strong>Tipo de usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
-        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
+        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '') ?></p>
         <a href="passchng.php"><button class="user-option" type="button">CAMBIAR CONTRASEÑA</button></a>
       </div>
     </div>
@@ -278,7 +262,7 @@ $totalPages = max(1, (int)ceil($total / $per));
     <label>Módulo
       <select name="modulo">
         <?php foreach($modulos as $m): ?>
-          <option value="<?= $m ?>" <?= $m===$mod? 'selected':'' ?>><?= $m===''? 'Todos' : $m ?></option>
+          <option value="<?= htmlspecialchars($m) ?>" <?= $m===$mod? 'selected':'' ?>><?= $m===''? 'Todos' : htmlspecialchars($m) ?></option>
         <?php endforeach; ?>
       </select>
     </label>
@@ -295,8 +279,11 @@ $totalPages = max(1, (int)ceil($total / $per));
     <label>Búsqueda
       <input type="text" name="q" placeholder="usuario / apodo / texto" value="<?= htmlspecialchars($q) ?>">
     </label>
-    <div style="grid-column:1/-1;text-align:right;margin-top:4px;">
+    <div style="grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
       <button type="submit" class="report-btn">FILTRAR</button>
+      <a class="report-btn" href="?<?= http_build_query(array_merge($_GET,['export'=>'csv','page'=>null])) ?>" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;">
+        EXPORTAR CSV
+      </a>
     </div>
   </form>
 
@@ -347,56 +334,50 @@ $totalPages = max(1, (int)ceil($total / $per));
 <script>
   const toggle = document.getElementById('menu-toggle');
   const dropdown = document.getElementById('dropdown-menu');
-  toggle.addEventListener('click', () => {
+  toggle && toggle.addEventListener('click', () => {
     dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
   });
   window.addEventListener('click', (e) => {
-    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
+    if (toggle && !toggle.contains(e.target) && !dropdown.contains(e.target)) {
       dropdown.style.display = 'none';
     }
   });
-</script>
 
-<script>
   const userToggle = document.getElementById('user-toggle');
   const userDropdown = document.getElementById('user-dropdown');
-  userToggle.addEventListener('click', () => {
+  userToggle && userToggle.addEventListener('click', () => {
     userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
   });
-
-  // Cerrar el menú al hacer clic fuera
   window.addEventListener('click', (e) => {
-    if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
+    if (userToggle && !userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
       userDropdown.style.display = 'none';
     }
   });
-</script>
 
-<script>
-// Notificaciones
-const notifToggle   = document.getElementById('notif-toggle');
-const notifDropdown = document.getElementById('notif-dropdown');
-if (notifToggle && notifDropdown) {
-  notifToggle.addEventListener('click', () => {
-    notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
-  });
-  window.addEventListener('click', (e) => {
-    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
-      notifDropdown.style.display = 'none';
-    }
-  });
-}
+  // Notificaciones
+  const notifToggle   = document.getElementById('notif-toggle');
+  const notifDropdown = document.getElementById('notif-dropdown');
+  if (notifToggle && notifDropdown) {
+    notifToggle.addEventListener('click', () => {
+      notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
+    });
+    window.addEventListener('click', (e) => {
+      if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
+        notifDropdown.style.display = 'none';
+      }
+    });
+  }
 
-// Confirmar lectura (roles 2 y 3): marca estatusRevision=1 y redirige a inventario
-function ackUserNotif(idNotificacion) {
-  fetch('php/ack_user_notif.php', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-    body: 'id=' + encodeURIComponent(idNotificacion)
-  })
-  .then(r => r.json()).catch(() => ({}))
-  .finally(() => { window.location.href = 'inventory.php'; });
-}
+  // Confirmar lectura (roles 2 y 3)
+  function ackUserNotif(idNotificacion) {
+    fetch('php/ack_user_notif.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: 'id=' + encodeURIComponent(idNotificacion)
+    })
+    .then(r => r.json()).catch(() => ({}))
+    .finally(() => { window.location.href = 'inventory.php'; });
+  }
 </script>
 </body>
 </html>
