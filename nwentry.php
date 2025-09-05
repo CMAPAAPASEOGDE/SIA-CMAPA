@@ -248,11 +248,13 @@ if (in_array($rolActual, [1,2,3], true)) {
                 <label>LÍNEA</label>
                 <select name="linea" required>
                     <option value="Herramientas">Herramientas</option>
+                    <option value="Materiales">Materiales</option>
                 </select>
             </div>
             <div class="entrada-col">
                 <label>SUBLÍNEA</label>
                 <select name="sublinea" required>
+                    <option value="Materiales">Materiales</option> 
                     <option value="Manuales">Manuales</option>
                     <option value="Electricas">Electricas</option>
                 </select>
