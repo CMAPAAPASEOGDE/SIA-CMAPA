@@ -252,7 +252,7 @@ if (in_array($rolActual, [1,2,3], true)) {
                     <option value="FOFO-Fierro">FOFO o Fierro</option>
                     <option value="Galvanizado">Galvanizado</option>
                     <option value="MaterialesDirectos">Materiales Directos</option>
-                    <option value="MaterialesDivesos">Materiales Divesos</option>
+                    <option value="MaterialesDiversos">Materiales Diversos</option>
                     <option value="PPR">PPR</option>
                     <option value="PVC">PVC</option>
 
