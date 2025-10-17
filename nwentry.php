@@ -247,16 +247,37 @@ if (in_array($rolActual, [1,2,3], true)) {
             <div class="entrada-col">
                 <label>LÍNEA</label>
                 <select name="linea" required>
-                    <option value="Herramientas">Herramientas</option>
-                    <option value="Materiales">Materiales</option>
+                    <option value="Cobre">Cobre</option>
+                    <option value="CPVC">CPVC</option>
+                    <option value="FOFO-Fierro">FOFO o Fierro</option>
+                    <option value="Galvanizado">Galvanizado</option>
+                    <option value="MaterialesDirectos">Materiales Directos</option>
+                    <option value="MaterialesDivesos">Materiales Divesos</option>
+                    <option value="PPR">PPR</option>
+                    <option value="PVC">PVC</option>
+
                 </select>
             </div>
             <div class="entrada-col">
                 <label>SUBLÍNEA</label>
                 <select name="sublinea" required>
-                    <option value="Materiales">Materiales</option> 
-                    <option value="Manuales">Manuales</option>
-                    <option value="Electricas">Electricas</option>
+                    <option value="Codo">Codo</option>
+                    <option value="Cople">Cople</option>
+                    <option value="Conector">Conector</option>
+                    <option value="TEE">TEE</option>
+                    <option value="Tubo">Tubo</option>
+                    <option value="Adaptador">Adaptador</option>
+                    <option value="Reduccion">Reducción</option>
+                    <option value="Tapon">Tapon</option>
+                    <option value="Abrazadera">Abrazaderas</option>
+                    <option value="Valvula">Valvula</option>
+                    <option value="Niple">Niple</option>
+                    <option value="Caja">Caja</option>
+                    <option value="BocasTormenta">Bocas de Tormenta</option>
+                    <option value="Silleta">Silleta</option>
+                    <option value="Brocal">Brocal</option>
+                    <option value="Cinta">Cinta</option>
+                    <option value="Plastico">Plastico</option>
                 </select>
             </div>
             <div class="entrada-col">
