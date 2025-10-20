@@ -1,6 +1,11 @@
 <?php
 session_start();
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['idCodigo'])) {
+    include 'php/registrar_entrada_existente.php';
+    exit;
+}
+
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
@@ -263,7 +268,7 @@ $fecha_actual = date('Y-m-d');
         <a href="nwentry.php"><button class="new-bttn">ENTRADA NUEVA</button></a>
     </section>
 
-      <form class="entrada-form" action="registrar_entrada_existente.php" method="POST">
+      <form class="entrada-form" action="" method="POST">
         <div class="entrada-row">
             <div class="entrada-col">
                 <label for="idCodigo">CÓDIGO</label>
