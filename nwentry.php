@@ -247,6 +247,7 @@ if (in_array($rolActual, [1,2,3], true)) {
             <div class="entrada-col">
                 <label>LÍNEA</label>
                 <select name="linea" required>
+                  <option value="Herramientas">Herramientas</option>
                     <option value="Cobre">Cobre</option>
                     <option value="CPVC">CPVC</option>
                     <option value="FOFO-Fierro">FOFO o Fierro</option>
@@ -278,6 +279,8 @@ if (in_array($rolActual, [1,2,3], true)) {
                     <option value="Brocal">Brocal</option>
                     <option value="Cinta">Cinta</option>
                     <option value="Plastico">Plastico</option>
+                    <option value="HManual">H-Manual</option>
+                    <option value="HElectrica">H-Electrica</option>
                 </select>
             </div>
             <div class="entrada-col">
