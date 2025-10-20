@@ -227,7 +227,7 @@ function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
       <label>TIPO
         <select name="tipo" required>
           <option value="Herramienta" <?= sel(($producto['tipo'] ?? ''), 'Herramienta') ?>>Herramienta</option>
-          <option value="Material"   <?= sel(($producto['tipo'] ?? ''), 'Material') ?>>Material</option>
+          <option value="Materiales"   <?= sel(($producto['tipo'] ?? ''), 'Materiales') ?>>Materiales</option>
         </select>
       </label>
 
