@@ -135,5 +135,5 @@ if ($row) {
 }
 
 sqlsrv_commit($conn);
-header("Location: ../extetcnf.php");
+header("Location: extetcnf.php");
 exit();
