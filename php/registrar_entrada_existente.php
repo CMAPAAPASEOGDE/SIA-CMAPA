@@ -17,9 +17,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     die('Error: Este archivo solo acepta solicitudes POST. Por favor, use el formulario de entrada.');
 }
 
-// Log the POST data for debugging
-error_log("POST data received: " . print_r($_POST, true));
-
 // Database connection
 $serverName = "sqlserver-sia.database.windows.net";
 $connOpts = [
@@ -53,20 +50,55 @@ if ($cantidad <= 0) {
     die("Error: La cantidad debe ser mayor a 0.");
 }
 
-$idCaja      = 1;
 $ubicacion   = "Almacen";
 $fechaParam  = date('Y-m-d H:i:s', strtotime($fecha));
 
 error_log("Processing entry - Product: $idCodigo, Provider: $idProveedor, Quantity: $cantidad");
 
 try {
-    // 0) Get product information
+    // CRITICAL FIX: Get a valid idCaja from CajaRegistro table
+    $sqlCaja = "SELECT TOP 1 idCaja FROM CajaRegistro ORDER BY idCaja ASC";
+    $stmtCaja = sqlsrv_query($conn, $sqlCaja);
+    
+    if ($stmtCaja === false) {
+        error_log("Error getting idCaja: " . print_r(sqlsrv_errors(), true));
+        throw new Exception("Error al obtener caja de registro");
+    }
+    
+    $rowCaja = sqlsrv_fetch_array($stmtCaja, SQLSRV_FETCH_ASSOC);
+    sqlsrv_free_stmt($stmtCaja);
+    
+    if (!$rowCaja) {
+        // No CajaRegistro exists, try to create one or use a default
+        error_log("No CajaRegistro found, attempting to create default");
+        
+        // Try to insert a default CajaRegistro record
+        $sqlInsertCaja = "INSERT INTO CajaRegistro (nombreCaja, ubicacion) VALUES ('Caja Principal', 'Almacen')";
+        $stmtInsertCaja = sqlsrv_query($conn, $sqlInsertCaja);
+        
+        if ($stmtInsertCaja === false) {
+            error_log("Could not create CajaRegistro: " . print_r(sqlsrv_errors(), true));
+            throw new Exception("No existe ninguna caja de registro en el sistema. Por favor, contacte al administrador.");
+        }
+        
+        sqlsrv_free_stmt($stmtInsertCaja);
+        
+        // Get the newly created idCaja
+        $stmtCaja2 = sqlsrv_query($conn, $sqlCaja);
+        $rowCaja = sqlsrv_fetch_array($stmtCaja2, SQLSRV_FETCH_ASSOC);
+        sqlsrv_free_stmt($stmtCaja2);
+    }
+    
+    $idCaja = (int)$rowCaja['idCaja'];
+    error_log("Using idCaja: $idCaja");
+
+    // Get product information
     $sqlInfo = "SELECT codigo, tipo, descripcion FROM Productos WHERE idCodigo = ?";
     $stmtInfo = sqlsrv_query($conn, $sqlInfo, [$idCodigo]);
     
     if ($stmtInfo === false) {
         error_log("Error getting product info: " . print_r(sqlsrv_errors(), true));
-        throw new Exception("Error al obtener información del producto: " . print_r(sqlsrv_errors(), true));
+        throw new Exception("Error al obtener información del producto");
     }
     
     $rowInfo = sqlsrv_fetch_array($stmtInfo, SQLSRV_FETCH_ASSOC);
@@ -86,7 +118,7 @@ try {
     // Begin transaction
     if (!sqlsrv_begin_transaction($conn)) {
         error_log("Failed to start transaction: " . print_r(sqlsrv_errors(), true));
-        throw new Exception("Error al iniciar transacción: " . print_r(sqlsrv_errors(), true));
+        throw new Exception("Error al iniciar transacción");
     }
 
     // 1) Insert into Entradas
@@ -102,7 +134,7 @@ try {
         $errors = sqlsrv_errors();
         error_log("Error inserting into Entradas: " . print_r($errors, true));
         sqlsrv_rollback($conn);
-        throw new Exception("Error al insertar entrada: " . print_r($errors, true));
+        throw new Exception("Error al insertar entrada: " . $errors[0]['message']);
     }
     
     sqlsrv_free_stmt($stmtEntrada);
@@ -119,7 +151,7 @@ try {
         if ($stmtContador === false) {
             error_log("Error counting tools: " . print_r(sqlsrv_errors(), true));
             sqlsrv_rollback($conn);
-            throw new Exception("Error al contar herramientas: " . print_r(sqlsrv_errors(), true));
+            throw new Exception("Error al contar herramientas");
         }
         
         $rowContador = sqlsrv_fetch_array($stmtContador, SQLSRV_FETCH_ASSOC);
@@ -142,7 +174,7 @@ try {
             if ($stmtHerramienta === false) {
                 error_log("Error inserting tool $i: " . print_r(sqlsrv_errors(), true));
                 sqlsrv_rollback($conn);
-                throw new Exception("Error al insertar herramienta única: " . print_r(sqlsrv_errors(), true));
+                throw new Exception("Error al insertar herramienta única");
             }
             
             sqlsrv_free_stmt($stmtHerramienta);
@@ -150,135 +182,56 @@ try {
         }
     }
 
-    // 3) Update Inventory - CRITICAL FIX HERE
-    error_log("Updating inventory for product $idCodigo");
+    // 3) Update Inventory using MERGE (atomic upsert)
+    error_log("Updating inventory for product $idCodigo with idCaja $idCaja");
     
-    // First, check if record exists
-    $sqlCheck = "SELECT cantidadActual FROM Inventario WHERE idCodigo = ?";
-    $stmtCheck = sqlsrv_query($conn, $sqlCheck, [$idCodigo]);
+    // Use MERGE for atomic upsert - matching your exact table structure
+    $sqlMerge = "
+        MERGE INTO Inventario AS target
+        USING (SELECT ? AS idCodigo, ? AS idCaja) AS source
+        ON target.idCodigo = source.idCodigo
+        WHEN MATCHED THEN
+            UPDATE SET 
+                cantidadActual = target.cantidadActual + ?,
+                ultimaActualizacion = GETDATE()
+        WHEN NOT MATCHED THEN
+            INSERT (idCodigo, idCaja, cantidadActual, ubicacion, ultimaActualizacion)
+            VALUES (?, ?, ?, ?, GETDATE());
+    ";
     
-    if ($stmtCheck === false) {
-        error_log("Error checking inventory: " . print_r(sqlsrv_errors(), true));
+    $paramsMerge = [
+        $idCodigo,      // source idCodigo
+        $idCaja,        // source idCaja
+        $cantidad,      // quantity to add in UPDATE
+        $idCodigo,      // insert idCodigo
+        $idCaja,        // insert idCaja  
+        $cantidad,      // insert cantidadActual
+        $ubicacion      // insert ubicacion
+    ];
+    
+    error_log("Executing MERGE for inventory");
+    error_log("MERGE params: " . print_r($paramsMerge, true));
+    
+    $stmtMerge = sqlsrv_query($conn, $sqlMerge, $paramsMerge);
+    
+    if ($stmtMerge === false) {
+        $errors = sqlsrv_errors();
+        error_log("Error with MERGE: " . print_r($errors, true));
         sqlsrv_rollback($conn);
-        throw new Exception("Error al verificar inventario: " . print_r(sqlsrv_errors(), true));
+        
+        $errorMsg = "Error al actualizar inventario:\n";
+        $errorMsg .= "SQLSTATE: " . $errors[0]['SQLSTATE'] . "\n";
+        $errorMsg .= "Message: " . $errors[0]['message'];
+        throw new Exception($errorMsg);
     }
-
-    $rowInv = sqlsrv_fetch_array($stmtCheck, SQLSRV_FETCH_ASSOC);
-    sqlsrv_free_stmt($stmtCheck);
     
-    if ($rowInv) {
-        // Update existing inventory
-        $cantidadActual = (int)($rowInv['cantidadActual'] ?? 0);
-        $nuevaCantidad = $cantidadActual + $cantidad;
-        
-        error_log("Updating existing inventory from $cantidadActual to $nuevaCantidad");
-        
-        $sqlUpdate = "UPDATE Inventario 
-                      SET cantidadActual = ?, ultimaActualizacion = ? 
-                      WHERE idCodigo = ?";
-        $stmtUpdate = sqlsrv_query($conn, $sqlUpdate, [$nuevaCantidad, $fechaParam, $idCodigo]);
-        
-        if ($stmtUpdate === false) {
-            error_log("Error updating inventory: " . print_r(sqlsrv_errors(), true));
-            sqlsrv_rollback($conn);
-            throw new Exception("Error al actualizar inventario: " . print_r($errors, true));
-        }
-        
-        sqlsrv_free_stmt($stmtUpdate);
-        error_log("Inventory updated successfully");
-        
-    } else {
-        // Insert new inventory record - FIX: Get all required columns
-        error_log("Creating new inventory record with quantity $cantidad");
-        
-        // Check what columns exist in Inventario table
-        // Common variations include: idInventario, idProducto, etc.
-        
-        // Try MERGE as alternative (SQL Server upsert)
-        $sqlMerge = "
-            MERGE INTO Inventario AS target
-            USING (SELECT ? AS idCodigo) AS source
-            ON target.idCodigo = source.idCodigo
-            WHEN MATCHED THEN
-                UPDATE SET 
-                    cantidadActual = target.cantidadActual + ?,
-                    ultimaActualizacion = ?
-            WHEN NOT MATCHED THEN
-                INSERT (idCodigo, idCaja, cantidadActual, ubicacion, ultimaActualizacion)
-                VALUES (?, ?, ?, ?, ?);
-        ";
-        
-        $paramsMerge = [
-            $idCodigo,              // source idCodigo
-            $cantidad,              // quantity to add
-            $fechaParam,            // update date
-            $idCodigo,              // insert idCodigo
-            $idCaja,                // insert idCaja
-            $cantidad,              // insert quantity
-            $ubicacion,             // insert location
-            $fechaParam             // insert date
-        ];
-        
-        error_log("Using MERGE statement for inventory upsert");
-        error_log("MERGE params: " . print_r($paramsMerge, true));
-        
-        $stmtMerge = sqlsrv_query($conn, $sqlMerge, $paramsMerge);
-        
-        if ($stmtMerge === false) {
-            $errors = sqlsrv_errors();
-            error_log("Error with MERGE: " . print_r($errors, true));
-            
-            // If MERGE fails, try traditional INSERT with explicit column list
-            error_log("MERGE failed, trying traditional INSERT");
-            
-            // Build INSERT with only required columns (adjust based on your table)
-            $sqlInsert = "INSERT INTO Inventario (idCodigo, cantidadActual, ultimaActualizacion";
-            $paramsInsert = [$idCodigo, $cantidad, $fechaParam];
-            
-            // Add optional columns if they exist
-            if ($idCaja !== null) {
-                $sqlInsert .= ", idCaja";
-                $paramsInsert[] = $idCaja;
-            }
-            if ($ubicacion !== null) {
-                $sqlInsert .= ", ubicacion";
-                $paramsInsert[] = $ubicacion;
-            }
-            
-            $sqlInsert .= ") VALUES (" . implode(", ", array_fill(0, count($paramsInsert), "?")) . ")";
-            
-            error_log("INSERT SQL: $sqlInsert");
-            error_log("INSERT params: " . print_r($paramsInsert, true));
-            
-            $stmtInsert = sqlsrv_query($conn, $sqlInsert, $paramsInsert);
-            
-            if ($stmtInsert === false) {
-                $insertErrors = sqlsrv_errors();
-                error_log("Error inserting inventory: " . print_r($insertErrors, true));
-                sqlsrv_rollback($conn);
-                
-                // Provide detailed error message
-                $errorMsg = "Error al insertar en inventario. Detalles:\n";
-                foreach ($insertErrors as $error) {
-                    $errorMsg .= "SQLSTATE: " . $error['SQLSTATE'] . "\n";
-                    $errorMsg .= "Code: " . $error['code'] . "\n";
-                    $errorMsg .= "Message: " . $error['message'] . "\n";
-                }
-                throw new Exception($errorMsg);
-            }
-            
-            sqlsrv_free_stmt($stmtInsert);
-        } else {
-            sqlsrv_free_stmt($stmtMerge);
-        }
-        
-        error_log("New inventory record created successfully");
-    }
+    sqlsrv_free_stmt($stmtMerge);
+    error_log("Inventory updated successfully");
 
     // Commit transaction
     if (!sqlsrv_commit($conn)) {
         error_log("Error committing transaction: " . print_r(sqlsrv_errors(), true));
-        throw new Exception("Error al confirmar transacción: " . print_r(sqlsrv_errors(), true));
+        throw new Exception("Error al confirmar transacción");
     }
 
     error_log("Entry registered successfully - redirecting to confirmation page");
@@ -296,10 +249,15 @@ try {
     }
     
     // Display user-friendly error
-    echo "<html><head><meta charset='UTF-8'></head><body>";
+    echo "<!DOCTYPE html>";
+    echo "<html><head><meta charset='UTF-8'><title>Error</title>";
+    echo "<style>body{font-family:Arial;padding:20px;} .error{background:#fee;border:1px solid #c00;padding:15px;border-radius:5px;}</style>";
+    echo "</head><body>";
+    echo "<div class='error'>";
     echo "<h2>Error al registrar la entrada</h2>";
-    echo "<pre>" . htmlspecialchars($e->getMessage()) . "</pre>";
-    echo "<p><a href='../exstentry.php'>Volver al formulario</a></p>";
+    echo "<p>" . htmlspecialchars($e->getMessage()) . "</p>";
+    echo "</div>";
+    echo "<p><a href='../exstentry.php'>← Volver al formulario</a></p>";
     echo "</body></html>";
     exit();
 }
