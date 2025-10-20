@@ -239,30 +239,12 @@ $idRol = (int)$_SESSION['rol'];
                 ?>
             </select>
         </div>
-
-        <div class="filter-group">
-            <label for="Sublinea">Sublinea:</label>
-            <select id="Sublinea" onchange="filterTable()">
-                <option value="">Todas</option>
-                <?php
-                // Obtener líneas únicas
-                $sqlLineas = "SELECT DISTINCT sublinea FROM Productos";
-                $stmtLineas = sqlsrv_query($conn, $sqlSublineas);
-                if ($stmtSublineas) {
-                    while ($rowL = sqlsrv_fetch_array($stmtSublineas, SQLSRV_FETCH_ASSOC)) {
-                        echo '<option value="' . htmlspecialchars($rowL['sublinea']) . '">' . htmlspecialchars($rowL['sublinea']) . '</option>';
-                    }
-                    sqlsrv_free_stmt($stmtSublineas);
-                }
-                ?>
-            </select>
-        </div>
         
         <div class="filter-group">
             <label for="tipo">Tipo:</label>
             <select id="tipo" onchange="filterTable()">
                 <option value="">Todos</option>
-                <option value="Materiales">Materiales</option>
+                <option value="Materiales">Material</option>
                 <option value="Herramienta">Herramienta</option>
             </select>
         </div>
@@ -402,7 +384,6 @@ $idRol = (int)$_SESSION['rol'];
   function filterTable() {
     const searchText = document.getElementById('search').value.toLowerCase();
     const linea = document.getElementById('linea').value;
-    const Sublinea = document.getElementById('sublinea').value;
     const tipo = document.getElementById('tipo').value;
     const estado = document.getElementById('estado').value;
 
