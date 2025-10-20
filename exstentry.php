@@ -132,6 +132,25 @@ $fecha_actual = date('Y-m-d');
 </head>
 
 <body>
+
+<!-- AGREGAR ESTO TEMPORALMENTE PARA DIAGNÓSTICO -->
+<div style="background: #ff4444; color: white; padding: 10px; margin: 10px; border-radius: 5px;">
+    <strong>Diagnóstico de rutas:</strong><br>
+    <?php
+    $archivo_destino = 'php/registrar_entrada_existente.php';
+    $archivo_absoluto = __DIR__ . '/' . $archivo_destino;
+    
+    echo "Ruta relativa: " . $archivo_destino . "<br>";
+    echo "Ruta absoluta: " . $archivo_absoluto . "<br>";
+    echo "¿Existe el archivo? " . (file_exists($archivo_absoluto) ? 'SÍ' : 'NO') . "<br>";
+    
+    if (file_exists($archivo_absoluto)) {
+        echo "Permisos: " . substr(sprintf('%o', fileperms($archivo_absoluto)), -4) . "<br>";
+        echo "Tamaño: " . filesize($archivo_absoluto) . " bytes<br>";
+    }
+    ?>
+</div>
+
 <header>
   <div class="brand">
     <img src="img/cmapa.png" class="logo" />
