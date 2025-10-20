@@ -239,6 +239,24 @@ $idRol = (int)$_SESSION['rol'];
                 ?>
             </select>
         </div>
+
+        <div class="filter-group">
+            <label for="sublinea">Sublínea:</label>
+            <select id="sublinea" onchange="filterTable()">
+                <option value="">Todas</option>
+                <?php
+                // Obtener sublíneas únicas
+                $sqlSublineas = "SELECT DISTINCT sublinea FROM Productos WHERE sublinea IS NOT NULL AND sublinea != '' ORDER BY sublinea";
+                $stmtSublineas = sqlsrv_query($conn, $sqlSublineas);
+                if ($stmtSublineas) {
+                    while ($rowS = sqlsrv_fetch_array($stmtSublineas, SQLSRV_FETCH_ASSOC)) {
+                        echo '<option value="' . htmlspecialchars($rowS['sublinea']) . '">' . htmlspecialchars($rowS['sublinea']) . '</option>';
+                    }
+                    sqlsrv_free_stmt($stmtSublineas);
+                }
+                ?>
+            </select>
+        </div>
         
         <div class="filter-group">
             <label for="tipo">Tipo:</label>
@@ -378,6 +396,83 @@ $idRol = (int)$_SESSION['rol'];
       body: 'id=' + encodeURIComponent(idNotificacion)
     }).then(r => r.json()).catch(() => ({}))
       .finally(() => { window.location.reload(); });
+  }
+
+    // Datos de sublíneas para filtrado dinámico
+  const sublineasData = {
+    <?php
+    // Obtener todas las líneas con sus sublíneas
+    $sqlLineasSublineas = "SELECT DISTINCT linea, sublinea FROM Productos WHERE sublinea IS NOT NULL AND sublinea != '' ORDER BY linea, sublinea";
+    $stmtLineasSublineas = sqlsrv_query($conn, $sqlLineasSublineas);
+    $lineasSublineas = [];
+    if ($stmtLineasSublineas) {
+        while ($row = sqlsrv_fetch_array($stmtLineasSublineas, SQLSRV_FETCH_ASSOC)) {
+            $linea = $row['linea'];
+            $sublinea = $row['sublinea'];
+            if (!isset($lineasSublineas[$linea])) {
+                $lineasSublineas[$linea] = [];
+            }
+            $lineasSublineas[$linea][] = $sublinea;
+        }
+        sqlsrv_free_stmt($stmtLineasSublineas);
+        
+        // Generar JavaScript
+        foreach ($lineasSublineas as $linea => $sublineas) {
+            echo "'" . addslashes($linea) . "': " . json_encode($sublineas) . ",\n";
+        }
+    }
+    ?>
+  };
+
+  // Actualizar sublíneas según línea seleccionada
+  function updateSublineas() {
+    const lineaSelect = document.getElementById('linea');
+    const sublineaSelect = document.getElementById('sublinea');
+    const lineaSeleccionada = lineaSelect.value;
+    
+    // Guardar la selección actual
+    const seleccionActual = sublineaSelect.value;
+    
+    // Limpiar opciones excepto "Todas"
+    sublineaSelect.innerHTML = '<option value="">Todas</option>';
+    
+    if (lineaSeleccionada && sublineasData[lineaSeleccionada]) {
+        // Agregar sublíneas de la línea seleccionada
+        sublineasData[lineaSeleccionada].forEach(sublinea => {
+            const option = document.createElement('option');
+            option.value = sublinea;
+            option.textContent = sublinea;
+            sublineaSelect.appendChild(option);
+        });
+        
+        // Restaurar selección anterior si existe en las nuevas opciones
+        if (seleccionActual && sublineasData[lineaSeleccionada].includes(seleccionActual)) {
+            sublineaSelect.value = seleccionActual;
+        }
+    } else if (!lineaSeleccionada) {
+        // Si no hay línea seleccionada, mostrar todas las sublíneas
+        <?php
+        $sqlTodasSublineas = "SELECT DISTINCT sublinea FROM Productos WHERE sublinea IS NOT NULL AND sublinea != '' ORDER BY sublinea";
+        $stmtTodasSublineas = sqlsrv_query($conn, $sqlTodasSublineas);
+        if ($stmtTodasSublineas) {
+            while ($row = sqlsrv_fetch_array($stmtTodasSublineas, SQLSRV_FETCH_ASSOC)) {
+                echo "const option = document.createElement('option');";
+                echo "option.value = '" . addslashes($row['sublinea']) . "';";
+                echo "option.textContent = '" . addslashes($row['sublinea']) . "';";
+                echo "sublineaSelect.appendChild(option);";
+            }
+            sqlsrv_free_stmt($stmtTodasSublineas);
+        }
+        ?>
+        
+        // Restaurar selección anterior si existe
+        if (seleccionActual) {
+            sublineaSelect.value = seleccionActual;
+        }
+    }
+    
+    // Volver a filtrar la tabla
+    filterTable();
   }
 
   // Filtrado de la tabla
