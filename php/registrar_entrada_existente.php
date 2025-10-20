@@ -193,7 +193,7 @@ try {
         error_log("Creating new inventory record with quantity $cantidad");
         
         $sqlInsert = "INSERT INTO Inventario (idCodigo, idCaja, cantidadActual, ubicacion, ultimaActualizacion)
-                      VALUES (?, ?, ?, ?, ?)";
+                      VALUES (?, 13, ?, ?, ?)";
         $stmtInsert = sqlsrv_query($conn, $sqlInsert, [$idCodigo, $idCaja, $cantidad, $ubicacion, $fechaParam]);
         
         if ($stmtInsert === false) {
@@ -201,7 +201,7 @@ try {
             sqlsrv_rollback($conn);
             throw new Exception("Error al insertar en inventario: " . print_r(sqlsrv_errors(), true));
         }
-        
+         
         sqlsrv_free_stmt($stmtInsert);
         error_log("New inventory record created successfully");
     }
