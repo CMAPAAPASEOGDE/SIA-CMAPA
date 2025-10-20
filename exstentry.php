@@ -363,6 +363,19 @@ function validateForm() {
 </script>
 
 <script>
+  const toggle = document.getElementById('menu-toggle');
+  const dropdown = document.getElementById('dropdown-menu');
+  toggle.addEventListener('click', () => {
+    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+  });
+  window.addEventListener('click', (e) => {
+    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+</script>
+
+<script>
   const userToggle = document.getElementById('user-toggle');
   const userDropdown = document.getElementById('user-dropdown');
   userToggle.addEventListener('click', () => {
