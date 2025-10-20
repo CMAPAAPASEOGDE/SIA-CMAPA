@@ -244,63 +244,60 @@ $fecha_actual = date('Y-m-d');
         <a href="nwentry.php"><button class="new-bttn">ENTRADA NUEVA</button></a>
     </section>
 
-    <form class="entrada-form" action="php/registrar_entrada_existente.php" method="POST" onsubmit="return validateForm()">
-    <div class="entrada-row">
-        <div class="entrada-col">
-            <label for="idCodigo">CÓDIGO *</label>
-            <select name="idCodigo" id="codigo" required onchange="llenarCampos()">
-                <option value="">Seleccione un producto</option>
-                <?php foreach ($productos as $producto): ?>
-                    <option value="<?= (int)$producto['idCodigo'] ?>" 
-                            data-descripcion="<?= htmlspecialchars($producto['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                            data-tipo="<?= htmlspecialchars($producto['tipo'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                            data-linea="<?= htmlspecialchars($producto['linea'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                            data-sublinea="<?= htmlspecialchars($producto['sublinea'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                            data-unidad="<?= htmlspecialchars($producto['unidad'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-                        <?= htmlspecialchars($producto['codigo'] ?? '') ?> - <?= htmlspecialchars($producto['descripcion'] ?? '') ?>
-                    </option>
+    <form class="entrada-form" action="php/registrar_entrada_existente.php" method="POST">
+        <div class="entrada-row">
+            <div class="entrada-col">
+                <label for="idCodigo">CÓDIGO</label>
+                <select name="idCodigo" id="codigo" required onchange="llenarCampos()">
+                    <option value="">Seleccione</option>
+                    <?php foreach ($productos as $producto): ?>
+                        <option value="<?= $producto['idCodigo'] ?>" 
+                                data-descripcion="<?= $producto['descripcion'] ?>"
+                                data-tipo="<?= $producto['tipo'] ?>"
+                                data-linea="<?= $producto['linea'] ?>"
+                                data-sublinea="<?= $producto['sublinea'] ?>"
+                                data-unidad="<?= $producto['unidad'] ?>">
+                            <?= htmlspecialchars($producto['codigo']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="entrada-col">
+                <label for="fecha">FECHA</label>
+                <input type="date" id="fecha" name="fecha" value="<?= $fecha_actual ?>" readonly />
+            </div>
+        </div>
+
+        <div class="entrada-row">
+            <label>DESCRIPCIÓN</label>
+            <input type="text" id="descripcion" readonly />
+            <label>TIPO</label>
+            <input type="text" id="tipo" readonly />
+        </div>
+        <div class="entrada-row">
+            <label>LINEA</label>
+            <input type="text" id="linea" readonly />
+            <label>SUBLINEA</label>
+            <input type="text" id="sublinea" readonly />
+            <label>UNIDAD</label>
+            <input type="text" id="unidad" readonly />
+        </div>
+        <div class="entrada-row">
+            <label for="cantidad">CANTIDAD</label>
+            <input type="number" name="cantidad" required min="1" />
+            <label for="idProveedor">PROVEEDOR</label>
+            <select name="idProveedor" required>
+                <option value="">Seleccione</option>
+                <?php foreach ($proveedores as $prov): ?>
+                    <option value="<?= $prov['idProveedor'] ?>"><?= htmlspecialchars($prov['razonSocial']) ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="entrada-col">
-            <label for="fecha">FECHA *</label>
-            <input type="date" id="fecha" name="fecha" value="<?= $fecha_actual ?>" required />
+
+        <div class="entrada-buttons">
+            <a href="warehouse.php"><button type="button">CANCELAR</button></a>
+            <button type="submit">CONFIRMAR</button>
         </div>
-    </div>
-
-    <div class="entrada-row">
-        <label>DESCRIPCIÓN</label>
-        <input type="text" id="descripcion" readonly />
-        <label>TIPO</label>
-        <input type="text" id="tipo" readonly />
-    </div>
-    <div class="entrada-row">
-        <label>LINEA</label>
-        <input type="text" id="linea" readonly />
-        <label>SUBLINEA</label>
-        <input type="text" id="sublinea" readonly />
-        <label>UNIDAD</label>
-        <input type="text" id="unidad" readonly />
-    </div>
-    <div class="entrada-row">
-        <label for="cantidad">CANTIDAD *</label>
-        <input type="number" name="cantidad" id="cantidad" required min="1" step="1" />
-        
-        <label for="idProveedor">PROVEEDOR *</label>
-        <select name="idProveedor" id="idProveedor" required>
-            <option value="">Seleccione un proveedor</option>
-            <?php foreach ($proveedores as $prov): ?>
-                <option value="<?= (int)$prov['idProveedor'] ?>">
-                    <?= htmlspecialchars($prov['razonSocial'] ?? '', ENT_QUOTES, 'UTF-8') ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-
-      <div class="entrada-buttons">
-          <a href="warehouse.php"><button type="button">CANCELAR</button></a>
-          <button type="submit">CONFIRMAR</button>
-      </div>
     </form>
 </main>
 
@@ -318,48 +315,16 @@ function llenarCampos() {
 </script>
 
 <script>
-function llenarCampos() {
-    const select = document.getElementById("codigo");
-    const option = select.options[select.selectedIndex];
-
-    if (option && option.value) {
-        document.getElementById("descripcion").value = option.getAttribute("data-descripcion") || "";
-        document.getElementById("tipo").value = option.getAttribute("data-tipo") || "";
-        document.getElementById("linea").value = option.getAttribute("data-linea") || "";
-        document.getElementById("sublinea").value = option.getAttribute("data-sublinea") || "";
-        document.getElementById("unidad").value = option.getAttribute("data-unidad") || "";
-    } else {
-        // Clear fields if no selection
-        document.getElementById("descripcion").value = "";
-        document.getElementById("tipo").value = "";
-        document.getElementById("linea").value = "";
-        document.getElementById("sublinea").value = "";
-        document.getElementById("unidad").value = "";
+  const toggle = document.getElementById('menu-toggle');
+  const dropdown = document.getElementById('dropdown-menu');
+  toggle.addEventListener('click', () => {
+    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+  });
+  window.addEventListener('click', (e) => {
+    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
     }
-}
-
-function validateForm() {
-    const idCodigo = document.getElementById("codigo").value;
-    const cantidad = document.getElementById("cantidad").value;
-    const idProveedor = document.getElementById("idProveedor").value;
-    
-    if (!idCodigo || idCodigo === "") {
-        alert("Por favor seleccione un código de producto");
-        return false;
-    }
-    
-    if (!cantidad || parseInt(cantidad) <= 0) {
-        alert("Por favor ingrese una cantidad válida (mayor a 0)");
-        return false;
-    }
-    
-    if (!idProveedor || idProveedor === "") {
-        alert("Por favor seleccione un proveedor");
-        return false;
-    }
-    
-    return confirm("¿Está seguro de registrar esta entrada?\n\nCantidad: " + cantidad);
-}
+  });
 </script>
 
 <script>
