@@ -89,7 +89,7 @@ if ($row) {
     if ($stmtUpdate === false) { sqlsrv_rollback($conn); die(print_r(sqlsrv_errors(), true)); }
 } else {
     $sqlInsert = "INSERT INTO Inventario (idCodigo, idCaja, cantidadActual, ubicacion, ultimaActualizacion)
-                  VALUES (?, 13, ?, ?, ?)";
+                  VALUES (?, ?, ?, ?, ?)";
     $stmtInsert = sqlsrv_query($conn, $sqlInsert, [$idCodigo, $idCaja, $cantidad, $ubicacion, $fechaParam]);
     if ($stmtInsert === false) { sqlsrv_rollback($conn); die(print_r(sqlsrv_errors(), true)); }
 }
