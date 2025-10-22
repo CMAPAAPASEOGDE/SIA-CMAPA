@@ -279,6 +279,7 @@ if (in_array($rolActual, [1,2,3], true)) {
                     <option value="Brocal">Brocal</option>
                     <option value="Cinta">Cinta</option>
                     <option value="Plastico">Plastico</option>
+                    <option value="Extremidad">Extremidad</option>
                     <option value="HManual">H-Manual</option>
                     <option value="HElectrica">H-Electrica</option>
                 </select>
