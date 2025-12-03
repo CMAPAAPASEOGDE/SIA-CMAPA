@@ -85,7 +85,7 @@ if (is_resource($conn)) { sqlsrv_close($conn); }
   <header>
     <img src="img/cmapa.png" />
     <h1>Sistema de Inventario de Almacén - CMAPA</h1>
-    <p>Versión 1.3.1</p>
+    <p>Versión 1.3.2</p>
   </header>
 
   <section class="container">
