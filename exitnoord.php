@@ -1,6 +1,14 @@
 <?php
 session_start();
 
+if (isset($_SESSION['exit_error'])) {
+    $errorMsg = $_SESSION['exit_error'];
+    unset($_SESSION['exit_error']);
+    echo '<div style="background:#fee;border:1px solid #c00;padding:10px;margin:10px;border-radius:5px;">';
+    echo '<strong>Error:</strong> ' . htmlspecialchars($errorMsg);
+    echo '</div>';
+}
+
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
