@@ -1,35 +1,62 @@
 <?php
 session_start();
 
-// Enable error reporting
+// MAXIMUM DEBUG MODE
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 
+// Create a debug output function
+function debug_output($message, $data = null) {
+    $output = "[" . date('Y-m-d H:i:s') . "] " . $message;
+    if ($data !== null) {
+        $output .= ": " . print_r($data, true);
+    }
+    error_log($output);
+    
+    // Also echo for immediate viewing (remove in production)
+    echo "<pre style='background:#f0f0f0; padding:10px; margin:5px; border:1px solid #ccc;'>";
+    echo htmlspecialchars($output);
+    echo "</pre>";
+    flush();
+}
+
+debug_output("=== EXIT WITH ORDER PROCESS STARTED ===");
+
 if (!isset($_SESSION['user_id'])) { 
+    debug_output("ERROR: User not authenticated");
     header("Location: ../index.php"); 
     exit(); 
 }
 
+debug_output("User authenticated", $_SESSION['user_id']);
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { 
+    debug_output("ERROR: Not a POST request");
     header("Location: ../exitord.php"); 
     exit(); 
 }
 
+debug_output("POST request received", $_POST);
+
 // Database connection
 $serverName = "sqlserver-sia.database.windows.net";
-$connectionOptions = [
+$connOpts = [
     "Database" => "db_sia",
     "Uid" => "cmapADMIN",
     "PWD" => "@siaADMN56*",
     "Encrypt" => true,
     "TrustServerCertificate" => false
 ];
-$conn = sqlsrv_connect($serverName, $connectionOptions);
+
+$conn = sqlsrv_connect($serverName, $connOpts);
 if (!$conn) {
-    error_log("Connection failed: " . print_r(sqlsrv_errors(), true));
-    die("Error de conexión");
+    $errors = sqlsrv_errors();
+    debug_output("ERROR: Database connection failed", $errors);
+    die("Connection failed");
 }
+
+debug_output("Database connected successfully");
 
 $rpu         = $_POST['rpuUsuario'] ?? '';
 $orden       = $_POST['numeroOrden'] ?? '';
@@ -38,17 +65,35 @@ $idOperador  = (int)($_POST['idOperador'] ?? 0);
 $fecha       = date('Y-m-d H:i:s');
 $elementos   = $_POST['elementos'] ?? [];
 
-error_log("Exit with order - RPU: $rpu, Order: $orden, Operator: $idOperador");
-error_log("Elements: " . print_r($elementos, true));
+debug_output("Form data", [
+    'rpu' => $rpu,
+    'orden' => $orden,
+    'idOperador' => $idOperador,
+    'elementos_count' => count($elementos)
+]);
 
 // Validate input
-if (strlen($rpu) !== 12 || !ctype_digit($rpu) || $orden === '' || $idOperador === 0 || empty($elementos)) {
-    error_log("Validation failed - redirecting back");
+if (strlen($rpu) !== 12 || !ctype_digit($rpu)) {
+    debug_output("ERROR: Invalid RPU - length: " . strlen($rpu) . ", is_digit: " . (ctype_digit($rpu) ? 'yes' : 'no'));
     header("Location: ../exitord.php"); 
     exit();
 }
 
-// CRITICAL FIX: Check if ANY element requires tool selection BEFORE processing
+if ($orden === '' || $idOperador === 0 || empty($elementos)) {
+    debug_output("ERROR: Missing required fields", [
+        'orden_empty' => ($orden === ''),
+        'operator_zero' => ($idOperador === 0),
+        'elements_empty' => empty($elementos)
+    ]);
+    header("Location: ../exitord.php"); 
+    exit();
+}
+
+debug_output("✓ Validation passed");
+
+// CHECK FOR TOOLS
+debug_output("=== CHECKING FOR TOOLS ===");
+
 $requiereSeleccionHerramienta = false;
 $productosConHerramientas = [];
 
@@ -56,14 +101,29 @@ foreach ($elementos as $idx => $el) {
     $idCodigo = (int)($el['idCodigo'] ?? 0);
     $cantidad = (int)($el['cantidad'] ?? 0);
     
+    debug_output("Checking element #$idx", ['idCodigo' => $idCodigo, 'cantidad' => $cantidad]);
+    
     if ($idCodigo === 0 || $cantidad <= 0) {
+        debug_output("  → Skipping invalid element");
+        continue;
+    }
+
+    // Get product info
+    $sqlProd = "SELECT codigo, descripcion, tipo FROM Productos WHERE idCodigo = ?";
+    $stmtProd = sqlsrv_query($conn, $sqlProd, [$idCodigo]);
+    
+    if ($stmtProd && ($rowProd = sqlsrv_fetch_array($stmtProd, SQLSRV_FETCH_ASSOC))) {
+        debug_output("  → Product found", $rowProd);
+        sqlsrv_free_stmt($stmtProd);
+    } else {
+        debug_output("  → ERROR: Product not found in database");
         continue;
     }
 
     // Check if this product has unique tools in inventory
-    $sqlCheckTools = "SELECT COUNT(*) AS total 
-                      FROM HerramientasUnicas 
-                      WHERE idCodigo = ? AND enInventario = 1";
+    $sqlCheckTools = "SELECT COUNT(*) AS total FROM HerramientasUnicas WHERE idCodigo = ? AND enInventario = 1";
+    debug_output("  → Running tool check query", ['idCodigo' => $idCodigo]);
+    
     $stmtCheck = sqlsrv_query($conn, $sqlCheckTools, [$idCodigo]);
     
     if ($stmtCheck) {
@@ -71,33 +131,46 @@ foreach ($elementos as $idx => $el) {
         $toolsAvailable = (int)($rowCheck['total'] ?? 0);
         sqlsrv_free_stmt($stmtCheck);
         
-        error_log("Product $idCodigo - Tools available: $toolsAvailable, Quantity needed: $cantidad");
+        debug_output("  → Tools in inventory: $toolsAvailable (needed: $cantidad)");
         
         if ($toolsAvailable > 0) {
-            // This product has tools, check if we have enough
+            debug_output("  → This product HAS tools available");
+            
             if ($toolsAvailable >= $cantidad) {
                 $requiereSeleccionHerramienta = true;
                 $productosConHerramientas[] = $idCodigo;
-                error_log("Product $idCodigo requires tool selection");
+                debug_output("  → ✓ ENOUGH TOOLS - Will require tool selection", [
+                    'available' => $toolsAvailable,
+                    'needed' => $cantidad
+                ]);
             } else {
-                // Not enough tools available
-                error_log("Product $idCodigo - Insufficient tools: has $toolsAvailable, needs $cantidad");
-                sqlsrv_close($conn);
+                debug_output("  → ✗ INSUFFICIENT TOOLS", [
+                    'available' => $toolsAvailable,
+                    'needed' => $cantidad
+                ]);
                 
-                // Store error in session
+                sqlsrv_close($conn);
                 $_SESSION['exit_error'] = "Stock insuficiente de herramientas para el producto código: $idCodigo. Disponibles: $toolsAvailable, Requeridas: $cantidad";
                 header("Location: ../exitord.php");
                 exit();
             }
+        } else {
+            debug_output("  → No tools found (count=0) - will process as regular product");
         }
+    } else {
+        $errors = sqlsrv_errors();
+        debug_output("  → ERROR: Failed to check tools", $errors);
     }
 }
 
-// CRITICAL FIX: If any product requires tool selection, redirect to tool selection page
+// DECISION POINT
+debug_output("=== DECISION POINT ===");
+debug_output("Requires tool selection", $requiereSeleccionHerramienta ? 'YES' : 'NO');
+
 if ($requiereSeleccionHerramienta) {
-    error_log("Redirecting to tool selection page - products: " . implode(', ', $productosConHerramientas));
+    debug_output("Products requiring tool selection", $productosConHerramientas);
     
-    // Store ALL form data in session for the tool selection page
+    // Store ALL form data in session
     $_SESSION['salida_temporal'] = [
         'rpuUsuario' => $rpu,
         'numeroOrden' => $orden,
@@ -108,18 +181,27 @@ if ($requiereSeleccionHerramienta) {
         'productos_con_herramientas' => $productosConHerramientas
     ];
     
+    debug_output("Session data stored", $_SESSION['salida_temporal']);
+    debug_output("REDIRECTING to ../exitorderr2.php");
+    
     sqlsrv_close($conn);
-    header("Location: ../exitorderr2.php");
+    
+    // Give time to see the debug output
+    echo "<hr><h2>Redirecting to tool selection page in 3 seconds...</h2>";
+    echo "<p><a href='../exitorderr2.php'>Click here if not redirected</a></p>";
+    echo "<script>setTimeout(() => window.location.href='../exitorderr2.php', 3000);</script>";
     exit();
 }
 
-// If we reach here, no tools required - process normal exit
-error_log("No tools required - processing normal exit");
+debug_output("=== PROCESSING NORMAL EXIT (NO TOOLS) ===");
 
+// Continue with normal exit processing...
 if (!sqlsrv_begin_transaction($conn)) {
-    error_log("Failed to start transaction");
-    die("Error al iniciar transacción");
+    debug_output("ERROR: Failed to start transaction", sqlsrv_errors());
+    die("Transaction error");
 }
+
+debug_output("Transaction started");
 
 try {
     foreach ($elementos as $el) {
@@ -127,26 +209,11 @@ try {
         $cantidad = (int)($el['cantidad'] ?? 0);
         
         if ($idCodigo === 0 || $cantidad <= 0) {
-            error_log("Skipping invalid element: idCodigo=$idCodigo, cantidad=$cantidad");
+            debug_output("Skipping invalid element in processing");
             continue;
         }
 
-        error_log("Processing element: idCodigo=$idCodigo, cantidad=$cantidad");
-
-        // Check total stock
-        $stmt = sqlsrv_query($conn, "SELECT SUM(cantidadActual) AS stock FROM Inventario WHERE idCodigo = ?", [$idCodigo]);
-        if (!$stmt) {
-            throw new Exception('Error al verificar stock');
-        }
-        $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
-        sqlsrv_free_stmt($stmt);
-        $stock = (float)($row['stock'] ?? 0);
-        
-        error_log("Product $idCodigo - Stock available: $stock, Quantity needed: $cantidad");
-        
-        if ($stock < $cantidad) {
-            throw new Exception("Stock insuficiente para el producto código: $idCodigo. Disponible: $stock, Requerido: $cantidad");
-        }
+        debug_output("Processing exit for product $idCodigo, quantity: $cantidad");
 
         // Insert exit
         $sqlInsert = "INSERT INTO Salidas (rpuUsuario, numeroOrden, comentarios, idOperador, idCodigo, cantidad, fechaSalida)
@@ -155,83 +222,58 @@ try {
         
         if (!$ok) {
             $errors = sqlsrv_errors();
-            error_log("Error inserting exit: " . print_r($errors, true));
-            throw new Exception('Error al registrar salida');
+            debug_output("ERROR: Failed to insert exit", $errors);
+            throw new Exception('Error inserting exit');
         }
         
-        error_log("Exit registered successfully");
+        debug_output("✓ Exit inserted");
 
-        // Update inventory (FIFO)
-        $porDescontar = $cantidad;
-        $stmt = sqlsrv_query(
-            $conn,
-            "SELECT idInventario, cantidadActual
-             FROM Inventario
-             WHERE idCodigo = ? AND cantidadActual > 0
-             ORDER BY ultimaActualizacion ASC, idInventario ASC",
-            [$idCodigo]
-        );
+        // Update inventory (simplified for debugging)
+        $sqlUpdate = "UPDATE Inventario 
+                      SET cantidadActual = cantidadActual - ?, 
+                          ultimaActualizacion = GETDATE()
+                      WHERE idCodigo = ? AND cantidadActual >= ?";
         
-        if (!$stmt) {
-            throw new Exception('Error al leer inventario');
-        }
-
-        $filas = [];
-        while ($r = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-            $filas[] = $r;
-        }
-        sqlsrv_free_stmt($stmt);
-
-        error_log("Found " . count($filas) . " inventory rows for product $idCodigo");
-
-        foreach ($filas as $f) {
-            if ($porDescontar <= 0) break;
-            
-            $usar = min($porDescontar, (float)$f['cantidadActual']);
-            error_log("Deducting $usar from inventory row " . $f['idInventario']);
-            
-            $ok = sqlsrv_query(
-                $conn,
-                "UPDATE Inventario
-                 SET cantidadActual = cantidadActual - ?, ultimaActualizacion = ?
-                 WHERE idInventario = ?",
-                [$usar, $fecha, (int)$f['idInventario']]
-            );
-            
-            if (!$ok) {
-                $errors = sqlsrv_errors();
-                error_log("Error updating inventory: " . print_r($errors, true));
-                throw new Exception('Error al actualizar inventario');
-            }
-            
-            $porDescontar -= $usar;
+        $ok = sqlsrv_query($conn, $sqlUpdate, [$cantidad, $idCodigo, $cantidad]);
+        
+        if (!$ok) {
+            $errors = sqlsrv_errors();
+            debug_output("ERROR: Failed to update inventory", $errors);
+            throw new Exception('Error updating inventory');
         }
         
-        if ($porDescontar > 0) {
-            error_log("Inventory mismatch: still need to deduct $porDescontar");
-            throw new Exception('Error en el descuento de inventario');
-        }
+        $rowsAffected = sqlsrv_rows_affected($ok);
+        debug_output("✓ Inventory updated", "Rows affected: $rowsAffected");
         
-        error_log("Inventory updated successfully for product $idCodigo");
+        if ($rowsAffected === 0) {
+            throw new Exception("Insufficient stock for product $idCodigo");
+        }
     }
 
     if (!sqlsrv_commit($conn)) {
-        throw new Exception('Error al confirmar transacción');
+        debug_output("ERROR: Failed to commit", sqlsrv_errors());
+        throw new Exception('Commit failed');
     }
     
-    error_log("Transaction committed successfully");
+    debug_output("✓ Transaction committed successfully");
+    debug_output("=== EXIT PROCESS COMPLETED SUCCESSFULLY ===");
+    
     sqlsrv_close($conn);
-    header("Location: ../exitordcnf.php"); 
+    
+    echo "<hr><h2>Success! Redirecting to confirmation page...</h2>";
+    echo "<script>setTimeout(() => window.location.href='../exitordcnf.php', 2000);</script>";
     exit();
 
 } catch (Throwable $e) {
-    error_log("Exception caught: " . $e->getMessage());
+    debug_output("EXCEPTION CAUGHT", $e->getMessage());
     sqlsrv_rollback($conn);
     sqlsrv_close($conn);
     
-    // Store error message in session
     $_SESSION['exit_error'] = $e->getMessage();
-    header("Location: ../exitord.php");
+    
+    echo "<hr><h2>Error occurred. Redirecting back to form...</h2>";
+    echo "<p>Error: " . htmlspecialchars($e->getMessage()) . "</p>";
+    echo "<script>setTimeout(() => window.location.href='../exitord.php', 3000);</script>";
     exit();
 }
 ?>
