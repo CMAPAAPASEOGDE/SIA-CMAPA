@@ -1,7 +1,6 @@
 <?php
 session_start();
 
-// Enable error reporting
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('log_errors', 1);
@@ -37,19 +36,21 @@ $comentarios = trim($_POST['comentarios'] ?? '');
 $fecha       = date('Y-m-d H:i:s');
 $elementos   = $_POST['elementos'] ?? [];
 
-error_log("Exit without order - Area: $area, Manager: $encargado");
-error_log("Elements: " . print_r($elementos, true));
+error_log("Exit without order - Area: $area, Manager: $encargado, Elements: " . count($elementos));
 
 // Validate input
 if ($area === '' || $encargado === '' || $comentarios === '' || empty($elementos)) {
-    error_log("Validation failed - redirecting back");
+    error_log("Validation failed");
+    sqlsrv_close($conn);
     header("Location: ../exitnoord.php"); 
     exit();
 }
 
-// CRITICAL FIX: Check if ANY element requires tool selection BEFORE processing
-$requiereSeleccionHerramienta = false;
-$productosConHerramientas = [];
+// ============================================================================
+// STEP 1: CHECK IF ANY PRODUCT REQUIRES TOOL SELECTION (BEFORE TRANSACTION!)
+// ============================================================================
+$requiereHerramientas = false;
+$datosHerramientas = [];
 
 foreach ($elementos as $idx => $item) {
     $idCodigo = (int)($item['idCodigo'] ?? 0);
@@ -59,32 +60,31 @@ foreach ($elementos as $idx => $item) {
         continue;
     }
 
-    // Check if this product has unique tools in inventory
-    $sqlCheckTools = "SELECT COUNT(*) AS total 
-                      FROM HerramientasUnicas 
-                      WHERE idCodigo = ? AND enInventario = 1";
-    $stmtCheck = sqlsrv_query($conn, $sqlCheckTools, [$idCodigo]);
+    // Check if this specific product has tools available
+    $sql = "SELECT COUNT(*) AS total FROM HerramientasUnicas WHERE idCodigo = ? AND enInventario = 1";
+    $stmt = sqlsrv_query($conn, $sql, [$idCodigo]);
     
-    if ($stmtCheck) {
-        $rowCheck = sqlsrv_fetch_array($stmtCheck, SQLSRV_FETCH_ASSOC);
-        $toolsAvailable = (int)($rowCheck['total'] ?? 0);
-        sqlsrv_free_stmt($stmtCheck);
+    if ($stmt && ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC))) {
+        $toolsDisponibles = (int)($row['total'] ?? 0);
+        sqlsrv_free_stmt($stmt);
         
-        error_log("Product $idCodigo - Tools available: $toolsAvailable, Quantity needed: $cantidad");
+        error_log("Product $idCodigo - Tools available: $toolsDisponibles, Needed: $cantidad");
         
-        if ($toolsAvailable > 0) {
-            // This product has tools, check if we have enough
-            if ($toolsAvailable >= $cantidad) {
-                $requiereSeleccionHerramienta = true;
-                $productosConHerramientas[] = $idCodigo;
-                error_log("Product $idCodigo requires tool selection");
+        if ($toolsDisponibles > 0) {
+            // This product IS a tool with inventory tracking
+            if ($toolsDisponibles >= $cantidad) {
+                // Enough tools available - requires selection
+                $requiereHerramientas = true;
+                $datosHerramientas[$idCodigo] = [
+                    'disponibles' => $toolsDisponibles,
+                    'necesarias' => $cantidad
+                ];
+                error_log("Product $idCodigo REQUIRES tool selection");
             } else {
-                // Not enough tools available
-                error_log("Product $idCodigo - Insufficient tools: has $toolsAvailable, needs $cantidad");
+                // Not enough tools
+                error_log("Product $idCodigo - INSUFFICIENT tools: $toolsDisponibles < $cantidad");
                 sqlsrv_close($conn);
-                
-                // Store error in session
-                $_SESSION['exit_error'] = "Stock insuficiente de herramientas para el producto código: $idCodigo. Disponibles: $toolsAvailable, Requeridas: $cantidad";
+                $_SESSION['exit_error'] = "Herramientas insuficientes para el producto (ID: $idCodigo). Disponibles: $toolsDisponibles, Necesarias: $cantidad";
                 header("Location: ../exitnoord.php");
                 exit();
             }
@@ -92,18 +92,21 @@ foreach ($elementos as $idx => $item) {
     }
 }
 
-// CRITICAL FIX: If any product requires tool selection, redirect to tool selection page
-if ($requiereSeleccionHerramienta) {
-    error_log("Redirecting to tool selection page - products: " . implode(', ', $productosConHerramientas));
+// ============================================================================
+// DECISION: Redirect to tool selection if needed
+// ============================================================================
+if ($requiereHerramientas) {
+    error_log("REDIRECTING to tool selection - Products: " . implode(', ', array_keys($datosHerramientas)));
     
-    // Store ALL form data in session for the tool selection page
+    // Store form data in session
     $_SESSION['salida_temporal'] = [
+        'tipo' => 'sinorden',
         'areaSolicitante' => $area,
         'encargadoArea' => $encargado,
         'comentarios' => $comentarios,
         'fecha' => $_POST['fecha'] ?? date('Y-m-d'),
         'elementos' => $elementos,
-        'productos_con_herramientas' => $productosConHerramientas
+        'herramientas_data' => $datosHerramientas
     ];
     
     sqlsrv_close($conn);
@@ -111,11 +114,14 @@ if ($requiereSeleccionHerramienta) {
     exit();
 }
 
-// If we reach here, no tools required - process normal exit
-error_log("No tools required - processing normal exit");
+// ============================================================================
+// STEP 2: Process normal exit (no tools requiring selection)
+// ============================================================================
+error_log("Processing normal exit (no tool selection required)");
 
 if (!sqlsrv_begin_transaction($conn)) {
     error_log("Failed to start transaction");
+    sqlsrv_close($conn);
     die("Error al iniciar transacción");
 }
 
@@ -125,25 +131,22 @@ try {
         $cantidad = (int)($item['cantidad'] ?? 0);
         
         if ($idCodigo === 0 || $cantidad <= 0) {
-            error_log("Skipping invalid element: idCodigo=$idCodigo, cantidad=$cantidad");
             continue;
         }
 
-        error_log("Processing element: idCodigo=$idCodigo, cantidad=$cantidad");
+        error_log("Processing product $idCodigo, quantity: $cantidad");
 
-        // Check total stock
+        // Check stock
         $stmt = sqlsrv_query($conn, "SELECT SUM(cantidadActual) AS stock FROM Inventario WHERE idCodigo = ?", [$idCodigo]);
         if (!$stmt) {
-            throw new Exception('Error al verificar stock');
+            throw new Exception('Error verificando stock');
         }
         $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
         sqlsrv_free_stmt($stmt);
         $stock = (float)($row['stock'] ?? 0);
         
-        error_log("Product $idCodigo - Stock available: $stock, Quantity needed: $cantidad");
-        
         if ($stock < $cantidad) {
-            throw new Exception("Stock insuficiente para el producto código: $idCodigo. Disponible: $stock, Requerido: $cantidad");
+            throw new Exception("Stock insuficiente para producto $idCodigo. Disponible: $stock, Necesario: $cantidad");
         }
 
         // Insert exit without order
@@ -152,13 +155,9 @@ try {
         $stmt = sqlsrv_query($conn, $sqlInsert, [$area, $encargado, $fecha, $comentarios, $idCodigo, $cantidad]);
         
         if (!$stmt) {
-            $errors = sqlsrv_errors();
-            error_log("Error inserting exit: " . print_r($errors, true));
             throw new Exception('Error al registrar salida');
         }
         sqlsrv_free_stmt($stmt);
-        
-        error_log("Exit registered successfully");
 
         // Update inventory (FIFO)
         $porDescontar = $cantidad;
@@ -172,7 +171,7 @@ try {
         );
         
         if (!$stmt) {
-            throw new Exception('Error al leer inventario');
+            throw new Exception('Error leyendo inventario');
         }
 
         $filas = [];
@@ -181,13 +180,10 @@ try {
         }
         sqlsrv_free_stmt($stmt);
 
-        error_log("Found " . count($filas) . " inventory rows for product $idCodigo");
-
         foreach ($filas as $f) {
             if ($porDescontar <= 0) break;
             
             $usar = min($porDescontar, (float)$f['cantidadActual']);
-            error_log("Deducting $usar from inventory row " . $f['idInventario']);
             
             $ok = sqlsrv_query(
                 $conn,
@@ -198,37 +194,31 @@ try {
             );
             
             if (!$ok) {
-                $errors = sqlsrv_errors();
-                error_log("Error updating inventory: " . print_r($errors, true));
-                throw new Exception('Error al actualizar inventario');
+                throw new Exception('Error actualizando inventario');
             }
             
             $porDescontar -= $usar;
         }
         
         if ($porDescontar > 0) {
-            error_log("Inventory mismatch: still need to deduct $porDescontar");
-            throw new Exception('Error en el descuento de inventario');
+            throw new Exception('Error en descuento de inventario');
         }
-        
-        error_log("Inventory updated successfully for product $idCodigo");
     }
 
     if (!sqlsrv_commit($conn)) {
         throw new Exception('Error al confirmar transacción');
     }
     
-    error_log("Transaction committed successfully");
+    error_log("Exit completed successfully");
     sqlsrv_close($conn);
     header("Location: ../exitnoordcnf.php"); 
     exit();
 
 } catch (Throwable $e) {
-    error_log("Exception caught: " . $e->getMessage());
+    error_log("Error: " . $e->getMessage());
     sqlsrv_rollback($conn);
     sqlsrv_close($conn);
     
-    // Store error message in session
     $_SESSION['exit_error'] = $e->getMessage();
     header("Location: ../exitnoord.php");
     exit();
