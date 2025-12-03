@@ -1,171 +1,119 @@
 <?php
 session_start();
+if (!isset($_SESSION['user_id'])) { header("Location: ../index.php"); exit(); }
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') { header("Location: ../exitnoord.php"); exit(); }
 
-// Enable error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-ini_set('log_errors', 1);
-
-// Check authentication
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    header("Location: ../index.php");
-    exit();
-}
-
-// Check role
-$idRol = (int)($_SESSION['rol'] ?? 0);
-if (!in_array($idRol, [1, 2])) {
-    header("Location: ../acceso_denegado.php");
-    exit();
-}
-
-// Check if this is a POST request
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    die('Error: Este archivo solo acepta solicitudes POST.');
-}
-
-error_log("Exit without order - POST data: " . print_r($_POST, true));
-
-// Database connection
+// Conexión
 $serverName = "sqlserver-sia.database.windows.net";
-$connOpts = [
-    "Database" => "db_sia",
-    "Uid" => "cmapADMIN",
-    "PWD" => "@siaADMN56*",
-    "Encrypt" => true,
-    "TrustServerCertificate" => false
+$connectionOptions = [
+  "Database"=>"db_sia","Uid"=>"cmapADMIN","PWD"=>"@siaADMN56*",
+  "Encrypt"=>true,"TrustServerCertificate"=>false
 ];
+$conn = sqlsrv_connect($serverName,$connectionOptions) or die(print_r(sqlsrv_errors(), true));
 
-$conn = sqlsrv_connect($serverName, $connOpts);
-if ($conn === false) {
-    error_log("Database connection failed: " . print_r(sqlsrv_errors(), true));
-    die("Error de conexión a la base de datos");
+$area        = trim($_POST['areaSolicitante'] ?? '');
+$encargado   = trim($_POST['encargadoArea'] ?? '');
+$comentarios = trim($_POST['comentarios'] ?? '');
+$fecha       = date('Y-m-d H:i:s');
+$elementos   = $_POST['elementos'] ?? [];
+
+if ($area==='' || $encargado==='' || $comentarios==='' || empty($elementos)) {
+  header("Location: ../exitnoord.php"); exit();
 }
+
+sqlsrv_begin_transaction($conn);
 
 try {
-    // Validate required fields
-    $areaSolicitante = trim($_POST['areaSolicitante'] ?? '');
-    $encargadoArea = trim($_POST['encargadoArea'] ?? '');
-    $fecha = $_POST['fecha'] ?? date('Y-m-d');
-    $comentarios = trim($_POST['comentarios'] ?? '');
-    $elementos = $_POST['elementos'] ?? [];
+  foreach ($elementos as $item) {
+    $idCodigo = (int)($item['idCodigo'] ?? 0);
+    $cantidad = (int)($item['cantidad'] ?? 0);
+    if ($idCodigo===0 || $cantidad<=0) { throw new Exception('Datos inválidos'); }
 
-    if (empty($areaSolicitante)) {
-        throw new Exception("El área solicitante es requerida");
-    }
-    if (empty($encargadoArea)) {
-        throw new Exception("Debe indicar quién solicita");
-    }
-    if (empty($elementos)) {
-        throw new Exception("Debe agregar al menos un elemento");
-    }
+    // 1) Stock total (sumado en todas las cajas)
+    $stmt = sqlsrv_query($conn, "SELECT SUM(cantidadActual) AS stock FROM Inventario WHERE idCodigo = ?", [$idCodigo]);
+    if (!$stmt) throw new Exception('Error stock');
+    $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+    sqlsrv_free_stmt($stmt);
+    $stock = (float)($row['stock'] ?? 0);
+    if ($stock < $cantidad) { throw new Exception('Stock insuficiente'); }
 
-    $fechaParam = date('Y-m-d H:i:s', strtotime($fecha));
+    // 2) ¿Se controla por serie? (existen filas en HerramientasUnicas para ese código)
+    $stmt = sqlsrv_query($conn, "SELECT TOP 1 1 AS hay FROM HerramientasUnicas WHERE idCodigo = ? AND enInventario = 1", [$idCodigo]);
+    if ($stmt === false) throw new Exception('Error series');
+    $rowSerie = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+    sqlsrv_free_stmt($stmt);
+    $requiereSerie = (bool)($rowSerie['hay'] ?? false);
 
-    // Check if any element is a tool (Herramienta)
-    $tieneHerramientas = false;
-    foreach ($elementos as $elem) {
-        $idCodigo = isset($elem['idCodigo']) && is_numeric($elem['idCodigo']) ? (int)$elem['idCodigo'] : 0;
-        if ($idCodigo > 0) {
-            $sqlTipo = "SELECT tipo FROM Productos WHERE idCodigo = ?";
-            $stmtTipo = sqlsrv_query($conn, $sqlTipo, [$idCodigo]);
-            if ($stmtTipo) {
-                $rowTipo = sqlsrv_fetch_array($stmtTipo, SQLSRV_FETCH_ASSOC);
-                $tipo = strtolower(trim($rowTipo['tipo'] ?? ''));
-                if (in_array($tipo, ['herramienta', 'herramientas'], true)) {
-                    $tieneHerramientas = true;
-                    break;
-                }
-                sqlsrv_free_stmt($stmtTipo);
-            }
-        }
+    $toolIds = [];
+    if ($requiereSerie) {
+      // Toma exactamente N series disponibles
+      $stmt = sqlsrv_query(
+        $conn,
+        "SELECT TOP (?) idHerramienta FROM HerramientasUnicas WHERE idCodigo = ? AND enInventario = 1 ORDER BY idHerramienta ASC",
+        [$cantidad, $idCodigo]
+      );
+      if (!$stmt) throw new Exception('Error obt series');
+      while ($r = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) { $toolIds[] = (int)$r['idHerramienta']; }
+      sqlsrv_free_stmt($stmt);
+      if (count($toolIds) < $cantidad) { throw new Exception('Sin suficientes series'); }
     }
 
-    // FIXED: Correct redirect paths
-    if ($tieneHerramientas) {
-        // Redirect to tool selection page with correct filename
-        $_SESSION['salida_temporal'] = [
-            'areaSolicitante' => $areaSolicitante,
-            'encargadoArea' => $encargadoArea,
-            'fecha' => $fecha,
-            'comentarios' => $comentarios,
-            'elementos' => $elementos
-        ];
-        sqlsrv_close($conn);
-        header("Location: ../exitnoorder2.php"); // FIXED: Changed from exitnoord2.php
-        exit();
+    // 3) Inserta la salida sin orden (una fila por código)
+    $stmt = sqlsrv_query(
+      $conn,
+      "INSERT INTO SalidaSinorden (areaSolicitante, encargadoArea, fecha, comentarios, idCodigo, cantidad)
+       VALUES (?,?,?,?,?,?)",
+      [$area, $encargado, $fecha, $comentarios, $idCodigo, $cantidad]
+    );
+    if (!$stmt) throw new Exception('Error insert s/orden');
+    sqlsrv_free_stmt($stmt);
+
+    // 4) Descontar de Inventario repartiendo por filas (FIFO simple)
+    $porDescontar = $cantidad;
+    $stmt = sqlsrv_query(
+      $conn,
+      "SELECT idInventario, cantidadActual
+         FROM Inventario
+        WHERE idCodigo = ? AND cantidadActual > 0
+     ORDER BY ultimaActualizacion ASC, idInventario ASC",
+      [$idCodigo]
+    );
+    if (!$stmt) throw new Exception('Error leer inventario');
+
+    $filas = [];
+    while ($r = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) { $filas[] = $r; }
+    sqlsrv_free_stmt($stmt);
+
+    foreach ($filas as $f) {
+      if ($porDescontar <= 0) break;
+      $usar = min($porDescontar, (float)$f['cantidadActual']);
+      $ok = sqlsrv_query(
+        $conn,
+        "UPDATE Inventario
+            SET cantidadActual = cantidadActual - ?, ultimaActualizacion = ?
+          WHERE idInventario = ?",
+        [$usar, $fecha, (int)$f['idInventario']]
+      );
+      if (!$ok) throw new Exception('Error update inventario');
+      $porDescontar -= $usar;
     }
+    if ($porDescontar > 0) { throw new Exception('Descuadre inventario'); }
 
-    // Process non-tool exit
-    if (!sqlsrv_begin_transaction($conn)) {
-        throw new Exception("Error al iniciar transacción");
+    // 5) Marcar series como fuera de inventario (si aplica)
+    if ($requiereSerie) {
+      foreach ($toolIds as $tid) {
+        $ok = sqlsrv_query($conn, "UPDATE HerramientasUnicas SET enInventario = 0 WHERE idHerramienta = ?", [$tid]);
+        if (!$ok) throw new Exception('Error update serie');
+      }
     }
+  }
 
-    foreach ($elementos as $elem) {
-        $idCodigo = isset($elem['idCodigo']) && is_numeric($elem['idCodigo']) ? (int)$elem['idCodigo'] : 0;
-        $cantidad = isset($elem['cantidad']) && is_numeric($elem['cantidad']) ? (int)$elem['cantidad'] : 0;
+  sqlsrv_commit($conn);
+  header("Location: ../exitnoordcnf.php"); exit();
 
-        if ($idCodigo <= 0 || $cantidad <= 0) {
-            continue; // Skip invalid elements
-        }
-
-        // Insert into SalidaSinorden
-        $sqlSalida = "INSERT INTO SalidaSinorden 
-            (idCodigo, cantidad, areaSolicitante, encargadoArea, fecha, observaciones)
-            VALUES (?, ?, ?, ?, ?, ?)";
-        $paramsSalida = [$idCodigo, $cantidad, $areaSolicitante, $encargadoArea, $fechaParam, $comentarios];
-        
-        $stmtSalida = sqlsrv_query($conn, $sqlSalida, $paramsSalida);
-        if ($stmtSalida === false) {
-            $errors = sqlsrv_errors();
-            error_log("Error inserting exit: " . print_r($errors, true));
-            sqlsrv_rollback($conn);
-            throw new Exception("Error al registrar salida: " . $errors[0]['message']);
-        }
-        sqlsrv_free_stmt($stmtSalida);
-
-        // Update inventory
-        $sqlUpdate = "UPDATE Inventario 
-                      SET cantidadActual = cantidadActual - ?, 
-                          ultimaActualizacion = GETDATE()
-                      WHERE idCodigo = ?";
-        $stmtUpdate = sqlsrv_query($conn, $sqlUpdate, [$cantidad, $idCodigo]);
-        
-        if ($stmtUpdate === false) {
-            $errors = sqlsrv_errors();
-            error_log("Error updating inventory: " . print_r($errors, true));
-            sqlsrv_rollback($conn);
-            throw new Exception("Error al actualizar inventario");
-        }
-        sqlsrv_free_stmt($stmtUpdate);
-    }
-
-    if (!sqlsrv_commit($conn)) {
-        throw new Exception("Error al confirmar transacción");
-    }
-
-    sqlsrv_close($conn);
-    header("Location: ../exitnoordcnf.php");
-    exit();
-
-} catch (Exception $e) {
-    error_log("Exit without order error: " . $e->getMessage());
-    
-    if (isset($conn) && $conn) {
-        sqlsrv_rollback($conn);
-        sqlsrv_close($conn);
-    }
-    
-    echo "<!DOCTYPE html>";
-    echo "<html><head><meta charset='UTF-8'><title>Error</title>";
-    echo "<style>body{font-family:Arial;padding:20px;} .error{background:#fee;border:1px solid #c00;padding:15px;border-radius:5px;}</style>";
-    echo "</head><body>";
-    echo "<div class='error'>";
-    echo "<h2>Error al registrar la salida</h2>";
-    echo "<p>" . htmlspecialchars($e->getMessage()) . "</p>";
-    echo "</div>";
-    echo "<p><a href='../exitnoord.php'>← Volver al formulario</a></p>";
-    echo "</body></html>";
-    exit();
+} catch (Throwable $e) {
+  sqlsrv_rollback($conn);
+  // Redirige a la pantalla de “no disponible”
+  header("Location: ../exitnoorder2.php"); // usa tu vista de error
+  exit();
 }
-?>
