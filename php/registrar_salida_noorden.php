@@ -119,7 +119,7 @@ try {
             $sqlGetTools = "SELECT TOP (?) idHerramienta, identificadorUnico 
                             FROM HerramientasUnicas 
                             WHERE idCodigo = ? AND enInventario = 1 
-                            ORDER BY idHerramienta ASC";
+                            ORDER BY fechaEntrada ASC";
             $stmtTools = sqlsrv_query($conn, $sqlGetTools, [$cantidad, $idCodigo]);
             
             if (!$stmtTools) {
@@ -138,7 +138,8 @@ try {
             
             // Mark each tool as out of inventory
             foreach ($toolsToMark as $tool) {
-                $idHerramienta = (int)$tool['idHerramienta'];
+                // idHerramienta is a UNIQUEIDENTIFIER (GUID), not int!
+                $idHerramienta = $tool['idHerramienta'];
                 $identificador = $tool['identificadorUnico'];
                 
                 $sqlUpdateTool = "UPDATE HerramientasUnicas 
@@ -148,19 +149,19 @@ try {
                 
                 if ($stmtUpdateTool === false) {
                     $errors = sqlsrv_errors();
-                    error_log("Error updating tool $idHerramienta: " . print_r($errors, true));
-                    throw new Exception("Error al actualizar herramienta ID $idHerramienta: " . $errors[0]['message']);
+                    error_log("Error updating tool: " . print_r($errors, true));
+                    throw new Exception("Error al actualizar herramienta: " . $errors[0]['message']);
                 }
                 
                 $rowsAffected = sqlsrv_rows_affected($stmtUpdateTool);
                 sqlsrv_free_stmt($stmtUpdateTool);
                 
                 if ($rowsAffected === 0) {
-                    error_log("Tool $idHerramienta was not updated (already out or doesn't exist)");
+                    error_log("Tool was not updated (already out or doesn't exist): $identificador");
                     throw new Exception("La herramienta $identificador ya no está disponible");
                 }
                 
-                error_log("Tool marked as out: $identificador (ID: $idHerramienta)");
+                error_log("Tool marked as out: $identificador");
             }
         }
 
