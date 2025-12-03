@@ -144,14 +144,22 @@ try {
                 
                 $sqlUpdateTool = "UPDATE HerramientasUnicas 
                                   SET enInventario = 0
-                                  WHERE idHerramienta = ?";
+                                  WHERE idHerramienta = ? AND enInventario = 1";
                 $stmtUpdateTool = sqlsrv_query($conn, $sqlUpdateTool, [$idHerramienta]);
                 
-                if (!$stmtUpdateTool) {
-                    error_log("Error updating tool $idHerramienta");
-                    throw new Exception("Error al actualizar estado de herramienta");
+                if ($stmtUpdateTool === false) {
+                    $errors = sqlsrv_errors();
+                    error_log("Error updating tool $idHerramienta: " . print_r($errors, true));
+                    throw new Exception("Error al actualizar herramienta ID $idHerramienta: " . $errors[0]['message']);
                 }
+                
+                $rowsAffected = sqlsrv_rows_affected($stmtUpdateTool);
                 sqlsrv_free_stmt($stmtUpdateTool);
+                
+                if ($rowsAffected === 0) {
+                    error_log("Tool $idHerramienta was not updated (already out or doesn't exist)");
+                    throw new Exception("La herramienta $identificador ya no está disponible");
+                }
                 
                 error_log("Tool marked as out: $identificador (ID: $idHerramienta)");
             }
