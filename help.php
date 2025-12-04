@@ -217,7 +217,7 @@ if (in_array($rolActual, [1,2,3], true)) {
             <img src="img/manual.png" alt="Manual" />
             <span>MANUAL DE USUARIO</span>
         </a>
-    </div>
+    </div> 
 </main>
 
 <script>
