@@ -25,7 +25,7 @@ $conn = sqlsrv_connect($serverName, $connectionOptions);
 
 // Obtener productos
 $productos = [];
-$tsqlProductos = "SELECT idCodigo, codigo, descripcion, tipo, linea, sublinea, unidad FROM Productos";
+$tsqlProductos = "SELECT idCodigo, codigo, descripcion, tipo, linea, sublinea, unidad FROM Productos ORDER BY codigo ASC";
 $stmtProd = sqlsrv_query($conn, $tsqlProductos);
 while ($row = sqlsrv_fetch_array($stmtProd, SQLSRV_FETCH_ASSOC)) {
     $productos[] = $row;
