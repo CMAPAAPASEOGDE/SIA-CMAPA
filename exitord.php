@@ -281,8 +281,8 @@ if (in_array($rolActual, [1,2,3], true)) {
           <select name="idOperador" required>
             <option value="">Seleccionar...</option>
             <?php foreach ($operadores as $op): ?>
-              <option value="<?= $prod['idCodigo'] ?>" data-nombre="<?= htmlspecialchars($prod['descripcion']) ?>">
-                <?= htmlspecialchars($prod['codigo']) ?> - <?= htmlspecialchars($prod['descripcion']) ?>
+              <option value="<?= $op['idOperador'] ?>">
+                <?= htmlspecialchars($op['nombreCompleto']) ?>
               </option>
             <?php endforeach; ?>
           </select>
