@@ -294,16 +294,7 @@ if (in_array($rolActual, [1,2,3], true)) {
       <h3 class="items-title">ELEMENTOS EN LA ORDEN</h3>
 
       <div class="salida-row item">
-        <select name="elementos[0][idCodigo]" class="codigo-select" onchange="cargarNombre(this)">
-          <option value="">Seleccionar código</option>
-          <?php foreach ($productos as $prod): ?>
-            <option value="<?= $prod['idCodigo'] ?>" data-nombre="<?= htmlspecialchars($prod['descripcion']) ?>">
-              <?= htmlspecialchars($prod['codigo']) ?>
-            </option>
-          <?php endforeach; ?>
-        </select>
-        <input type="text" name="elementos[0][nombre]" placeholder="NOMBRE" readonly />
-        <input type="number" name="elementos[0][cantidad]" placeholder="CANTIDAD" min="1" required />
+        
       </div>
     </div>
 
