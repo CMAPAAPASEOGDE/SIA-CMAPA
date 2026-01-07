@@ -33,7 +33,7 @@ $conn = sqlsrv_connect($serverName, $connectionOptions);
 if (!$conn) die(print_r(sqlsrv_errors(), true));
 
 $productos = [];
-$queryProd = "SELECT idCodigo, codigo, descripcion FROM Productos";
+$queryProd = "SELECT idCodigo, codigo, descripcion FROM Productos ORDER BY codigo ASC";
 $stmt = sqlsrv_query($conn, $queryProd);
 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
     $productos[] = $row;
