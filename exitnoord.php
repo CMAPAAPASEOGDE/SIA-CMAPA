@@ -264,22 +264,14 @@ if (in_array($rolActual, [1,2,3], true)) {
         <div class="salida-items" id="salida-items">
             <h3 class="items-title">ELEMENTOS</h3>
             <div class="salida-row item">
-                <select name="elementos[0][idCodigo]" class="codigo-select" onchange="cargarNombre(this)">
-                    <option value="">Seleccionar código</option>
-                    <?php foreach ($productos as $prod): ?>
-                        <option value="<?= $prod['idCodigo'] ?>" data-nombre="<?= htmlspecialchars($prod['descripcion']) ?>">
-                            <?= htmlspecialchars($prod['codigo']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <input type="text" name="elementos[0][nombre]" placeholder="NOMBRE" readonly />
-                <input type="number" name="elementos[0][cantidad]" placeholder="CANTIDAD" min="1" required />
+                
             </div>
         </div>
 
         <div class="salida-actions">
             <a href="warehouse.php"><button type="button" class="btn cancel">CANCELAR</button></a>
             <button type="button" class="btn add" onclick="agregarElemento()">AÑADIR ELEMENTOS</button>
+            <button type="button" class="btn remove" onclick="eliminarUltimo()" style="background-color: #ffc107; color: #333;">ELIMINAR ÚLTIMO</button>
             <button type="submit" class="btn confirm">CONFIRMAR SALIDA</button>
         </div>
     </form>
@@ -290,25 +282,49 @@ let contador = 1;
 const productos = <?= json_encode($productos) ?>;
 
 function cargarNombre(select) {
-    const nombreInput = select.nextElementSibling;
-    const selectedOption = select.options[select.selectedIndex];
-    nombreInput.value = selectedOption.getAttribute('data-nombre') || "";
+  const nombreInput = select.nextElementSibling;
+  const selectedOption = select.options[select.selectedIndex];
+  nombreInput.value = selectedOption.getAttribute('data-nombre') || "";
 }
 
 function agregarElemento() {
-    const container = document.getElementById('salida-items');
-    const nuevo = document.createElement('div');
-    nuevo.className = "salida-row item";
-    nuevo.innerHTML = `
-        <select name="elementos[${contador}][idCodigo]" class="codigo-select" onchange="cargarNombre(this)">
-            <option value="">Seleccionar código</option>
-            ${productos.map(p => `<option value="${p.idCodigo}" data-nombre="${p.descripcion}">${p.codigo}</option>`).join('')}
-        </select>
-        <input type="text" name="elementos[${contador}][nombre]" placeholder="NOMBRE" readonly />
-        <input type="number" name="elementos[${contador}][cantidad]" placeholder="CANTIDAD" min="1" required />
-    `;
-    container.appendChild(nuevo);
-    contador++;
+  const container = document.getElementById('salida-items');
+  const nuevo = document.createElement('div');
+  nuevo.className = "salida-row item";
+  nuevo.id = `elemento-${contador}`;
+  nuevo.innerHTML = `
+    <select name="elementos[${contador}][idCodigo]" class="codigo-select" onchange="cargarNombre(this)">
+      <option value="">Seleccionar código</option>
+      ${productos.map(p => `<option value="${p.idCodigo}" data-nombre="${p.descripcion}">${p.codigo} - ${p.descripcion}</option>`).join('')}
+    </select>
+    <input type="text" name="elementos[${contador}][nombre]" placeholder="NOMBRE" readonly />
+    <input type="number" name="elementos[${contador}][cantidad]" placeholder="CANTIDAD" min="1" required />
+    <button type="button" class="btn-eliminar" onclick="eliminarElemento('elemento-${contador}')" style="background-color: #dc3545; color: white; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer;">✕</button>
+  `;
+  container.appendChild(nuevo);
+  contador++;
+}
+
+function eliminarElemento(elementId) {
+  const elemento = document.getElementById(elementId);
+  if (elemento) {
+    // Verificar que quede al menos un elemento
+    const totalElementos = document.querySelectorAll('.salida-row.item').length;
+    if (totalElementos > 1) {
+      elemento.remove();
+    } else {
+      alert('Debe mantener al menos un elemento en la orden');
+    }
+  }
+}
+
+function eliminarUltimo() {
+  const elementos = document.querySelectorAll('.salida-row.item');
+  if (elementos.length > 1) {
+    elementos[elementos.length - 1].remove();
+  } else {
+    alert('Debe mantener al menos un elemento en la orden');
+  }
 }
 </script>
 
