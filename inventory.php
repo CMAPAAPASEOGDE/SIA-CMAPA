@@ -95,7 +95,8 @@ $sql = "SELECT
                 ELSE 'En stock'
             END AS estado
         FROM Productos p
-        INNER JOIN Inventario i ON p.idCodigo = i.idCodigo";
+        INNER JOIN Inventario i ON p.idCodigo = i.idCodigo
+        ORDER BY p.codigo ASC";
 $stmt = sqlsrv_query($conn, $sql);
 if ($stmt === false) {
     die("Error en la consulta: " . print_r(sqlsrv_errors(), true));
