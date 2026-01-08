@@ -181,7 +181,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $stmtCaja = sqlsrv_query($conn, "SELECT C.numeroCaja, O.nombreCompleto AS nombreOperador 
                                  FROM CajaRegistro C
                                  JOIN Operativo O ON C.idOperador = O.idOperador
-                                 WHERE C.idCaja = ?", [$idCaja]);
+                                 WHERE C.idCaja = ?
+                                 ORDER BY p.codigo ASC", [$idCaja]);
 if ($stmtCaja === false) die("Error al obtener datos de caja: " . print_r(sqlsrv_errors(), true));
 $datosCaja = sqlsrv_fetch_array($stmtCaja, SQLSRV_FETCH_ASSOC);
 if (!$datosCaja) { header("Location: boxes.php?error=caja_not_found"); exit(); }
@@ -407,11 +408,12 @@ if ($stmtList) {
           echo '<div class="error-container">No se encontraron elementos en esta caja</div>';
       } else {
           foreach ($contenidoRows as $row) { ?>
-            <div class="elemento-row">
+            <div class="elemento-row" id="elem-<?= $index ?>">
               <input type="hidden" name="elementos[<?= $index ?>][idCodigo]" value="<?= (int)$row['idCodigo'] ?>">
               <input type="text" value="<?= htmlspecialchars($row['codigoProducto']) ?>" readonly>
               <input type="text" value="<?= htmlspecialchars($row['descripcion']) ?>" readonly>
-              <input type="number" name="elementos[<?= $index ?>][cantidad]" value="<?= (int)$row['cantidad'] ?>" min="0">
+              <input type="number" name="elementos[<?= $index ?>][cantidad]" id="cant-<?= $index ?>" value="<?= (int)$row['cantidad'] ?>" min="0">
+              <button type="button" onclick="eliminarElemento(<?= $index ?>)" style="background-color: #dc3545; color: white; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer;">✕</button>
             </div>
           <?php
             $index++;
@@ -445,25 +447,42 @@ function agregarElemento() {
   const contenedor = document.getElementById('nuevos-elementos');
   const nuevoDiv = document.createElement('div');
   nuevoDiv.classList.add('elemento-row');
+  nuevoDiv.setAttribute('id', 'elem-' + contador);
   nuevoDiv.innerHTML = `
     <select name="elementos[${contador}][idCodigo]" onchange="cargarNombre(this)" class="codigo-select">
       <option value="">Seleccionar código</option>
       <?php
-      $stmtProds = sqlsrv_query($conn, "SELECT idCodigo, codigo, descripcion FROM Productos");
+      $stmtProds = sqlsrv_query($conn, "SELECT idCodigo, codigo, descripcion FROM Productos ORDER BY codigo ASC");
       while ($prod = sqlsrv_fetch_array($stmtProds, SQLSRV_FETCH_ASSOC)) {
           $id = (int)$prod['idCodigo'];
           $cod = htmlspecialchars($prod['codigo'], ENT_QUOTES, 'UTF-8');
           $desc = htmlspecialchars($prod['descripcion'], ENT_QUOTES, 'UTF-8');
-          echo "<option value='{$id}' data-descripcion=\"{$desc}\">{$cod}</option>";
+          echo "<option value='{$id}' data-descripcion=\"{$desc}\">{$cod} - {$desc}</option>";
       }
       sqlsrv_free_stmt($stmtProds);
       ?>
     </select>
     <input type="text" name="elementos[${contador}][nombre]" placeholder="NOMBRE" readonly>
     <input type="number" name="elementos[${contador}][cantidad]" placeholder="CANTIDAD" min="1" required>
+    <button type="button" onclick="eliminarElemento(${contador})" style="background-color: #dc3545; color: white; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer;">✕</button>
   `;
   contenedor.appendChild(nuevoDiv);
   contador++;
+}
+
+function eliminarElemento(index) {
+  const elemento = document.getElementById('elem-' + index);
+  if (elemento) {
+    // Para elementos existentes, poner cantidad en 0 en lugar de eliminar el div
+    const cantInput = document.getElementById('cant-' + index);
+    if (cantInput) {
+      cantInput.value = 0;
+      elemento.style.display = 'none';
+    } else {
+      // Para elementos nuevos, eliminar completamente
+      elemento.remove();
+    }
+  }
 }
 function cargarNombre(select) {
   const descripcion = select.options[select.selectedIndex].getAttribute('data-descripcion') || '';
