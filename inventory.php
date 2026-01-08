@@ -23,7 +23,59 @@ if ($conn === false) {
 }
 
 // ============================
-// NUEVO SISTEMA DE NOTIFICACIONES DE INVENTARIO
+// NOTIFICACIONES SOLICITUDES
+// ============================
+$rolActual   = (int)($_SESSION['rol'] ?? 0);
+$unreadCount = 0;
+$notifList   = [];
+$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'inventory.php';
+
+// Admin (rol 1): pendientes en Modificaciones
+if ($rolActual === 1) {
+    $stmtCount = sqlsrv_query($conn,
+        "SELECT COUNT(*) AS c
+           FROM Modificaciones
+          WHERE solicitudRevisada = 0");
+    $stmtList  = sqlsrv_query($conn,
+        "SELECT TOP 10 M.idModificacion, M.descripcion, M.fechaSolicitud, M.tipo, M.cantidad,
+                P.codigo AS codigoProducto
+           FROM Modificaciones M
+      LEFT JOIN Productos P ON P.idCodigo = M.idCodigo
+          WHERE M.solicitudRevisada = 0
+       ORDER BY M.fechaSolicitud DESC");
+}
+// Usuarios 2 y 3: avisos desde Notificaciones
+elseif (in_array($rolActual, [2,3], true)) {
+    $stmtCount = sqlsrv_query($conn,
+        "SELECT COUNT(*) AS c
+           FROM Notificaciones
+          WHERE estatusRevision = 0");
+    $stmtList  = sqlsrv_query($conn,
+        "SELECT TOP 10 N.idNotificacion,
+                N.descripcion AS comentarioAdmin,
+                N.fechaNotificacion,
+                P.codigo      AS codigoProducto
+           FROM Notificaciones N
+      LEFT JOIN Modificaciones M ON M.idModificacion = N.idModificacion
+      LEFT JOIN Productos      P ON P.idCodigo       = M.idCodigo
+          WHERE N.estatusRevision = 0
+       ORDER BY N.fechaNotificacion DESC");
+}
+
+if (isset($stmtCount) && $stmtCount) {
+    $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
+    $unreadCount = (int)($row['c'] ?? 0);
+    sqlsrv_free_stmt($stmtCount);
+}
+if (isset($stmtList) && $stmtList) {
+    while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
+        $notifList[] = $r;
+    }
+    sqlsrv_free_stmt($stmtList);
+}
+
+// ============================
+// NOTIFICACIONES INVENTARIO
 // ============================
 $rolActual = (int)($_SESSION['rol'] ?? 0);
 $alertasInventario = [];
@@ -92,8 +144,10 @@ if ($stmt === false) {
 
 $idRol = (int)$_SESSION['rol'];
 ?>
+
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
@@ -102,7 +156,7 @@ $idRol = (int)$_SESSION['rol'];
     <style>
         /* Estilos adicionales para el botón de inicio */
         .home-button {
-            background-color: #28a745;
+            background-color: #2215b2ff;
             color: white;
             padding: 8px 16px;
             border: none;
@@ -115,7 +169,7 @@ $idRol = (int)$_SESSION['rol'];
             transition: background-color 0.3s;
         }
         .home-button:hover {
-            background-color: #218838;
+            background-color: #270353ff;
         }
         
         /* Estilos para las alertas de inventario */
@@ -149,6 +203,7 @@ $idRol = (int)$_SESSION['rol'];
         }
     </style>
 </head>
+
 <body>
 <header>
   <div class="brand">
@@ -479,8 +534,6 @@ $idRol = (int)$_SESSION['rol'];
     });
     actualizarContadorAlertas();
   });
-
-  // ... resto del código JavaScript ...
 </script>
 
 <?php

@@ -214,7 +214,7 @@ if (in_array($rolActual, [1,2,3], true)) {
         <strong>SIA - CMAPA</strong>
     </p>
     <p class="about-version">
-        Version: <strong>1.3.2</strong>
+        Version: <strong>1.3.3</strong>
     </p>
     <div class="about-details">
         <p><strong>Azure:</strong> Actualizado y En Linea</p>

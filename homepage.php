@@ -266,5 +266,53 @@ function ackUserNotif(idNotificacion) {
   .finally(() => { window.location.href = 'inventory.php'; });
 }
 </script>
+
+<script>
+  function marcarComoLeido(idCodigo) {
+    // Ocultar la alerta visualmente
+    const alertaElement = document.getElementById('alerta-' + idCodigo);
+    if (alertaElement) {
+      alertaElement.style.transition = 'opacity 0.3s';
+      alertaElement.style.opacity = '0.3';
+      alertaElement.style.pointerEvents = 'none';
+      
+      // Guardar en localStorage que fue leída
+      let alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
+      if (!alertasLeidas.includes(idCodigo)) {
+        alertasLeidas.push(idCodigo);
+        localStorage.setItem('alertasLeidas', JSON.stringify(alertasLeidas));
+      }
+      
+      // Actualizar contador
+      actualizarContadorAlertas();
+    }
+  }
+  
+  // Función para actualizar el contador de alertas
+  function actualizarContadorAlertas() {
+    const alertasVisibles = document.querySelectorAll('.alerta-item:not([style*="opacity"])').length;
+    const badge = document.querySelector('.notification-container span');
+    if (badge) {
+      if (alertasVisibles > 0) {
+        badge.textContent = alertasVisibles;
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+  }
+  
+  // Al cargar la página, ocultar las alertas ya leídas
+  document.addEventListener('DOMContentLoaded', function() {
+    const alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
+    alertasLeidas.forEach(idCodigo => {
+      const alertaElement = document.getElementById('alerta-' + idCodigo);
+      if (alertaElement) {
+        alertaElement.style.display = 'none';
+      }
+    });
+    actualizarContadorAlertas();
+  });
+</script>
+
 </body>
 </html>
