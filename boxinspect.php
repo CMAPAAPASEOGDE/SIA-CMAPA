@@ -178,11 +178,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 /* ===============================
    Datos de la caja + contenido
    =============================== */
-$stmtContenido = sqlsrv_query($conn, "SELECT cc.idCodigo, p.codigo AS codigoProducto, p.descripcion, cc.cantidad
-                                      FROM CajaContenido cc
-                                      JOIN Productos p ON cc.idCodigo = p.idCodigo
-                                      WHERE cc.idCaja = ?
-                                      ORDER BY p.codigo ASC", [$idCaja]);
+$stmtCaja = sqlsrv_query($conn, "SELECT C.numeroCaja, O.nombreCompleto AS nombreOperador 
+                                 FROM CajaRegistro C
+                                 JOIN Operativo O ON C.idOperador = O.idOperador
+                                 WHERE C.idCaja = ?", [$idCaja]);
 if ($stmtCaja === false) die("Error al obtener datos de caja: " . print_r(sqlsrv_errors(), true));
 $datosCaja = sqlsrv_fetch_array($stmtCaja, SQLSRV_FETCH_ASSOC);
 if (!$datosCaja) { header("Location: boxes.php?error=caja_not_found"); exit(); }
