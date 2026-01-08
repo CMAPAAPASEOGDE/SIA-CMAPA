@@ -75,7 +75,7 @@ if ($idRol !== 1) {
       LOS ELEMENTOS SE HAN AÑADIDO CORRECTAMENTE Y YA SE PUEDEN VER REFLEJADOS EN EL INVENTARIO.
     </p>
     <div class="form-buttons">
-      <a href="admin.php"><button type="submit" class="btn confirm">CONFIRMAR</button></a>
+      <a href="admnedtet.php"><button type="submit" class="btn confirm">CONFIRMAR</button></a>
     </div>
   </div>
 </article>
