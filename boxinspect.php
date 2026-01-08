@@ -182,7 +182,7 @@ $stmtCaja = sqlsrv_query($conn, "SELECT C.numeroCaja, O.nombreCompleto AS nombre
                                  FROM CajaRegistro C
                                  JOIN Operativo O ON C.idOperador = O.idOperador
                                  WHERE C.idCaja = ?
-                                 ORDER BY p.codigo ASC", [$idCaja]);
+                                 ORDER BY codigo ASC", [$idCaja]);
 if ($stmtCaja === false) die("Error al obtener datos de caja: " . print_r(sqlsrv_errors(), true));
 $datosCaja = sqlsrv_fetch_array($stmtCaja, SQLSRV_FETCH_ASSOC);
 if (!$datosCaja) { header("Location: boxes.php?error=caja_not_found"); exit(); }
