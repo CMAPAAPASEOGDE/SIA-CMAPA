@@ -23,9 +23,9 @@ if (in_array($rolActual, [1,2,3], true)) {
     ];
     $conn = sqlsrv_connect($serverName, $connectionOptions);
 
-// ============================
-// NOTIFICACIONES INVENTARIO
-// ============================
+// ========================
+// BLOQUE DE NOTIFICACIONES
+// ========================
 $rolActual = (int)($_SESSION['rol'] ?? 0);
 $alertasInventario = [];
 $totalAlertas = 0;
@@ -123,6 +123,7 @@ if (in_array($rolActual, [1, 2], true)) {
 
         sqlsrv_close($conn);
     }
+  //=======================================XXXXXXXXXXXXXXX  
 }
 ?>
 

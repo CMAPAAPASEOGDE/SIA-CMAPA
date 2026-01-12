@@ -16,9 +16,20 @@ if (!in_array($idRol, [1, 2])) {
     exit();
 }
 
-// ============================
-// NOTIFICACIONES INVENTARIO
-// ============================
+if (in_array($rolActual, [1,2,3], true)) {
+    $serverName = "sqlserver-sia.database.windows.net";
+    $connectionOptions = [
+        "Database" => "db_sia",
+        "Uid"      => "cmapADMIN",
+        "PWD"      => "@siaADMN56*",
+        "Encrypt"  => true,
+        "TrustServerCertificate" => false
+    ];
+    $conn = sqlsrv_connect($serverName, $connectionOptions);
+
+// ========================
+// BLOQUE DE NOTIFICACIONES
+// ========================
 $rolActual = (int)($_SESSION['rol'] ?? 0);
 $alertasInventario = [];
 $totalAlertas = 0;
@@ -116,6 +127,8 @@ if (in_array($rolActual, [1, 2], true)) {
 
         sqlsrv_close($conn);
     }
+  //=======================================XXXXXXXXXXXXXXX  
+}
 ?>
 
 <!DOCTYPE html>
