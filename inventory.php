@@ -153,55 +153,6 @@ $idRol = (int)$_SESSION['rol'];
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
     <title>SIA Inventory</title>
     <link rel="stylesheet" href="css/StyleINV.css">
-    <style>
-        /* Estilos adicionales para el botón de inicio */
-        .home-button {
-            background-color: #2215b2ff;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 5px;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-left: 15px;
-            transition: background-color 0.3s;
-        }
-        .home-button:hover {
-            background-color: #270353ff;
-        }
-        
-        /* Estilos para las alertas de inventario */
-        .alerta-item {
-            padding: 10px;
-            border-bottom: 1px solid #eaeaea;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .alerta-item:hover {
-            background-color: #f5f5f5;
-        }
-        .alerta-sin-stock {
-            border-left: 4px solid #dc3545;
-        }
-        .alerta-reorden {
-            border-left: 4px solid #ffc107;
-        }
-        .marca-leido-btn {
-            background-color: #007bff;
-            color: white;
-            padding: 4px 8px;
-            border: none;
-            border-radius: 3px;
-            font-size: 12px;
-            cursor: pointer;
-            float: right;
-        }
-        .marca-leido-btn:hover {
-            background-color: #0056b3;
-        }
-    </style>
 </head>
 
 <body>
