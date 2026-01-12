@@ -16,46 +16,6 @@ if (!in_array($idRol, [1, 2])) {
     exit();
 }
 
-// ============================
-// NOTIFICACIONES INVENTARIO
-// ============================
-$rolActual = (int)($_SESSION['rol'] ?? 0);
-$alertasInventario = [];
-$totalAlertas = 0;
-
-// Para Admin (1) y Almacenista (2): Alertas de inventario
-if (in_array($rolActual, [1, 2], true)) {
-    // Productos en punto de reorden o sin stock
-    $sqlAlertas = "SELECT 
-                    p.idCodigo,
-                    p.codigo,
-                    p.descripcion,
-                    i.cantidadActual,
-                    p.puntoReorden,
-                    CASE 
-                        WHEN i.cantidadActual = 0 THEN 'SIN STOCK'
-                        WHEN i.cantidadActual <= p.puntoReorden THEN 'PUNTO REORDEN'
-                    END AS tipoAlerta,
-                    CASE 
-                        WHEN i.cantidadActual = 0 THEN 1
-                        WHEN i.cantidadActual <= p.puntoReorden THEN 2
-                    END AS prioridad
-                FROM Productos p
-                INNER JOIN Inventario i ON p.idCodigo = i.idCodigo
-                WHERE i.cantidadActual <= p.puntoReorden
-                ORDER BY prioridad ASC, i.cantidadActual ASC";
-    
-    $stmtAlertas = sqlsrv_query($conn, $sqlAlertas);
-    if ($stmtAlertas) {
-        while ($alerta = sqlsrv_fetch_array($stmtAlertas, SQLSRV_FETCH_ASSOC)) {
-            $alertasInventario[] = $alerta;
-        }
-        sqlsrv_free_stmt($stmtAlertas);
-    }
-    
-    $totalAlertas = count($alertasInventario);
-}
-
 // -------- Notificaciones (nuevo esquema) --------
 $rolActual   = (int)($_SESSION['rol'] ?? 0);
 $unreadCount = 0;
@@ -134,6 +94,46 @@ if (in_array($rolActual, [1,2,3], true)) {
         sqlsrv_close($conn);
     }
 }
+
+// ============================
+// NOTIFICACIONES INVENTARIO
+// ============================
+$rolActual = (int)($_SESSION['rol'] ?? 0);
+$alertasInventario = [];
+$totalAlertas = 0;
+
+// Para Admin (1) y Almacenista (2): Alertas de inventario
+if (in_array($rolActual, [1, 2], true)) {
+    // Productos en punto de reorden o sin stock
+    $sqlAlertas = "SELECT 
+                    p.idCodigo,
+                    p.codigo,
+                    p.descripcion,
+                    i.cantidadActual,
+                    p.puntoReorden,
+                    CASE 
+                        WHEN i.cantidadActual = 0 THEN 'SIN STOCK'
+                        WHEN i.cantidadActual <= p.puntoReorden THEN 'PUNTO REORDEN'
+                    END AS tipoAlerta,
+                    CASE 
+                        WHEN i.cantidadActual = 0 THEN 1
+                        WHEN i.cantidadActual <= p.puntoReorden THEN 2
+                    END AS prioridad
+                FROM Productos p
+                INNER JOIN Inventario i ON p.idCodigo = i.idCodigo
+                WHERE i.cantidadActual <= p.puntoReorden
+                ORDER BY prioridad ASC, i.cantidadActual ASC";
+    
+    $stmtAlertas = sqlsrv_query($conn, $sqlAlertas);
+    if ($stmtAlertas) {
+        while ($alerta = sqlsrv_fetch_array($stmtAlertas, SQLSRV_FETCH_ASSOC)) {
+            $alertasInventario[] = $alerta;
+        }
+        sqlsrv_free_stmt($stmtAlertas);
+    }
+    
+    $totalAlertas = count($alertasInventario);
+}
 ?>
 
 <!DOCTYPE html>
@@ -151,16 +151,18 @@ if (in_array($rolActual, [1,2,3], true)) {
   <div class="brand">
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
+    <!-- NUEVO BOTÓN DE INICIO -->
+    <a href="homepage.php" class="home-button">INICIO</a>
   </div>
 
   <div class="header-right">
+    <!-- Campana de notificaciones de inventario -->
     <div class="notification-container">
-      <button class="icon-btn" id="notif-toggle" type="button" aria-label="Notificaciones">
-        <img
-          src="<?= ($unreadCount > 0) ? 'img/belldot.png' : 'img/bell.png' ?>"
-          class="imgh3"
-          alt="Notificaciones"
-        />
+      <button class="icon-btn" id="notif-toggle" type="button" aria-label="Alertas de Inventario">
+        <img src="<?= $totalAlertas > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" class="imgh3" alt="Alertas" />
+        <?php if ($totalAlertas > 0): ?>
+            <span style="position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px;"><?= $totalAlertas ?></span>
+        <?php endif; ?>
       </button>
 
       <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
@@ -219,15 +221,7 @@ if (in_array($rolActual, [1,2,3], true)) {
           </ul>
         <?php endif; ?>
       </div>
-    </div>
-
-    <div class="notification-container">
-      <button class="icon-btn" id="notif-toggle" type="button" aria-label="Alertas de Inventario">
-        <img src="<?= $totalAlertas > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" class="imgh3" alt="Alertas" />
-        <?php if ($totalAlertas > 0): ?>
-            <span style="position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px;"><?= $totalAlertas ?></span>
-        <?php endif; ?>
-      </button>
+    
 
       <div class="notification-dropdown" id="notif-dropdown" style="display:none; width: 350px; max-height: 400px; overflow-y: auto;">
         <?php if ($totalAlertas === 0): ?>
@@ -275,7 +269,7 @@ if (in_array($rolActual, [1,2,3], true)) {
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
       </button>
       <div class="user-dropdown" id="user-dropdown" style="display:none;">
-        <p><strong>Tipo de usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
+        <p><strong>Usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
         <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
         <a href="passchng.php"><button class="user-option" type="button">CAMBIAR CONTRASEÑA</button></a>
       </div>
@@ -288,10 +282,10 @@ if (in_array($rolActual, [1,2,3], true)) {
       <div class="dropdown" id="dropdown-menu" style="display:none;">
         <a href="homepage.php">Inicio</a>
         <a href="mnthclsr.php">Cierre de mes</a>
-        <a href="admin.php">Menu de administador</a>
+        <a href="admin.php">Menu de administrador</a>
         <a href="about.php">Acerca de</a>
         <a href="help.php">Ayuda</a>
-        <a href="logout.php">Cerrar Sesion</a>
+        <a href="logout.php">Cerrar Sesión</a>
       </div>
     </div>
   </div>
