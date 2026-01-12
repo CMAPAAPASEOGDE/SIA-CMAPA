@@ -85,8 +85,50 @@ if (in_array($rolActual, [1,2,3], true)) {
         sqlsrv_close($conn);
     }
 }
+
+// ============================
+// NOTIFICACIONES INVENTARIO
+// ============================
+$rolActual = (int)($_SESSION['rol'] ?? 0);
+$alertasInventario = [];
+$totalAlertas = 0;
+
+// Para Admin (1) y Almacenista (2): Alertas de inventario
+if (in_array($rolActual, [1, 2], true)) {
+    // Productos en punto de reorden o sin stock
+    $sqlAlertas = "SELECT 
+                    p.idCodigo,
+                    p.codigo,
+                    p.descripcion,
+                    i.cantidadActual,
+                    p.puntoReorden,
+                    CASE 
+                        WHEN i.cantidadActual = 0 THEN 'SIN STOCK'
+                        WHEN i.cantidadActual <= p.puntoReorden THEN 'PUNTO REORDEN'
+                    END AS tipoAlerta,
+                    CASE 
+                        WHEN i.cantidadActual = 0 THEN 1
+                        WHEN i.cantidadActual <= p.puntoReorden THEN 2
+                    END AS prioridad
+                FROM Productos p
+                INNER JOIN Inventario i ON p.idCodigo = i.idCodigo
+                WHERE i.cantidadActual <= p.puntoReorden
+                ORDER BY prioridad ASC, i.cantidadActual ASC";
+    
+    $stmtAlertas = sqlsrv_query($conn, $sqlAlertas);
+    if ($stmtAlertas) {
+        while ($alerta = sqlsrv_fetch_array($stmtAlertas, SQLSRV_FETCH_ASSOC)) {
+            $alertasInventario[] = $alerta;
+        }
+        sqlsrv_free_stmt($stmtAlertas);
+    }
+    
+    $totalAlertas = count($alertasInventario);
+}
 ?>
+
 <!DOCTYPE html>
+
 <html>
 <head>
     <meta charset="UTF-8" />
@@ -103,75 +145,55 @@ if (in_array($rolActual, [1,2,3], true)) {
   <div class="brand">
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
+    <!-- NUEVO BOTÓN DE INICIO -->
+    <a href="homepage.php" class="home-button">INICIO</a>
   </div>
 
   <div class="header-right">
+    <!-- Campana de notificaciones de inventario -->
     <div class="notification-container">
-      <button class="icon-btn" id="notif-toggle" type="button" aria-label="Notificaciones">
-        <img
-          src="<?= ($unreadCount > 0) ? 'img/belldot.png' : 'img/bell.png' ?>"
-          class="imgh3"
-          alt="Notificaciones"
-        />
+      <button class="icon-btn" id="notif-toggle" type="button" aria-label="Alertas de Inventario">
+        <img src="<?= $totalAlertas > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" class="imgh3" alt="Alertas" />
+        <?php if ($totalAlertas > 0): ?>
+            <span style="position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px;"><?= $totalAlertas ?></span>
+        <?php endif; ?>
       </button>
 
-      <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
-        <?php if (!in_array($rolActual,[1,2,3],true)): ?>
-          <div class="notif-empty" style="padding:10px;">No hay notificaciones para este perfil.</div>
-
-        <?php elseif ($unreadCount === 0): ?>
-          <div class="notif-empty" style="padding:10px;">No hay notificaciones nuevas.</div>
-
-        <?php elseif ($rolActual === 1): ?>
-          <!-- ADMIN: desde Modificaciones -->
-          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
-            <?php foreach ($notifList as $n): ?>
-              <?php
-                $f = $n['fecha'] ?? null;
-                $fechaTxt = ($f instanceof DateTime)
-                              ? $f->format('Y-m-d H:i')
-                              : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
-                $tipoTxt = strtoupper((string)($n['tipo'] ?? ''));
-                $qtyTxt  = isset($n['cantidad']) ? ' • Cant.: '.(int)$n['cantidad'] : '';
-                $codigo  = (string)($n['codigoProducto'] ?? '');
-              ?>
-              <li class="notif-item"
-                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  onclick="window.location.href='admnrqst.php'">
-                <div class="notif-desc" style="font-size:0.95rem;">
-                  [<?= htmlspecialchars($tipoTxt, ENT_QUOTES, 'UTF-8') ?>]
-                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong>
-                  <?= $qtyTxt ?> — <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
-                </div>
-                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-
+      <div class="notification-dropdown" id="notif-dropdown" style="display:none; width: 350px; max-height: 400px; overflow-y: auto;">
+        <?php if ($totalAlertas === 0): ?>
+          <div class="notif-empty" style="padding:15px; text-align: center;">
+            ✅ Todo el inventario está en niveles óptimos
+          </div>
         <?php else: ?>
-          <!-- USUARIOS 2 y 3: desde Notificaciones -->
-          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
-            <?php foreach ($notifList as $n): ?>
-              <?php
-                $idNoti   = (int)($n['idNotificacion'] ?? 0);
-                $codigo   = (string)($n['codigoProducto'] ?? '');
-                $coment   = (string)($n['comentarioAdmin'] ?? '');
-                $f        = $n['fechaNotificacion'] ?? null;
-                $fechaTxt = ($f instanceof DateTime)
-                          ? $f->format('Y-m-d H:i')
-                          : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
-              ?>
-              <li class="notif-item"
-                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  onclick="ackUserNotif(<?= $idNoti ?>)">
-                <div class="notif-desc" style="font-size:0.95rem;">
-                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong> —
-                  <?= htmlspecialchars($coment, ENT_QUOTES, 'UTF-8') ?>
+          <div style="padding: 10px; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;">
+            <strong>⚠️ Alertas de Inventario (<?= $totalAlertas ?>)</strong>
+          </div>
+          <div id="alertas-container">
+            <?php foreach ($alertasInventario as $alerta): 
+              $claseAlerta = ($alerta['tipoAlerta'] === 'SIN STOCK') ? 'alerta-sin-stock' : 'alerta-reorden';
+              $iconoAlerta = ($alerta['tipoAlerta'] === 'SIN STOCK') ? '🔴' : '🟡';
+            ?>
+              <div class="alerta-item <?= $claseAlerta ?>" id="alerta-<?= $alerta['idCodigo'] ?>">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                  <div style="flex: 1;">
+                    <div style="font-weight: bold; margin-bottom: 5px;">
+                      <?= $iconoAlerta ?> <?= htmlspecialchars($alerta['codigo']) ?> - <?= htmlspecialchars($alerta['tipoAlerta']) ?>
+                    </div>
+                    <div style="font-size: 13px; color: #666;">
+                      <?= htmlspecialchars($alerta['descripcion']) ?>
+                    </div>
+                    <div style="font-size: 12px; color: #999; margin-top: 3px;">
+                      Cantidad actual: <strong><?= $alerta['cantidadActual'] ?></strong> | 
+                      Punto de reorden: <strong><?= $alerta['puntoReorden'] ?></strong>
+                    </div>
+                  </div>
+                  <button class="marca-leido-btn" onclick="marcarComoLeido(<?= $alerta['idCodigo'] ?>)">
+                    ✓ Leído
+                  </button>
                 </div>
-                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
-              </li>
+              </div>
             <?php endforeach; ?>
-          </ul>
+          </div>
         <?php endif; ?>
       </div>
     </div>
@@ -183,7 +205,7 @@ if (in_array($rolActual, [1,2,3], true)) {
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
       </button>
       <div class="user-dropdown" id="user-dropdown" style="display:none;">
-        <p><strong>Tipo de Usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
+        <p><strong>Usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
         <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
         <a href="passchng.php"><button class="user-option" type="button">CAMBIAR CONTRASEÑA</button></a>
       </div>
@@ -196,14 +218,15 @@ if (in_array($rolActual, [1,2,3], true)) {
       <div class="dropdown" id="dropdown-menu" style="display:none;">
         <a href="homepage.php">Inicio</a>
         <a href="mnthclsr.php">Cierre de mes</a>
-        <a href="admin.php">Menu de administador</a>
+        <a href="admin.php">Menu de administrador</a>
         <a href="about.php">Acerca de</a>
         <a href="help.php">Ayuda</a>
-        <a href="logout.php">Cerrar Sesion</a>
+        <a href="logout.php">Cerrar Sesión</a>
       </div>
     </div>
   </div>
 </header>
+
 
 <main class="menu">
   <div class="card">
@@ -266,5 +289,53 @@ function ackUserNotif(idNotificacion) {
   .finally(() => { window.location.href = 'inventory.php'; });
 }
 </script>
+
+<script>
+  function marcarComoLeido(idCodigo) {
+    // Ocultar la alerta visualmente
+    const alertaElement = document.getElementById('alerta-' + idCodigo);
+    if (alertaElement) {
+      alertaElement.style.transition = 'opacity 0.3s';
+      alertaElement.style.opacity = '0.3';
+      alertaElement.style.pointerEvents = 'none';
+      
+      // Guardar en localStorage que fue leída
+      let alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
+      if (!alertasLeidas.includes(idCodigo)) {
+        alertasLeidas.push(idCodigo);
+        localStorage.setItem('alertasLeidas', JSON.stringify(alertasLeidas));
+      }
+      
+      // Actualizar contador
+      actualizarContadorAlertas();
+    }
+  }
+  
+  // Función para actualizar el contador de alertas
+  function actualizarContadorAlertas() {
+    const alertasVisibles = document.querySelectorAll('.alerta-item:not([style*="opacity"])').length;
+    const badge = document.querySelector('.notification-container span');
+    if (badge) {
+      if (alertasVisibles > 0) {
+        badge.textContent = alertasVisibles;
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+  }
+  
+  // Al cargar la página, ocultar las alertas ya leídas
+  document.addEventListener('DOMContentLoaded', function() {
+    const alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
+    alertasLeidas.forEach(idCodigo => {
+      const alertaElement = document.getElementById('alerta-' + idCodigo);
+      if (alertaElement) {
+        alertaElement.style.display = 'none';
+      }
+    });
+    actualizarContadorAlertas();
+  });
+</script>
+
 </body>
 </html>
