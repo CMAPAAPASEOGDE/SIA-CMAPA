@@ -23,6 +23,45 @@ if (in_array($rolActual, [1,2,3], true)) {
     ];
     $conn = sqlsrv_connect($serverName, $connectionOptions);
 
+    // ============================
+// NOTIFICACIONES INVENTARIO
+// ============================
+$rolActual = (int)($_SESSION['rol'] ?? 0);
+$alertasInventario = [];
+$totalAlertas = 0;
+
+// Para Admin (1) y Almacenista (2): Alertas de inventario
+if (in_array($rolActual, [1, 2], true)) {
+    // Productos en punto de reorden o sin stock
+    $sqlAlertas = "SELECT 
+                    p.idCodigo,
+                    p.codigo,
+                    p.descripcion,
+                    i.cantidadActual,
+                    p.puntoReorden,
+                    CASE 
+                        WHEN i.cantidadActual = 0 THEN 'SIN STOCK'
+                        WHEN i.cantidadActual <= p.puntoReorden THEN 'PUNTO REORDEN'
+                    END AS tipoAlerta,
+                    CASE 
+                        WHEN i.cantidadActual = 0 THEN 1
+                        WHEN i.cantidadActual <= p.puntoReorden THEN 2
+                    END AS prioridad
+                FROM Productos p
+                INNER JOIN Inventario i ON p.idCodigo = i.idCodigo
+                WHERE i.cantidadActual <= p.puntoReorden
+                ORDER BY prioridad ASC, i.cantidadActual ASC";
+    
+    $stmtAlertas = sqlsrv_query($conn, $sqlAlertas);
+    if ($stmtAlertas) {
+        while ($alerta = sqlsrv_fetch_array($stmtAlertas, SQLSRV_FETCH_ASSOC)) {
+            $alertasInventario[] = $alerta;
+        }
+        sqlsrv_free_stmt($stmtAlertas);
+    }
+    
+    $totalAlertas = count($alertasInventario);
+}
     if ($conn) {
         if ($rolActual === 1) {
             // ADMIN: notificaciones desde Modificaciones (pendientes)
