@@ -77,7 +77,7 @@ header h1 {
 
  /* Estilos adicionales para el botón de inicio */
         .home-button {
-            background-color: #2215b2ff;
+            background-color: #28a745;
             color: white;
             padding: 8px 16px;
             border: none;
@@ -85,19 +85,17 @@ header h1 {
             text-decoration: none;
             font-size: 14px;
             font-weight: bold;
-            cursor: pointer;
             margin-left: 15px;
+            display: inline-block;
             transition: background-color 0.3s;
         }
         .home-button:hover {
-            background-color: #270353ff;
+            background-color: #218838;
         }
         
-        /* Estilos para las alertas de inventario */
         .alerta-item {
             padding: 10px;
             border-bottom: 1px solid #eaeaea;
-            cursor: pointer;
             transition: background-color 0.2s;
         }
         .alerta-item:hover {
@@ -112,15 +110,30 @@ header h1 {
         .marca-leido-btn {
             background-color: #007bff;
             color: white;
-            padding: 4px 8px;
+            padding: 5px 10px;
             border: none;
             border-radius: 3px;
             font-size: 12px;
             cursor: pointer;
-            float: right;
         }
         .marca-leido-btn:hover {
             background-color: #0056b3;
+        }
+        .contador-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: bold;
+            min-width: 18px;
+            text-align: center;
+        }
+        .notification-container {
+            position: relative;
         }
 
 /* número de usuario */
