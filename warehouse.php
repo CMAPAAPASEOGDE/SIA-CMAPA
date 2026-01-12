@@ -156,9 +156,47 @@ if (in_array($rolActual, [1, 2], true)) {
       <button class="icon-btn" id="notif-toggle" type="button" aria-label="Alertas de Inventario">
         <img src="<?= $totalAlertas > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" class="imgh3" alt="Alertas" />
         <?php if ($totalAlertas > 0): ?>
-            <span style="position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px;"><?= $totalAlertas ?></span>
+          <span style="position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px;"><?= $totalAlertas ?></span>
         <?php endif; ?>
-      </button>
+      </button>    
+
+      <div class="notification-dropdown" id="notif-dropdown" style="display:none; width: 350px; max-height: 400px; overflow-y: auto;">
+        <?php if ($totalAlertas === 0): ?>
+          <div class="notif-empty" style="padding:15px; text-align: center;">
+            ✅ Todo el inventario está en niveles óptimos
+          </div>
+        <?php else: ?>
+          <div style="padding: 10px; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;">
+            <strong>⚠️ Alertas de Inventario (<?= $totalAlertas ?>)</strong>
+          </div>
+          <div id="alertas-container">
+            <?php foreach ($alertasInventario as $alerta): 
+              $claseAlerta = ($alerta['tipoAlerta'] === 'SIN STOCK') ? 'alerta-sin-stock' : 'alerta-reorden';
+              $iconoAlerta = ($alerta['tipoAlerta'] === 'SIN STOCK') ? '🔴' : '🟡';
+            ?>
+              <div class="alerta-item <?= $claseAlerta ?>" id="alerta-<?= $alerta['idCodigo'] ?>">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                  <div style="flex: 1;">
+                    <div style="font-weight: bold; margin-bottom: 5px;">
+                      <?= $iconoAlerta ?> <?= htmlspecialchars($alerta['codigo']) ?> - <?= htmlspecialchars($alerta['tipoAlerta']) ?>
+                    </div>
+                    <div style="font-size: 13px; color: #666;">
+                      <?= htmlspecialchars($alerta['descripcion']) ?>
+                    </div>
+                    <div style="font-size: 12px; color: #999; margin-top: 3px;">
+                      Cantidad actual: <strong><?= $alerta['cantidadActual'] ?></strong> | 
+                      Punto de reorden: <strong><?= $alerta['puntoReorden'] ?></strong>
+                    </div>
+                  </div>
+                  <button class="marca-leido-btn" onclick="marcarComoLeido(<?= $alerta['idCodigo'] ?>)">
+                    ✓ Leído
+                  </button>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </div>
 
       <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
         <?php if ($unreadCount === 0): ?>
@@ -214,45 +252,6 @@ if (in_array($rolActual, [1, 2], true)) {
               </li>
             <?php endforeach; ?>
           </ul>
-        <?php endif; ?>
-      </div>
-    
-
-      <div class="notification-dropdown" id="notif-dropdown" style="display:none; width: 350px; max-height: 400px; overflow-y: auto;">
-        <?php if ($totalAlertas === 0): ?>
-          <div class="notif-empty" style="padding:15px; text-align: center;">
-            ✅ Todo el inventario está en niveles óptimos
-          </div>
-        <?php else: ?>
-          <div style="padding: 10px; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;">
-            <strong>⚠️ Alertas de Inventario (<?= $totalAlertas ?>)</strong>
-          </div>
-          <div id="alertas-container">
-            <?php foreach ($alertasInventario as $alerta): 
-              $claseAlerta = ($alerta['tipoAlerta'] === 'SIN STOCK') ? 'alerta-sin-stock' : 'alerta-reorden';
-              $iconoAlerta = ($alerta['tipoAlerta'] === 'SIN STOCK') ? '🔴' : '🟡';
-            ?>
-              <div class="alerta-item <?= $claseAlerta ?>" id="alerta-<?= $alerta['idCodigo'] ?>">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                  <div style="flex: 1;">
-                    <div style="font-weight: bold; margin-bottom: 5px;">
-                      <?= $iconoAlerta ?> <?= htmlspecialchars($alerta['codigo']) ?> - <?= htmlspecialchars($alerta['tipoAlerta']) ?>
-                    </div>
-                    <div style="font-size: 13px; color: #666;">
-                      <?= htmlspecialchars($alerta['descripcion']) ?>
-                    </div>
-                    <div style="font-size: 12px; color: #999; margin-top: 3px;">
-                      Cantidad actual: <strong><?= $alerta['cantidadActual'] ?></strong> | 
-                      Punto de reorden: <strong><?= $alerta['puntoReorden'] ?></strong>
-                    </div>
-                  </div>
-                  <button class="marca-leido-btn" onclick="marcarComoLeido(<?= $alerta['idCodigo'] ?>)">
-                    ✓ Leído
-                  </button>
-                </div>
-              </div>
-            <?php endforeach; ?>
-          </div>
         <?php endif; ?>
       </div>
     </div>
@@ -413,6 +412,7 @@ function ackUserNotif(idNotificacion) {
     actualizarContadorAlertas();
   });
 </script>
+
 </body>
 
 </html>

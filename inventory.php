@@ -170,7 +170,7 @@ $idRol = (int)$_SESSION['rol'];
       <button class="icon-btn" id="notif-toggle" type="button" aria-label="Alertas de Inventario">
         <img src="<?= $totalAlertas > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" class="imgh3" alt="Alertas" />
         <?php if ($totalAlertas > 0): ?>
-            <span style="position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px;"><?= $totalAlertas ?></span>
+          <span style="position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px;"><?= $totalAlertas ?></span>
         <?php endif; ?>
       </button>    
 
