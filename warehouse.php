@@ -4,38 +4,36 @@ session_start();
 
 // Verificar si el usuario está autenticado
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Si no hay sesión activa, redirigir al login
     header("Location: index.php");
     exit();
 }
 
 // Verificar el rol del usuario
-$idRol = (int)($_SESSION['rol'] ?? 0);
-if (!in_array($idRol, [1, 2])) {
+$rolActual = (int)($_SESSION['rol'] ?? 0);
+if (!in_array($rolActual, [1, 2])) {
     header("Location: acceso_denegado.php");
     exit();
 }
 
-if (in_array($rolActual, [1,2,3], true)) {
-    $serverName = "sqlserver-sia.database.windows.net";
-    $connectionOptions = [
-        "Database" => "db_sia",
-        "Uid"      => "cmapADMIN",
-        "PWD"      => "@siaADMN56*",
-        "Encrypt"  => true,
-        "TrustServerCertificate" => false
-    ];
-    $conn = sqlsrv_connect($serverName, $connectionOptions);
+// Conexión a la base de datos
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = [
+    "Database" => "db_sia",
+    "Uid"      => "cmapADMIN",
+    "PWD"      => "@siaADMN56*",
+    "Encrypt"  => true,
+    "TrustServerCertificate" => false
+];
+$conn = sqlsrv_connect($serverName, $connectionOptions);
 
 // ========================
-// BLOQUE DE NOTIFICACIONES
+// SISTEMA DE NOTIFICACIONES DE INVENTARIO
 // ========================
-$rolActual = (int)($_SESSION['rol'] ?? 0);
 $alertasInventario = [];
 $totalAlertas = 0;
 
 // Para Admin (1) y Almacenista (2): Alertas de inventario
-if (in_array($rolActual, [1, 2], true)) {
+if ($conn && in_array($rolActual, [1, 2], true)) {
     // Productos en punto de reorden o sin stock
     $sqlAlertas = "SELECT 
                     p.idCodigo,
@@ -66,7 +64,9 @@ if (in_array($rolActual, [1, 2], true)) {
     
     $totalAlertas = count($alertasInventario);
 }
-  //=======================================XXXXXXXXXXXXXXX  
+
+if ($conn) {
+    sqlsrv_close($conn);
 }
 ?>
 
@@ -85,7 +85,7 @@ if (in_array($rolActual, [1, 2], true)) {
   <div class="brand">
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
-    <!-- NUEVO BOTÓN DE INICIO -->
+    <!-- BOTÓN DE INICIO -->
     <a href="homepage.php" class="home-button">INICIO</a>
   </div>
 
@@ -95,18 +95,22 @@ if (in_array($rolActual, [1, 2], true)) {
       <button class="icon-btn" id="notif-toggle" type="button" aria-label="Alertas de Inventario">
         <img src="<?= $totalAlertas > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" class="imgh3" alt="Alertas" />
         <?php if ($totalAlertas > 0): ?>
-          <span style="position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px;"><?= $totalAlertas ?></span>
+          <span class="contador-badge" id="contador-alertas"><?= $totalAlertas ?></span>
         <?php endif; ?>
       </button>    
 
       <div class="notification-dropdown" id="notif-dropdown" style="display:none; width: 350px; max-height: 400px; overflow-y: auto;">
         <?php if ($totalAlertas === 0): ?>
-          <div class="notif-empty" style="padding:15px; text-align: center;">
-            ✅ Todo el inventario está en niveles óptimos
+          <div class="notif-empty" style="padding:15px; text-align: center; color: #28a745;">
+            <strong>✅ Inventario Óptimo</strong><br>
+            <small>Todos los productos están en niveles adecuados</small>
           </div>
         <?php else: ?>
-          <div style="padding: 10px; background-color: #33383dff; border-bottom: 1px solid #dee2e6;">
+          <div style="padding: 10px; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;">
             <strong>⚠️ Alertas de Inventario (<?= $totalAlertas ?>)</strong>
+            <button onclick="marcarTodasLeidas()" style="float: right; font-size: 11px; padding: 3px 8px; background: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer;">
+              Marcar todas como leídas
+            </button>
           </div>
           <div id="alertas-container">
             <?php foreach ($alertasInventario as $alerta): 
@@ -145,7 +149,7 @@ if (in_array($rolActual, [1, 2], true)) {
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
       </button>
       <div class="user-dropdown" id="user-dropdown" style="display:none;">
-        <p><strong>Usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
+        <p><strong>Tipo de usuario:</strong> <?= $rolActual ?></p>
         <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
         <a href="passchng.php"><button class="user-option" type="button">CAMBIAR CONTRASEÑA</button></a>
       </div>
@@ -158,7 +162,9 @@ if (in_array($rolActual, [1, 2], true)) {
       <div class="dropdown" id="dropdown-menu" style="display:none;">
         <a href="homepage.php">Inicio</a>
         <a href="mnthclsr.php">Cierre de mes</a>
-        <a href="admin.php">Menu de administrador</a>
+        <?php if ($rolActual === 1): ?>
+          <a href="admin.php">Menu de administrador</a>
+        <?php endif; ?>
         <a href="about.php">Acerca de</a>
         <a href="help.php">Ayuda</a>
         <a href="logout.php">Cerrar Sesión</a>
@@ -213,52 +219,92 @@ window.addEventListener('click', (e) => {
   if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) userDropdown.style.display = 'none';
 });
 
-  function marcarComoLeido(idCodigo) {
-    // Ocultar la alerta visualmente
+// Notificaciones
+const notifToggle = document.getElementById('notif-toggle');
+const notifDropdown = document.getElementById('notif-dropdown');
+if (notifToggle && notifDropdown) {
+  notifToggle.addEventListener('click', () => {
+    notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
+  });
+  window.addEventListener('click', (e) => {
+    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
+      notifDropdown.style.display = 'none';
+    }
+  });
+}
+
+// Función para marcar alerta individual como leída
+function marcarComoLeido(idCodigo) {
+  const alertaElement = document.getElementById('alerta-' + idCodigo);
+  if (alertaElement) {
+    alertaElement.style.transition = 'opacity 0.3s';
+    alertaElement.style.opacity = '0.3';
+    alertaElement.style.pointerEvents = 'none';
+    
+    let alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
+    if (!alertasLeidas.includes(idCodigo)) {
+      alertasLeidas.push(idCodigo);
+      localStorage.setItem('alertasLeidas', JSON.stringify(alertasLeidas));
+    }
+    
+    actualizarContadorAlertas();
+  }
+}
+
+// Función para marcar todas las alertas como leídas
+function marcarTodasLeidas() {
+  const alertas = document.querySelectorAll('.alerta-item');
+  const idsLeidos = [];
+  
+  alertas.forEach(alerta => {
+    alerta.style.transition = 'opacity 0.3s';
+    alerta.style.opacity = '0.3';
+    alerta.style.pointerEvents = 'none';
+    
+    const id = parseInt(alerta.id.replace('alerta-', ''));
+    if (id) idsLeidos.push(id);
+  });
+  
+  let alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
+  idsLeidos.forEach(id => {
+    if (!alertasLeidas.includes(id)) {
+      alertasLeidas.push(id);
+    }
+  });
+  localStorage.setItem('alertasLeidas', JSON.stringify(alertasLeidas));
+  
+  actualizarContadorAlertas();
+}
+
+// Función para actualizar el contador de alertas
+function actualizarContadorAlertas() {
+  const alertasVisibles = document.querySelectorAll('.alerta-item:not([style*="opacity"])').length;
+  const badge = document.getElementById('contador-alertas');
+  
+  if (badge) {
+    if (alertasVisibles > 0) {
+      badge.textContent = alertasVisibles;
+      badge.style.display = 'block';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
+
+// Al cargar la página, ocultar las alertas ya leídas
+document.addEventListener('DOMContentLoaded', function() {
+  const alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
+  
+  alertasLeidas.forEach(idCodigo => {
     const alertaElement = document.getElementById('alerta-' + idCodigo);
     if (alertaElement) {
-      alertaElement.style.transition = 'opacity 0.3s';
-      alertaElement.style.opacity = '0.3';
-      alertaElement.style.pointerEvents = 'none';
-      
-      // Guardar en localStorage que fue leída
-      let alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
-      if (!alertasLeidas.includes(idCodigo)) {
-        alertasLeidas.push(idCodigo);
-        localStorage.setItem('alertasLeidas', JSON.stringify(alertasLeidas));
-      }
-      
-      // Actualizar contador
-      actualizarContadorAlertas();
+      alertaElement.style.display = 'none';
     }
-  }
-  
-  // Función para actualizar el contador de alertas
-  function actualizarContadorAlertas() {
-    const alertasVisibles = document.querySelectorAll('.alerta-item:not([style*="opacity"])').length;
-    const badge = document.querySelector('.notification-container span');
-    if (badge) {
-      if (alertasVisibles > 0) {
-        badge.textContent = alertasVisibles;
-      } else {
-        badge.style.display = 'none';
-      }
-    }
-  }
-  
-  // Al cargar la página, ocultar las alertas ya leídas
-  document.addEventListener('DOMContentLoaded', function() {
-    const alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
-    alertasLeidas.forEach(idCodigo => {
-      const alertaElement = document.getElementById('alerta-' + idCodigo);
-      if (alertaElement) {
-        alertaElement.style.display = 'none';
-      }
-    });
-    actualizarContadorAlertas();
   });
+  
+  actualizarContadorAlertas();
+});
 </script>
 
 </body>
-
 </html>
