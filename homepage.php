@@ -226,7 +226,6 @@ if (in_array($rolActual, [1, 2], true)) {
   </div>
 </header>
 
-
 <main class="menu">
   <div class="card">
     <img src="img/warehouse.png" alt="Almacén" />
