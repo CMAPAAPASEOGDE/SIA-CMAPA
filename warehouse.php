@@ -66,67 +66,6 @@ if (in_array($rolActual, [1, 2], true)) {
     
     $totalAlertas = count($alertasInventario);
 }
-    if ($conn) {
-        if ($rolActual === 1) {
-            // ADMIN: notificaciones desde Modificaciones (pendientes)
-            $stmtCount = sqlsrv_query(
-                $conn,
-                "SELECT COUNT(*) AS c
-                   FROM Modificaciones
-                  WHERE solicitudRevisada = 0"
-            );
-            $stmtList = sqlsrv_query(
-                $conn,
-                "SELECT TOP 10
-                        M.idModificacion,
-                        M.descripcion,
-                        M.fecha,
-                        M.tipo,
-                        M.cantidad,
-                        P.codigo AS codigoProducto
-                   FROM Modificaciones M
-              LEFT JOIN Productos P ON P.idCodigo = M.idCodigo
-                  WHERE M.solicitudRevisada = 0
-               ORDER BY M.fecha DESC"
-            );
-        } else {
-            // USUARIOS (2 y 3): notificaciones desde Notificaciones (no leídas)
-            $stmtCount = sqlsrv_query(
-                $conn,
-                "SELECT COUNT(*) AS c
-                   FROM Notificaciones
-                  WHERE estatusRevision = 0"
-            );
-            $stmtList = sqlsrv_query(
-                $conn,
-                "SELECT TOP 10
-                        N.idNotificacion,
-                        N.descripcion AS comentarioAdmin,
-                        N.fechaNotificacion,
-                        P.codigo AS codigoProducto
-                   FROM Notificaciones N
-              LEFT JOIN Modificaciones M ON M.idModificacion = N.idModificacion
-              LEFT JOIN Productos      P ON P.idCodigo       = M.idCodigo
-                  WHERE N.estatusRevision = 0
-               ORDER BY N.fechaNotificacion DESC"
-            );
-        }
-
-        if ($stmtCount) {
-            $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
-            $unreadCount = (int)($row['c'] ?? 0);
-            sqlsrv_free_stmt($stmtCount);
-        }
-
-        if ($stmtList) {
-            while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
-                $notifList[] = $r;
-            }
-            sqlsrv_free_stmt($stmtList);
-        }
-
-        sqlsrv_close($conn);
-    }
   //=======================================XXXXXXXXXXXXXXX  
 }
 ?>
@@ -254,61 +193,26 @@ if (in_array($rolActual, [1, 2], true)) {
 </main>
 
 <script>
-  const toggle = document.getElementById('menu-toggle');
-  const dropdown = document.getElementById('dropdown-menu');
-  toggle.addEventListener('click', () => {
-    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
-  });
-  window.addEventListener('click', (e) => {
-    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
-      dropdown.style.display = 'none';
-    }
-  });
-</script>
+// Menú hamburguesa
+const toggle = document.getElementById('menu-toggle');
+const dropdown = document.getElementById('dropdown-menu');
+toggle.addEventListener('click', () => {
+  dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+});
+window.addEventListener('click', (e) => {
+  if (!toggle.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
+});
 
-<script>
-  const userToggle = document.getElementById('user-toggle');
-  const userDropdown = document.getElementById('user-dropdown');
-  userToggle.addEventListener('click', () => {
-    userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
-  });
+// Menú usuario
+const userToggle = document.getElementById('user-toggle');
+const userDropdown = document.getElementById('user-dropdown');
+userToggle.addEventListener('click', () => {
+  userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+});
+window.addEventListener('click', (e) => {
+  if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) userDropdown.style.display = 'none';
+});
 
-  // Cerrar el menú al hacer clic fuera
-  window.addEventListener('click', (e) => {
-    if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
-      userDropdown.style.display = 'none';
-    }
-  });
-</script>
-
-<script>
-// Notificaciones
-const notifToggle   = document.getElementById('notif-toggle');
-const notifDropdown = document.getElementById('notif-dropdown');
-if (notifToggle && notifDropdown) {
-  notifToggle.addEventListener('click', () => {
-    notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
-  });
-  window.addEventListener('click', (e) => {
-    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
-      notifDropdown.style.display = 'none';
-    }
-  });
-}
-
-// Confirmar lectura (roles 2 y 3): marca estatusRevision=1 y redirige a inventario
-function ackUserNotif(idNotificacion) {
-  fetch('php/ack_user_notif.php', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-    body: 'id=' + encodeURIComponent(idNotificacion)
-  })
-  .then(r => r.json()).catch(() => ({}))
-  .finally(() => { window.location.href = 'inventory.php'; });
-}
-</script>
-
-<script>
   function marcarComoLeido(idCodigo) {
     // Ocultar la alerta visualmente
     const alertaElement = document.getElementById('alerta-' + idCodigo);
