@@ -23,7 +23,7 @@ if (in_array($rolActual, [1,2,3], true)) {
     ];
     $conn = sqlsrv_connect($serverName, $connectionOptions);
 
-    // ============================
+// ============================
 // NOTIFICACIONES INVENTARIO
 // ============================
 $rolActual = (int)($_SESSION['rol'] ?? 0);

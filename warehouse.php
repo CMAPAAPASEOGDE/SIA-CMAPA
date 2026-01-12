@@ -16,10 +16,12 @@ if (!in_array($idRol, [1, 2])) {
     exit();
 }
 
-// -------- Notificaciones (nuevo esquema) --------
-$rolActual   = (int)($_SESSION['rol'] ?? 0);
-$unreadCount = 0;
-$notifList   = [];
+// ============================
+// NOTIFICACIONES INVENTARIO
+// ============================
+$rolActual = (int)($_SESSION['rol'] ?? 0);
+$alertasInventario = [];
+$totalAlertas = 0;
 
 // Para Admin (1) y Almacenista (2): Alertas de inventario
 if (in_array($rolActual, [1, 2], true)) {
@@ -53,21 +55,9 @@ if (in_array($rolActual, [1, 2], true)) {
     
     $totalAlertas = count($alertasInventario);
 }
-
-if (in_array($rolActual, [1,2,3], true)) {
-    $serverName = "sqlserver-sia.database.windows.net";
-    $connectionOptions = [
-        "Database" => "db_sia",
-        "Uid"      => "cmapADMIN",
-        "PWD"      => "@siaADMN56*",
-        "Encrypt"  => true,
-        "TrustServerCertificate" => false
-    ];
-    $conn = sqlsrv_connect($serverName, $connectionOptions);
-
     if ($conn) {
         if ($rolActual === 1) {
-            // ADMIN: pendientes en Modificaciones
+            // ADMIN: notificaciones desde Modificaciones (pendientes)
             $stmtCount = sqlsrv_query(
                 $conn,
                 "SELECT COUNT(*) AS c
@@ -89,7 +79,7 @@ if (in_array($rolActual, [1,2,3], true)) {
                ORDER BY M.fecha DESC"
             );
         } else {
-            // USUARIOS (2 y 3): avisos desde Notificaciones
+            // USUARIOS (2 y 3): notificaciones desde Notificaciones (no leídas)
             $stmtCount = sqlsrv_query(
                 $conn,
                 "SELECT COUNT(*) AS c
@@ -100,9 +90,9 @@ if (in_array($rolActual, [1,2,3], true)) {
                 $conn,
                 "SELECT TOP 10
                         N.idNotificacion,
-                        N.descripcion      AS comentarioAdmin,
+                        N.descripcion AS comentarioAdmin,
                         N.fechaNotificacion,
-                        P.codigo           AS codigoProducto
+                        P.codigo AS codigoProducto
                    FROM Notificaciones N
               LEFT JOIN Modificaciones M ON M.idModificacion = N.idModificacion
               LEFT JOIN Productos      P ON P.idCodigo       = M.idCodigo
@@ -126,7 +116,6 @@ if (in_array($rolActual, [1,2,3], true)) {
 
         sqlsrv_close($conn);
     }
-}
 ?>
 
 <!DOCTYPE html>
