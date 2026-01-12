@@ -180,7 +180,7 @@ $idRol = (int)$_SESSION['rol'];
             ✅ Todo el inventario está en niveles óptimos
           </div>
         <?php else: ?>
-          <div style="padding: 10px; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;">
+          <div style="padding: 10px; background-color: #33383dff; border-bottom: 1px solid #dee2e6;">
             <strong>⚠️ Alertas de Inventario (<?= $totalAlertas ?>)</strong>
           </div>
           <div id="alertas-container">
@@ -209,63 +209,6 @@ $idRol = (int)$_SESSION['rol'];
               </div>
             <?php endforeach; ?>
           </div>
-        <?php endif; ?>
-      </div>
-
-      <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
-        <?php if ($unreadCount === 0): ?>
-          <div class="notif-empty" style="padding:10px;">No hay notificaciones nuevas.</div>
-
-        <?php elseif ($rolActual === 1): ?>
-          <!-- ADMIN: desde Modificaciones -->
-          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
-            <?php foreach ($notifList as $n): ?>
-              <?php
-                $f = $n['fecha'] ?? null;
-                $fechaTxt = ($f instanceof DateTime)
-                              ? $f->format('Y-m-d H:i')
-                              : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
-                $tipoTxt = strtoupper((string)($n['tipo'] ?? ''));
-                $qtyTxt  = isset($n['cantidad']) ? ' • Cant.: '.(int)$n['cantidad'] : '';
-                $codigo  = (string)($n['codigoProducto'] ?? '');
-              ?>
-              <li class="notif-item"
-                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  onclick="window.location.href='admnrqst.php'">
-                <div class="notif-desc" style="font-size:0.95rem;">
-                  [<?= htmlspecialchars($tipoTxt, ENT_QUOTES, 'UTF-8') ?>]
-                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong>
-                  <?= $qtyTxt ?> — <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
-                </div>
-                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-
-        <?php else: ?>
-          <!-- USUARIOS 2 y 3: desde Notificaciones -->
-          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
-            <?php foreach ($notifList as $n): ?>
-              <?php
-                $idNoti   = (int)($n['idNotificacion'] ?? 0);
-                $codigo   = (string)($n['codigoProducto'] ?? '');
-                $coment   = (string)($n['comentarioAdmin'] ?? '');
-                $f        = $n['fechaNotificacion'] ?? null;
-                $fechaTxt = ($f instanceof DateTime)
-                          ? $f->format('Y-m-d H:i')
-                          : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
-              ?>
-              <li class="notif-item"
-                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  onclick="ackUserNotif(<?= $idNoti ?>)">
-                <div class="notif-desc" style="font-size:0.95rem;">
-                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong> —
-                  <?= htmlspecialchars($coment, ENT_QUOTES, 'UTF-8') ?>
-                </div>
-                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
-              </li>
-            <?php endforeach; ?>
-          </ul>
         <?php endif; ?>
       </div>
     </div>
