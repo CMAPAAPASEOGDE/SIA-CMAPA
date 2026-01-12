@@ -307,7 +307,6 @@ if (in_array($rolActual, [1, 2], true)) {
   </div>
   <div class="almacen-bottom">
     <a href="devotool.php"><button class="flat-btn">Devolución de Herramientas</button></a>
-    <a href="modif.php"><button class="flat-btn">Modificación de almacén</button></a>
   </div>
 </main>
 
