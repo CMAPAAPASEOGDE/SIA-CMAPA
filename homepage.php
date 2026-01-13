@@ -88,14 +88,16 @@ if ($conn) {
   <div class="header-right">
     <!-- Campana de notificaciones de inventario -->
     <div class="notification-container">
-      <button class="icon-btn" id="notif-toggle" type="button" aria-label="Alertas de Inventario">
-        <img src="<?= $totalAlertas > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" class="imgh3" alt="Alertas" />
-        <?php if ($totalAlertas > 0): ?>
-          <span class="contador-badge" id="contador-alertas"><?= $totalAlertas ?></span>
-        <?php endif; ?>
-      </button>    
+      <button class="icon-btn" id="notif-toggle" type="button" aria-label="Alertas de Inventario" 
+            title="Alertas de Inventario">
+          <img src="<?= $totalAlertas > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" 
+              class="imgh3" alt="Alertas" />
+          <?php if ($totalAlertas > 0): ?>
+              <span class="contador-badge" id="contador-alertas"><?= $totalAlertas ?></span>
+          <?php endif; ?>
+      </button>   
 
-      <div class="notification-dropdown" id="notif-dropdown" style="display:none; width: 350px; max-height: 400px; overflow-y: auto;">
+      <div class="notification-dropdown" id="notif-dropdown" tabindex="-1">
         <?php if (!in_array($rolActual, [1, 2], true)): ?>
           <div class="notif-empty" style="padding:15px; text-align: center;">
             No hay notificaciones disponibles para este perfil
@@ -209,23 +211,46 @@ window.addEventListener('click', (e) => {
   if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) userDropdown.style.display = 'none';
 });
 
-  // Notificaciones: toggle dropdown
-  const notifToggle = document.getElementById('notif-toggle');
-  const notifDropdown = document.getElementById('notif-dropdown');
-  if (notifToggle && notifDropdown) {
-    notifToggle.addEventListener('click', (e) => {
-      e.stopPropagation(); // <- esto es CRÍTICO
-      notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
-    });
-    notifDropdown.addEventListener('click', (e) => {
-      e.stopPropagation(); // permite interactuar dentro del panel
-    });
-    window.addEventListener('click', (e) => {
-      if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
-        notifDropdown.style.display = 'none';
-      }
-    });
-  }
+// Notificaciones: toggle dropdown
+const notifToggle = document.getElementById('notif-toggle');
+const notifDropdown = document.getElementById('notif-dropdown');
+
+if (notifToggle && notifDropdown) {
+  let notifTimeout;
+  
+  notifToggle.addEventListener('click', function(e) {
+    e.stopPropagation();
+    
+    // Cerrar otros menús si están abiertos
+    userDropdown.style.display = 'none';
+    dropdown.style.display = 'none';
+    
+    // Alternar visibilidad del dropdown de notificaciones
+    if (notifDropdown.style.display === 'block') {
+      notifDropdown.style.display = 'none';
+    } else {
+      notifDropdown.style.display = 'block';
+      // Enfocar el dropdown para mejor interacción
+      notifDropdown.focus();
+    }
+  });
+  
+  // Cerrar al hacer clic fuera
+  document.addEventListener('click', function(e) {
+    if (notifDropdown.style.display === 'block' && 
+        !notifToggle.contains(e.target) && 
+        !notifDropdown.contains(e.target)) {
+      notifDropdown.style.display = 'none';
+    }
+  });
+  
+  // También cerrar al presionar Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && notifDropdown.style.display === 'block') {
+      notifDropdown.style.display = 'none';
+    }
+  });
+}
 
   // Confirmar lectura (roles 2 y 3)
   function ackUserNotif(idNotificacion) {
@@ -238,24 +263,30 @@ window.addEventListener('click', (e) => {
   }
 
 function marcarComoLeido(idCodigo) {
-    // Ocultar la alerta visualmente
-    const alertaElement = document.getElementById('alerta-' + idCodigo);
-    if (alertaElement) {
-      alertaElement.style.transition = 'opacity 0.3s';
-      alertaElement.style.opacity = '0.3';
-      alertaElement.style.pointerEvents = 'none';
-      
-      // Guardar en localStorage que fue leída
-      let alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
-      if (!alertasLeidas.includes(idCodigo)) {
+    // Guardar en localStorage
+    let alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
+    if (!alertasLeidas.includes(idCodigo)) {
         alertasLeidas.push(idCodigo);
         localStorage.setItem('alertasLeidas', JSON.stringify(alertasLeidas));
-      }
-      
-      // Actualizar contador
-      actualizarContadorAlertas();
     }
-  }
+    
+    // Ocultar visualmente
+    const alertaElement = document.getElementById('alerta-' + idCodigo);
+    if (alertaElement) {
+        alertaElement.style.opacity = '0.5';
+        alertaElement.style.textDecoration = 'line-through';
+        
+        // Actualizar contador
+        actualizarContadorAlertas();
+        
+        // Opcional: eliminar después de animación
+        setTimeout(() => {
+            alertaElement.style.display = 'none';
+            // Recalcular contador después de ocultar
+            actualizarContadorAlertas();
+        }, 300);
+    }
+}
 
   // Función para marcar todas las alertas como leídas
 function marcarTodasLeidas() {
@@ -285,17 +316,29 @@ function marcarTodasLeidas() {
 
 // Función para actualizar el contador de alertas
 function actualizarContadorAlertas() {
-  const alertasVisibles = Array.from(document.querySelectorAll('.alerta-item'))
-  .filter(el => el.style.display !== 'none' && el.style.opacity !== '0.3')
-  .length;
-  const badge = document.querySelector('.notification-container span');
-  if (badge) {
-    if (alertasVisibles > 0) {
-      badge.textContent = alertasVisibles;
-    } else {
-      badge.style.display = 'none';
+    // Contar solo alertas no leídas
+    const alertasNoLeidas = Array.from(document.querySelectorAll('.alerta-item'))
+        .filter(el => {
+            const id = parseInt(el.id.replace('alerta-', ''));
+            const alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
+            return !alertasLeidas.includes(id);
+        }).length;
+    
+    const badge = document.getElementById('contador-alertas');
+    const bellImg = document.querySelector('#notif-toggle img');
+    
+    if (badge) {
+        if (alertasNoLeidas > 0) {
+            badge.textContent = alertasNoLeidas;
+            badge.style.display = 'block';
+            // Cambiar a imagen con punto rojo
+            if (bellImg) bellImg.src = 'img/belldot.png';
+        } else {
+            badge.style.display = 'none';
+            // Cambiar a imagen normal
+            if (bellImg) bellImg.src = 'img/bell.png';
+        }
     }
-  }
 }
   
 // Al cargar la página, ocultar las alertas ya leídas
