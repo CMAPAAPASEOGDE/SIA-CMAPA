@@ -83,8 +83,6 @@ if ($conn) {
   <div class="brand">
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
-    <!-- BOTÓN DE INICIO (deshabilitado ya que estamos en la página de inicio) -->
-    <a href="#" class="home-button" style="cursor: default; opacity: 0.6;">INICIO</a>
   </div>
 
   <div class="header-right">
@@ -108,7 +106,7 @@ if ($conn) {
             <small>Todos los productos están en niveles adecuados</small>
           </div>
         <?php else: ?>
-          <div style="padding: 10px; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;">
+          <div style="padding: 10px; background-color: #262a2e; border-bottom: 1px solid #dee2e6;">
             <strong>⚠️ Alertas de Inventario (<?= $totalAlertas ?>)</strong>
             <button onclick="marcarTodasLeidas()" style="float: right; font-size: 11px; padding: 3px 8px; background: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer;">
               Marcar todas como leídas
@@ -211,91 +209,72 @@ window.addEventListener('click', (e) => {
   if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) userDropdown.style.display = 'none';
 });
 
-// Notificaciones
-const notifToggle = document.getElementById('notif-toggle');
-const notifDropdown = document.getElementById('notif-dropdown');
-if (notifToggle && notifDropdown) {
-  notifToggle.addEventListener('click', () => {
-    notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
-  });
-  window.addEventListener('click', (e) => {
-    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
-      notifDropdown.style.display = 'none';
-    }
-  });
-}
-
-// Función para marcar alerta individual como leída
-function marcarComoLeido(idCodigo) {
-  const alertaElement = document.getElementById('alerta-' + idCodigo);
-  if (alertaElement) {
-    alertaElement.style.transition = 'opacity 0.3s';
-    alertaElement.style.opacity = '0.3';
-    alertaElement.style.pointerEvents = 'none';
-    
-    // Guardar en localStorage que fue leída
-    let alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
-    if (!alertasLeidas.includes(idCodigo)) {
-      alertasLeidas.push(idCodigo);
-      localStorage.setItem('alertasLeidas', JSON.stringify(alertasLeidas));
-    }
-    
-    actualizarContadorAlertas();
+  // Notificaciones: toggle dropdown
+  const notifToggle = document.getElementById('notif-toggle');
+  const notifDropdown = document.getElementById('notif-dropdown');
+  if (notifToggle && notifDropdown) {
+    notifToggle.addEventListener('click', () => {
+      notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
+    });
+    window.addEventListener('click', (e) => {
+      if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
+        notifDropdown.style.display = 'none';
+      }
+    });
   }
-}
 
-// Función para marcar todas las alertas como leídas
-function marcarTodasLeidas() {
-  const alertas = document.querySelectorAll('.alerta-item');
-  const idsLeidos = [];
-  
-  alertas.forEach(alerta => {
-    alerta.style.transition = 'opacity 0.3s';
-    alerta.style.opacity = '0.3';
-    alerta.style.pointerEvents = 'none';
-    
-    const id = parseInt(alerta.id.replace('alerta-', ''));
-    if (id) idsLeidos.push(id);
-  });
-  
-  // Guardar todos en localStorage
-  let alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
-  idsLeidos.forEach(id => {
-    if (!alertasLeidas.includes(id)) {
-      alertasLeidas.push(id);
+  // Confirmar lectura (roles 2 y 3)
+  function ackUserNotif(idNotificacion) {
+    fetch('php/ack_user_notif.php', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
+      body: 'id=' + encodeURIComponent(idNotificacion)
+    }).then(r => r.json()).catch(() => ({}))
+      .finally(() => { window.location.reload(); });
+  }
+
+function marcarComoLeido(idCodigo) {
+    // Ocultar la alerta visualmente
+    const alertaElement = document.getElementById('alerta-' + idCodigo);
+    if (alertaElement) {
+      alertaElement.style.transition = 'opacity 0.3s';
+      alertaElement.style.opacity = '0.3';
+      alertaElement.style.pointerEvents = 'none';
+      
+      // Guardar en localStorage que fue leída
+      let alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
+      if (!alertasLeidas.includes(idCodigo)) {
+        alertasLeidas.push(idCodigo);
+        localStorage.setItem('alertasLeidas', JSON.stringify(alertasLeidas));
+      }
+      
+      // Actualizar contador
+      actualizarContadorAlertas();
     }
-  });
-  localStorage.setItem('alertasLeidas', JSON.stringify(alertasLeidas));
-  
-  actualizarContadorAlertas();
-}
+  }
 
 // Función para actualizar el contador de alertas
 function actualizarContadorAlertas() {
   const alertasVisibles = document.querySelectorAll('.alerta-item:not([style*="opacity"])').length;
-  const badge = document.getElementById('contador-alertas');
-  
+  const badge = document.querySelector('.notification-container span');
   if (badge) {
     if (alertasVisibles > 0) {
       badge.textContent = alertasVisibles;
-      badge.style.display = 'block';
     } else {
       badge.style.display = 'none';
     }
   }
 }
-
+  
 // Al cargar la página, ocultar las alertas ya leídas
 document.addEventListener('DOMContentLoaded', function() {
   const alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
-  
   alertasLeidas.forEach(idCodigo => {
     const alertaElement = document.getElementById('alerta-' + idCodigo);
     if (alertaElement) {
       alertaElement.style.display = 'none';
     }
   });
-  
   actualizarContadorAlertas();
 });
 </script>
