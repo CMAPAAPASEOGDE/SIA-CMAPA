@@ -253,6 +253,32 @@ function marcarComoLeido(idCodigo) {
     }
   }
 
+  // Función para marcar todas las alertas como leídas
+function marcarTodasLeidas() {
+  const alertas = document.querySelectorAll('.alerta-item');
+  const idsLeidos = [];
+  
+  alertas.forEach(alerta => {
+    alerta.style.transition = 'opacity 0.3s';
+    alerta.style.opacity = '0.3';
+    alerta.style.pointerEvents = 'none';
+    
+    const id = parseInt(alerta.id.replace('alerta-', ''));
+    if (id) idsLeidos.push(id);
+  });
+  
+  // Guardar todos en localStorage
+  let alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
+  idsLeidos.forEach(id => {
+    if (!alertasLeidas.includes(id)) {
+      alertasLeidas.push(id);
+    }
+  });
+  localStorage.setItem('alertasLeidas', JSON.stringify(alertasLeidas));
+  
+  actualizarContadorAlertas();
+}
+
 // Función para actualizar el contador de alertas
 function actualizarContadorAlertas() {
   const alertasVisibles = document.querySelectorAll('.alerta-item:not([style*="opacity"])').length;
