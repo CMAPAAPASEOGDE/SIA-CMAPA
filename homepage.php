@@ -213,8 +213,12 @@ window.addEventListener('click', (e) => {
   const notifToggle = document.getElementById('notif-toggle');
   const notifDropdown = document.getElementById('notif-dropdown');
   if (notifToggle && notifDropdown) {
-    notifToggle.addEventListener('click', () => {
+    notifToggle.addEventListener('click', (e) => {
+      e.stopPropagation(); // <- esto es CRÍTICO
       notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
+    });
+    notifDropdown.addEventListener('click', (e) => {
+      e.stopPropagation(); // permite interactuar dentro del panel
     });
     window.addEventListener('click', (e) => {
       if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
@@ -281,7 +285,9 @@ function marcarTodasLeidas() {
 
 // Función para actualizar el contador de alertas
 function actualizarContadorAlertas() {
-  const alertasVisibles = document.querySelectorAll('.alerta-item:not([style*="opacity"])').length;
+  const alertasVisibles = Array.from(document.querySelectorAll('.alerta-item'))
+  .filter(el => el.style.display !== 'none' && el.style.opacity !== '0.3')
+  .length;
   const badge = document.querySelector('.notification-container span');
   if (badge) {
     if (alertasVisibles > 0) {
