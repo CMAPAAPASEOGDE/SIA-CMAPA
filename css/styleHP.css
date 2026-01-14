@@ -43,6 +43,7 @@ header h1 {
   color: #ffffff;
 }
 
+/* ##################################################################### */
 /* Botón de Inicio */
 .home-button {
   background-color: #28a745;
@@ -63,6 +64,8 @@ header h1 {
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
+
+/* ####################################################################### */
 
 .header-right {
   display: flex;
@@ -96,6 +99,7 @@ header p {
   font-size: 16px;
 }
 
+/* ######################################################################################### */
 /* ---------------  Sistema de Notificaciones de Inventario --------------- */
 .notification-container {
   position: relative;
@@ -361,6 +365,8 @@ header p {
 .dropdown a:hover {
   background-color: #3a3c4d;
 }
+
+/* ###################################################################################### */
 
 /* Menú de usuario */
 .user-menu-container {

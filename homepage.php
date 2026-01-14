@@ -97,7 +97,7 @@ if ($conn) {
     <div class="notification-container">
       <button class="icon-btn" id="notif-toggle" type="button" aria-label="Alertas de Inventario">
         <img src="<?= $totalAlertas > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" 
-             class="notif-icon" alt="Alertas" />
+        class="notif-icon" alt="Alertas" />
         <?php if ($totalAlertas > 0): ?>
           <span class="contador-badge"><?= $totalAlertas ?></span>
         <?php endif; ?>
