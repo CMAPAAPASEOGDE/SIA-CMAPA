@@ -309,9 +309,22 @@ header p {
   transform: scale(1.1);
 }
 
+/*
 .alerta-item.leida {
   opacity: 0.4;
   pointer-events: none;
+}
+*/
+
+.alerta-item.leida .btn-marcar-leido {
+  background: #28a745;
+  pointer-events: none;
+  cursor: default;
+}
+
+.alerta-item.leida .btn-marcar-leido:hover {
+  background: #28a745;
+  transform: none;
 }
 
 /* Scrollbar personalizada */

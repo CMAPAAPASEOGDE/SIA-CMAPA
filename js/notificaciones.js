@@ -32,8 +32,13 @@ document.addEventListener('DOMContentLoaded', function() {
 // Marcar una alerta como leída
 function marcarComoLeido(idCodigo) {
     const alertaElement = document.querySelector(`.alerta-item[data-id="${idCodigo}"]`);
-    if (alertaElement) {
+    const boton = alertaElement?.querySelector('.btn-marcar-leido');
+    
+    if (alertaElement && boton) {
+        // Marcar como leída visualmente
         alertaElement.classList.add('leida');
+        boton.innerHTML = '✓';
+        boton.disabled = true;
         
         // Guardar en localStorage
         let alertasLeidas = JSON.parse(localStorage.getItem('alertasInventario') || '[]');
@@ -48,17 +53,31 @@ function marcarComoLeido(idCodigo) {
 
 // Marcar todas las alertas como leídas
 function marcarTodasLeidas() {
-    const alertas = document.querySelectorAll('.alerta-item');
+    const alertas = document.querySelectorAll('.alerta-item:not(.leida)');
     const idsLeidos = [];
     
     alertas.forEach(alerta => {
-        alerta.classList.add('leida');
         const id = parseInt(alerta.getAttribute('data-id'));
+        const boton = alerta.querySelector('.btn-marcar-leido');
+        
+        alerta.classList.add('leida');
+        if (boton) {
+            boton.innerHTML = '✓';
+            boton.disabled = true;
+        }
+        
         if (id) idsLeidos.push(id);
     });
     
-    // Guardar en localStorage
-    localStorage.setItem('alertasInventario', JSON.stringify(idsLeidos));
+    // Agregar a las existentes en localStorage
+    let alertasLeidas = JSON.parse(localStorage.getItem('alertasInventario') || '[]');
+    idsLeidos.forEach(id => {
+        if (!alertasLeidas.includes(id)) {
+            alertasLeidas.push(id);
+        }
+    });
+    
+    localStorage.setItem('alertasInventario', JSON.stringify(alertasLeidas));
     actualizarContador();
 }
 
@@ -68,8 +87,14 @@ function cargarAlertasLeidas() {
     
     alertasLeidas.forEach(id => {
         const alerta = document.querySelector(`.alerta-item[data-id="${id}"]`);
+        const boton = alerta?.querySelector('.btn-marcar-leido');
+        
         if (alerta) {
             alerta.classList.add('leida');
+            if (boton) {
+                boton.innerHTML = '✓';
+                boton.disabled = true;
+            }
         }
     });
     
@@ -92,4 +117,23 @@ function actualizarContador() {
             if (bellImg) bellImg.src = 'img/bell.png';
         }
     }
+    
+    // Si no hay alertas no leídas, mostrar mensaje opcional
+    const contenedor = document.querySelector('.alertas-container');
+    if (contenedor && alertasNoLeidas === 0) {
+        const todasLeidas = document.querySelectorAll('.alerta-item').length;
+        if (todasLeidas > 0) {
+            // Opcional: agregar un pequeño indicador de que todas están leídas
+            const header = document.querySelector('.notif-header .notif-title');
+            if (header && !header.innerHTML.includes('(Todas leídas)')) {
+                header.innerHTML += ' <span style="color: #28a745; font-size: 12px;">(Todas leídas)</span>';
+            }
+        }
+    }
+}
+
+// Función para limpiar alertas leídas (opcional - puedes agregar un botón para esto)
+function limpiarAlertasLeidas() {
+    localStorage.removeItem('alertasInventario');
+    location.reload();
 }
