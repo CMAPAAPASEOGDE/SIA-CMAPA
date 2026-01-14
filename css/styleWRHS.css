@@ -70,66 +70,6 @@ header h1 {
   transform: scale(1.05);
 }
 
-/* Estilos adicionales para el botón de inicio */
-        .home-button {
-            background-color: #28a745;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 5px;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: bold;
-            margin-left: 15px;
-            display: inline-block;
-            transition: background-color 0.3s;
-        }
-        .home-button:hover {
-            background-color: #218838;
-        }
-        
-        .alerta-item {
-            padding: 10px;
-            border-bottom: 1px solid #eaeaea;
-            transition: background-color 0.2s;
-        }
-        .alerta-item:hover {
-            background-color: #f5f5f5;
-        }
-        .alerta-sin-stock {
-            border-left: 4px solid #dc3545;
-        }
-        .alerta-reorden {
-            border-left: 4px solid #ffc107;
-        }
-        .marca-leido-btn {
-            background-color: #007bff;
-            color: white;
-            padding: 5px 10px;
-            border: none;
-            border-radius: 3px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        .marca-leido-btn:hover {
-            background-color: #0056b3;
-        }
-        .contador-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: #dc3545;
-            color: white;
-            border-radius: 50%;
-            padding: 2px 6px;
-            font-size: 10px;
-            font-weight: bold;
-            min-width: 18px;
-            text-align: center;
-        }
-        .notification-container {
-            position: relative;
-        }
 
 /* número de usuario */
 header p {
