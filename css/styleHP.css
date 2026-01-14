@@ -46,7 +46,7 @@ header h1 {
 /* ##################################################################### */
 /* Botón de Inicio */
 .home-button {
-  background-color: #28a745;
+  background-color: #0f037b;
   color: white;
   padding: 8px 16px;
   border: none;
@@ -60,7 +60,7 @@ header h1 {
 }
 
 .home-button:hover {
-  background-color: #218838;
+  background-color: #1a26a9;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
