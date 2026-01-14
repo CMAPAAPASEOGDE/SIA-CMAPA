@@ -97,7 +97,7 @@ if ($conn) {
           <?php endif; ?>
       </button>   
 
-      <div class="notification-dropdown" id="notif-dropdown" tabindex="-1">
+      <div class="notification-dropdown" id="notif-dropdown" style="display:none;" tabindex="-1">
         <?php if (!in_array($rolActual, [1, 2], true)): ?>
           <div class="notif-empty" style="padding:15px; text-align: center;">
             No hay notificaciones disponibles para este perfil
