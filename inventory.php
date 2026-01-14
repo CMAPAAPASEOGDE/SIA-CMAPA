@@ -170,9 +170,9 @@ $idRol = (int)$_SESSION['rol'];
       <button class="icon-btn" id="notif-toggle" type="button" aria-label="Alertas de Inventario">
         <img src="<?= $totalAlertas > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" class="imgh3" alt="Alertas" />
         <?php if ($totalAlertas > 0): ?>
-          <span style="position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px;"><?= $totalAlertas ?></span>
+            <span style="position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px;"><?= $totalAlertas ?></span>
         <?php endif; ?>
-      </button>    
+      </button>
 
       <div class="notification-dropdown" id="notif-dropdown" style="display:none; width: 350px; max-height: 400px; overflow-y: auto;">
         <?php if ($totalAlertas === 0): ?>
@@ -180,7 +180,7 @@ $idRol = (int)$_SESSION['rol'];
             ✅ Todo el inventario está en niveles óptimos
           </div>
         <?php else: ?>
-          <div style="padding: 10px; background-color: #33383dff; border-bottom: 1px solid #dee2e6;">
+          <div style="padding: 10px; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;">
             <strong>⚠️ Alertas de Inventario (<?= $totalAlertas ?>)</strong>
           </div>
           <div id="alertas-container">
