@@ -22,85 +22,39 @@ if ($conn === false) {
     die("Error de conexión: " . print_r(sqlsrv_errors(), true));
 }
 
-// ============================
-// NOTIFICACIONES SOLICITUDES
-// ============================
-$rolActual   = (int)($_SESSION['rol'] ?? 0);
-$unreadCount = 0;
-$notifList   = [];
-$notifTarget = ($rolActual === 1) ? 'admnrqst.php' : 'inventory.php';
-
-// Admin (rol 1): pendientes en Modificaciones
-if ($rolActual === 1) {
-    $stmtCount = sqlsrv_query($conn,
-        "SELECT COUNT(*) AS c
-           FROM Modificaciones
-          WHERE solicitudRevisada = 0");
-    $stmtList  = sqlsrv_query($conn,
-        "SELECT TOP 10 M.idModificacion, M.descripcion, M.fechaSolicitud, M.tipo, M.cantidad,
-                P.codigo AS codigoProducto
-           FROM Modificaciones M
-      LEFT JOIN Productos P ON P.idCodigo = M.idCodigo
-          WHERE M.solicitudRevisada = 0
-       ORDER BY M.fechaSolicitud DESC");
-}
-// Usuarios 2 y 3: avisos desde Notificaciones
-elseif (in_array($rolActual, [2,3], true)) {
-    $stmtCount = sqlsrv_query($conn,
-        "SELECT COUNT(*) AS c
-           FROM Notificaciones
-          WHERE estatusRevision = 0");
-    $stmtList  = sqlsrv_query($conn,
-        "SELECT TOP 10 N.idNotificacion,
-                N.descripcion AS comentarioAdmin,
-                N.fechaNotificacion,
-                P.codigo      AS codigoProducto
-           FROM Notificaciones N
-      LEFT JOIN Modificaciones M ON M.idModificacion = N.idModificacion
-      LEFT JOIN Productos      P ON P.idCodigo       = M.idCodigo
-          WHERE N.estatusRevision = 0
-       ORDER BY N.fechaNotificacion DESC");
-}
-
-if (isset($stmtCount) && $stmtCount) {
-    $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
-    $unreadCount = (int)($row['c'] ?? 0);
-    sqlsrv_free_stmt($stmtCount);
-}
-if (isset($stmtList) && $stmtList) {
-    while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
-        $notifList[] = $r;
-    }
-    sqlsrv_free_stmt($stmtList);
-}
-
-// ============================
-// NOTIFICACIONES INVENTARIO
-// ============================
 $rolActual = (int)($_SESSION['rol'] ?? 0);
+
+// ============================
+// NUEVO SISTEMA DE NOTIFICACIONES DE INVENTARIO
+// ============================
 $alertasInventario = [];
 $totalAlertas = 0;
 
 // Para Admin (1) y Almacenista (2): Alertas de inventario
 if (in_array($rolActual, [1, 2], true)) {
-    // Productos en punto de reorden o sin stock
+    // Productos con problemas de inventario
     $sqlAlertas = "SELECT 
                     p.idCodigo,
                     p.codigo,
                     p.descripcion,
                     i.cantidadActual,
                     p.puntoReorden,
+                    p.stockMaximo,
                     CASE 
                         WHEN i.cantidadActual = 0 THEN 'SIN STOCK'
-                        WHEN i.cantidadActual <= p.puntoReorden THEN 'PUNTO REORDEN'
+                        WHEN i.cantidadActual <= p.puntoReorden THEN 'BAJO STOCK'
+                        WHEN i.cantidadActual >= p.stockMaximo THEN 'SOBRE STOCK'
                     END AS tipoAlerta,
                     CASE 
                         WHEN i.cantidadActual = 0 THEN 1
                         WHEN i.cantidadActual <= p.puntoReorden THEN 2
+                        WHEN i.cantidadActual >= p.stockMaximo THEN 3
                     END AS prioridad
                 FROM Productos p
                 INNER JOIN Inventario i ON p.idCodigo = i.idCodigo
-                WHERE i.cantidadActual <= p.puntoReorden
+                WHERE i.cantidadActual = 0 
+                   OR i.cantidadActual <= p.puntoReorden 
+                   OR i.cantidadActual >= p.stockMaximo
                 ORDER BY prioridad ASC, i.cantidadActual ASC";
     
     $stmtAlertas = sqlsrv_query($conn, $sqlAlertas);
@@ -115,7 +69,7 @@ if (in_array($rolActual, [1, 2], true)) {
 }
 
 // ============================
-// CONSULTA INVENTARIO (igual pero con ORDER BY)
+// CONSULTA INVENTARIO
 // ============================
 $sql = "SELECT 
             p.codigo, 
@@ -141,8 +95,6 @@ $stmt = sqlsrv_query($conn, $sql);
 if ($stmt === false) {
     die("Error en la consulta: " . print_r(sqlsrv_errors(), true));
 }
-
-$idRol = (int)$_SESSION['rol'];
 ?>
 
 <!DOCTYPE html>
@@ -160,50 +112,73 @@ $idRol = (int)$_SESSION['rol'];
   <div class="brand">
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
-    <!-- NUEVO BOTÓN DE INICIO -->
     <a href="homepage.php" class="home-button">INICIO</a>
   </div>
 
   <div class="header-right">
-    <!-- Campana de notificaciones de inventario -->
+    <!-- Sistema de Notificaciones de Inventario -->
     <div class="notification-container">
       <button class="icon-btn" id="notif-toggle" type="button" aria-label="Alertas de Inventario">
-        <img src="<?= $totalAlertas > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" class="imgh3" alt="Alertas" />
+        <img src="<?= $totalAlertas > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" 
+             class="notif-icon" alt="Alertas" />
         <?php if ($totalAlertas > 0): ?>
-          <span style="position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px;"><?= $totalAlertas ?></span>
+          <span class="contador-badge"><?= $totalAlertas ?></span>
         <?php endif; ?>
-      </button>    
+      </button>
 
-      <div class="notification-dropdown" id="notif-dropdown" style="display:none; width: 350px; max-height: 400px; overflow-y: auto;">
+      <div class="notification-dropdown" id="notif-dropdown">
         <?php if ($totalAlertas === 0): ?>
-          <div class="notif-empty" style="padding:15px; text-align: center;">
-            ✅ Todo el inventario está en niveles óptimos
+          <div class="notif-empty">
+            <div class="check-icon">✅</div>
+            <strong>Inventario Óptimo</strong>
+            <p>Todos los productos están en niveles adecuados</p>
           </div>
         <?php else: ?>
-          <div style="padding: 10px; background-color: #33383dff; border-bottom: 1px solid #dee2e6;">
-            <strong>⚠️ Alertas de Inventario (<?= $totalAlertas ?>)</strong>
+          <div class="notif-header">
+            <span class="notif-title">⚠️ Alertas de Inventario (<?= $totalAlertas ?>)</span>
+            <button class="btn-marcar-todas" onclick="marcarTodasLeidas()">
+              Marcar todas como leídas
+            </button>
           </div>
-          <div id="alertas-container">
+          <div class="alertas-container">
             <?php foreach ($alertasInventario as $alerta): 
-              $claseAlerta = ($alerta['tipoAlerta'] === 'SIN STOCK') ? 'alerta-sin-stock' : 'alerta-reorden';
-              $iconoAlerta = ($alerta['tipoAlerta'] === 'SIN STOCK') ? '🔴' : '🟡';
+              $claseAlerta = '';
+              $iconoAlerta = '';
+              
+              switch($alerta['tipoAlerta']) {
+                case 'SIN STOCK':
+                  $claseAlerta = 'alerta-sin-stock';
+                  $iconoAlerta = '🔴';
+                  break;
+                case 'BAJO STOCK':
+                  $claseAlerta = 'alerta-bajo-stock';
+                  $iconoAlerta = '🟡';
+                  break;
+                case 'SOBRE STOCK':
+                  $claseAlerta = 'alerta-sobre-stock';
+                  $iconoAlerta = '🟢';
+                  break;
+              }
             ?>
-              <div class="alerta-item <?= $claseAlerta ?>" id="alerta-<?= $alerta['idCodigo'] ?>">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                  <div style="flex: 1;">
-                    <div style="font-weight: bold; margin-bottom: 5px;">
-                      <?= $iconoAlerta ?> <?= htmlspecialchars($alerta['codigo']) ?> - <?= htmlspecialchars($alerta['tipoAlerta']) ?>
+              <div class="alerta-item <?= $claseAlerta ?>" data-id="<?= $alerta['idCodigo'] ?>">
+                <div class="alerta-content">
+                  <div class="alerta-info">
+                    <div class="alerta-header">
+                      <span class="alerta-icono"><?= $iconoAlerta ?></span>
+                      <strong><?= htmlspecialchars($alerta['codigo']) ?></strong>
+                      <span class="alerta-tipo"><?= htmlspecialchars($alerta['tipoAlerta']) ?></span>
                     </div>
-                    <div style="font-size: 13px; color: #666;">
+                    <div class="alerta-descripcion">
                       <?= htmlspecialchars($alerta['descripcion']) ?>
                     </div>
-                    <div style="font-size: 12px; color: #999; margin-top: 3px;">
-                      Cantidad actual: <strong><?= $alerta['cantidadActual'] ?></strong> | 
-                      Punto de reorden: <strong><?= $alerta['puntoReorden'] ?></strong>
+                    <div class="alerta-detalles">
+                      <span>Stock: <strong><?= $alerta['cantidadActual'] ?></strong></span>
+                      <span>Reorden: <strong><?= $alerta['puntoReorden'] ?></strong></span>
+                      <span>Máximo: <strong><?= $alerta['stockMaximo'] ?></strong></span>
                     </div>
                   </div>
-                  <button class="marca-leido-btn" onclick="marcarComoLeido(<?= $alerta['idCodigo'] ?>)">
-                    ✓ Leído
+                  <button class="btn-marcar-leido" onclick="marcarComoLeido(<?= $alerta['idCodigo'] ?>)">
+                    ✓
                   </button>
                 </div>
               </div>
@@ -219,8 +194,8 @@ $idRol = (int)$_SESSION['rol'];
       <button class="icon-btn" id="user-toggle" type="button">
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
       </button>
-      <div class="user-dropdown" id="user-dropdown" style="display:none;">
-        <p><strong>Usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
+      <div class="user-dropdown" id="user-dropdown">
+        <p><strong>Tipo de usuario:</strong> <?= $rolActual ?></p>
         <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
         <a href="passchng.php"><button class="user-option" type="button">CAMBIAR CONTRASEÑA</button></a>
       </div>
@@ -230,10 +205,12 @@ $idRol = (int)$_SESSION['rol'];
       <button class="icon-btn" id="menu-toggle" type="button">
         <img src="img/menu.png" alt="Menú" />
       </button>
-      <div class="dropdown" id="dropdown-menu" style="display:none;">
+      <div class="dropdown" id="dropdown-menu">
         <a href="homepage.php">Inicio</a>
         <a href="mnthclsr.php">Cierre de mes</a>
-        <a href="admin.php">Menu de administrador</a>
+        <?php if ($rolActual === 1): ?>
+          <a href="admin.php">Menu de administrador</a>
+        <?php endif; ?>
         <a href="about.php">Acerca de</a>
         <a href="help.php">Ayuda</a>
         <a href="logout.php">Cerrar Sesión</a>
@@ -360,133 +337,10 @@ $idRol = (int)$_SESSION['rol'];
     </div>
 </main>
 
-<script>
-  // Menú hamburguesa
-  const toggle = document.getElementById('menu-toggle');
-  const dropdown = document.getElementById('dropdown-menu');
-  if (toggle && dropdown) {
-    toggle.addEventListener('click', () => {
-      dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
-    });
-    window.addEventListener('click', (e) => {
-      if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
-        dropdown.style.display = 'none';
-      }
-    });
-  }
+<script src="js/notificaciones.js"></script>
+<script src="js/menus.js"></script>
+<script src="js/inventory-filters.js"></script>
 
-  // Menú de usuario
-  const userToggle = document.getElementById('user-toggle');
-  const userDropdown = document.getElementById('user-dropdown');
-  if (userToggle && userDropdown) {
-    userToggle.addEventListener('click', () => {
-      userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
-    });
-    window.addEventListener('click', (e) => {
-      if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
-        userDropdown.style.display = 'none';
-      }
-    });
-  }
-
-  // Notificaciones: toggle dropdown
-  const notifToggle = document.getElementById('notif-toggle');
-  const notifDropdown = document.getElementById('notif-dropdown');
-  if (notifToggle && notifDropdown) {
-    notifToggle.addEventListener('click', () => {
-      notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
-    });
-    window.addEventListener('click', (e) => {
-      if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
-        notifDropdown.style.display = 'none';
-      }
-    });
-  }
-
-  // Confirmar lectura (roles 2 y 3)
-  function ackUserNotif(idNotificacion) {
-    fetch('php/ack_user_notif.php', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
-      body: 'id=' + encodeURIComponent(idNotificacion)
-    }).then(r => r.json()).catch(() => ({}))
-      .finally(() => { window.location.reload(); });
-  }
-
-  // Filtrado de la tabla
-  function filterTable() {
-    const searchText = document.getElementById('search').value.toLowerCase();
-    const linea = document.getElementById('linea').value;
-    const tipo = document.getElementById('tipo').value;
-    const estado = document.getElementById('estado').value;
-
-    const table = document.getElementById('inventory-table');
-    const rows = table.tBodies[0].rows;
-
-    for (let i = 0; i < rows.length; i++) {
-      const cells = rows[i].cells;
-      const show =
-        (searchText === '' ||
-          cells[0].textContent.toLowerCase().includes(searchText) ||
-          cells[1].textContent.toLowerCase().includes(searchText)) &&
-        (linea === '' || cells[2].textContent === linea) &&
-        (tipo === '' || cells[9].textContent === tipo) &&
-        (estado === '' || cells[10].textContent.includes(estado));
-      rows[i].style.display = show ? '' : 'none';
-    }
-  }
-
-  // Inicializar la tabla
-  document.addEventListener('DOMContentLoaded', filterTable);
-</script>
-
-<script>
-  function marcarComoLeido(idCodigo) {
-    // Ocultar la alerta visualmente
-    const alertaElement = document.getElementById('alerta-' + idCodigo);
-    if (alertaElement) {
-      alertaElement.style.transition = 'opacity 0.3s';
-      alertaElement.style.opacity = '0.3';
-      alertaElement.style.pointerEvents = 'none';
-      
-      // Guardar en localStorage que fue leída
-      let alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
-      if (!alertasLeidas.includes(idCodigo)) {
-        alertasLeidas.push(idCodigo);
-        localStorage.setItem('alertasLeidas', JSON.stringify(alertasLeidas));
-      }
-      
-      // Actualizar contador
-      actualizarContadorAlertas();
-    }
-  }
-  
-  // Función para actualizar el contador de alertas
-  function actualizarContadorAlertas() {
-    const alertasVisibles = document.querySelectorAll('.alerta-item:not([style*="opacity"])').length;
-    const badge = document.querySelector('.notification-container span');
-    if (badge) {
-      if (alertasVisibles > 0) {
-        badge.textContent = alertasVisibles;
-      } else {
-        badge.style.display = 'none';
-      }
-    }
-  }
-  
-  // Al cargar la página, ocultar las alertas ya leídas
-  document.addEventListener('DOMContentLoaded', function() {
-    const alertasLeidas = JSON.parse(localStorage.getItem('alertasLeidas') || '[]');
-    alertasLeidas.forEach(idCodigo => {
-      const alertaElement = document.getElementById('alerta-' + idCodigo);
-      if (alertaElement) {
-        alertaElement.style.display = 'none';
-      }
-    });
-    actualizarContadorAlertas();
-  });
-</script>
- 
 <?php
 // Cerrar conexión a la base de datos
 sqlsrv_free_stmt($stmt);

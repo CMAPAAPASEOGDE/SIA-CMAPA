@@ -10,53 +10,74 @@ html {
 body {
   margin: 0;
   background-color: #ffffff;
-  color: #ffffff;
+  color: #333;
 }
 
 /* ---------------  Encabezado --------------- */
-/* -------- Encabezado -------- */
 header {
   background-color: #4a4c60;
   height: 50px;
   display: flex;
   align-items: center;
   padding: 0 10px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
-/* agrupa logo + título */
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;            /* espacio entre logo y texto */
+  gap: 10px;
 }
 
-/* logo */
 .logo {
   height: 30px;
 }
 
-/* título */
 header h1 {
   margin: 0;
   font-size: 18px;
   color: #ffffff;
 }
 
-/* bloque derecho (ya lo tenías) */
+/* Botón de Inicio */
+.home-button {
+  background-color: #28a745;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: bold;
+  margin-left: 20px;
+  display: inline-block;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.home-button:hover {
+  background-color: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
 .header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-left: auto;    /* empuja todo esto a la derecha */
+  gap: 15px;
+  margin-left: auto;
 }
 
 .icon-btn {
   background: none;
   border: none;
-  padding: 0;
+  padding: 5px;
   cursor: pointer;
   display: flex;
   align-items: center;
+  position: relative;
 }
 
 .icon-btn img {
@@ -69,66 +90,263 @@ header h1 {
   transform: scale(1.05);
 }
 
- /* Estilos adicionales para el botón de inicio */
-        .home-button {
-            background-color: #2215b2ff;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 5px;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-left: 15px;
-            transition: background-color 0.3s;
-        }
-        .home-button:hover {
-            background-color: #270353ff;
-        }
-        
-        /* Estilos para las alertas de inventario */
-        .alerta-item {
-            padding: 10px;
-            border-bottom: 1px solid #eaeaea;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .alerta-item:hover {
-            background-color: #f5f5f5;
-        }
-        .alerta-sin-stock {
-            border-left: 4px solid #dc3545;
-        }
-        .alerta-reorden {
-            border-left: 4px solid #ffc107;
-        }
-        .marca-leido-btn {
-            background-color: #007bff;
-            color: white;
-            padding: 4px 8px;
-            border: none;
-            border-radius: 3px;
-            font-size: 12px;
-            cursor: pointer;
-            float: right;
-        }
-        .marca-leido-btn:hover {
-            background-color: #0056b3;
-        }
-
-/* número de usuario */
 header p {
   margin: 0;
   font-size: 16px;
+  color: white;
 }
+
+/* ---------------  Sistema de Notificaciones de Inventario --------------- */
+.notification-container {
+  position: relative;
+}
+
+.notif-icon {
+  height: 25px;
+}
+
+.contador-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #dc3545;
+  color: white;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  min-width: 18px;
+  text-align: center;
+  border: 2px solid #4a4c60;
+}
+
+.notification-dropdown {
+  position: absolute;
+  right: 0;
+  top: 35px;
+  width: 400px;
+  max-height: 500px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+  display: none;
+  overflow: hidden;
+  z-index: 1001;
+}
+
+.notif-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #333;
+}
+
+.notif-empty .check-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.notif-empty strong {
+  display: block;
+  font-size: 18px;
+  color: #28a745;
+  margin-bottom: 5px;
+}
+
+.notif-empty p {
+  color: #666;
+  font-size: 14px;
+  margin: 0;
+}
+
+.notif-header {
+  padding: 15px;
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notif-title {
+  font-weight: bold;
+  color: #333;
+  font-size: 15px;
+}
+
+.btn-marcar-todas {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-marcar-todas:hover {
+  background: #5a6268;
+}
+
+.alertas-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.alerta-item {
+  border-bottom: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.alerta-item:last-child {
+  border-bottom: none;
+}
+
+.alerta-content {
+  padding: 12px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.alerta-info {
+  flex: 1;
+  padding-right: 10px;
+}
+
+.alerta-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.alerta-icono {
+  font-size: 16px;
+}
+
+.alerta-header strong {
+  color: #333;
+  font-size: 14px;
+}
+
+.alerta-tipo {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+.alerta-descripcion {
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+
+.alerta-detalles {
+  display: flex;
+  gap: 15px;
+  font-size: 11px;
+  color: #999;
+}
+
+.alerta-detalles strong {
+  color: #333;
+}
+
+/* Tipos de alertas */
+.alerta-sin-stock {
+  background: #fff5f5;
+  border-left: 4px solid #dc3545;
+}
+
+.alerta-sin-stock .alerta-tipo {
+  background: #dc3545;
+  color: white;
+}
+
+.alerta-bajo-stock {
+  background: #fffdf0;
+  border-left: 4px solid #ffc107;
+}
+
+.alerta-bajo-stock .alerta-tipo {
+  background: #ffc107;
+  color: #333;
+}
+
+.alerta-sobre-stock {
+  background: #f0fff4;
+  border-left: 4px solid #28a745;
+}
+
+.alerta-sobre-stock .alerta-tipo {
+  background: #28a745;
+  color: white;
+}
+
+.btn-marcar-leido {
+  background: #007bff;
+  color: white;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-marcar-leido:hover {
+  background: #0056b3;
+  transform: scale(1.1);
+}
+
+/* Estado de alertas leídas */
+.alerta-item.leida .btn-marcar-leido {
+  background: #28a745;
+  pointer-events: none;
+  cursor: default;
+}
+
+.alerta-item.leida .btn-marcar-leido:hover {
+  background: #28a745;
+  transform: none;
+}
+
+/* Scrollbar personalizada */
+.alertas-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.alertas-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.alertas-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.alertas-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* ---------------  Menús desplegables --------------- */
+.menu-container {
+  position: relative;
+}
+
 .dropdown {
   position: absolute;
   right: 0;
-  top: 40px;                      /* debajo del header */
+  top: 40px;
   background-color: #4a4c60;
   border-radius: 8px;
-  display: none;                  /* se activa por JS */
+  display: none;
   flex-direction: column;
   min-width: 160px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
@@ -151,12 +369,11 @@ header p {
   background-color: #3a3c4d;
 }
 
-/* Contenedor y botón de usuario */
+/* Menú de usuario */
 .user-menu-container {
   position: relative;
 }
 
-/* Menú desplegable oculto */
 .user-dropdown {
   position: absolute;
   top: 40px;
@@ -193,34 +410,7 @@ header p {
   background-color: #222;
 }
 
-.notification-container {
-  position: relative;
-}
-
-.notification-dropdown {
-  position: absolute;
-  right: 0;
-  top: 40px;
-  background-color: #4a4c60;
-  color: white;
-  border-radius: 8px;
-  padding: 10px;
-  width: 260px;
-  display: none;
-  font-size: 13px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
-}
-
-.notification-dropdown p {
-  margin: 8px 0;
-  line-height: 1.4;
-}
-
-.notification-dropdown u {
-  text-decoration-thickness: 1px;
-}
-
+/* ---------------  Contenido principal --------------- */
 .inventory-container {
   padding: 30px;
   font-family: monospace;
@@ -238,11 +428,70 @@ header p {
   color: black;
 }
 
+/* Filtros y búsqueda */
+.inventory-filters {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.filter-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.filter-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.filter-group input,
+.filter-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.search-box {
+  display: flex;
+  gap: 10px;
+}
+
+.search-box input {
+  flex: 1;
+}
+
+.search-box button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.search-box button:hover {
+  background-color: #2980b9;
+}
+
+/* Tabla de inventario */
 .inventory-table-wrapper {
   width: 100%;
   max-width: 1200px;
-  max-height: 800px;
-  overflow-x: auto;
+  max-height: 600px;
+  overflow: auto;
   background-color: #4a4c60;
   border-radius: 10px;
   padding: 15px;
@@ -250,7 +499,6 @@ header p {
 
 .inventory-table {
   width: 100%;
-  max-width: 1000px;
   border-collapse: collapse;
   color: white;
   font-size: 14px;
@@ -266,12 +514,15 @@ header p {
 
 .inventory-table th {
   background-color: #3b3d50;
+  position: sticky;
+  top: 0;
 }
 
-tr:hover {
+.inventory-table tr:hover {
   background-color: #5c5f72;
 }
 
+/* Estados de inventario */
 .estado {
   font-weight: bold;
   padding: 5px 10px;
@@ -279,25 +530,56 @@ tr:hover {
 }
 
 .estado.green {
-  color: green;
+  color: #00ff00;
 }
 
 .estado.yellow {
-  color: yellow;
+  color: #ffff00;
 }
 
 .estado.red {
-  color: red;
+  color: #ff0000;
 }
 
 .estado.green-bright {
-    color: rgb(0, 255, 0);
+  color: #00ff7f;
 }
 
-/* Responsive behavior */
+/* Indicadores de cantidad */
+.no-stock {
+  color: #ff0000;
+  font-weight: bold;
+}
+
+.low-stock {
+  color: #ffa500;
+  font-weight: 600;
+}
+
+.high-stock {
+  color: #00ff7f;
+  font-weight: 600;
+}
+
+/* Precios censurados */
+.censored {
+  letter-spacing: 3px;
+  font-weight: bold;
+  color: #999;
+}
+
+/* ---------------  Responsive --------------- */
 @media screen and (max-width: 768px) {
   .inventory-title {
-    font-size: 24px;
+    font-size: 30px;
+  }
+
+  .inventory-filters {
+    padding: 15px;
+  }
+
+  .filter-group {
+    min-width: 100%;
   }
 
   .inventory-table-wrapper {
@@ -312,80 +594,11 @@ tr:hover {
 
   .estado {
     padding: 3px 6px;
-    font-size: 12px;
+    font-size: 11px;
+  }
+  
+  .notification-dropdown {
+    width: 320px;
+    right: -50px;
   }
 }
-
-/* Filtros y búsqueda */
-        .inventory-filters {
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        
-        .filter-group {
-            flex: 1;
-            min-width: 200px;
-        }
-        
-        .filter-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #2c3e50;
-        }
-        
-        .filter-group input,
-        .filter-group select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-        
-        .search-box {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .search-box input {
-            flex: 1;
-        }
-        
-        .search-box button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 15px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        
-        .search-box button:hover {
-            background-color: #2980b9;
-        }
-        
-        /* Indicador visual para cantidades bajas */ 
-        .low-stock {
-            color: #e74c3c;
-            font-weight: 600;
-        }
-        
-        .high-stock {
-            color: #27ae60;
-            font-weight: 600;
-        }
-        
-        /* Para precios censurados */
-        .censored {
-            letter-spacing: 3px;
-            font-weight: bold;
-        }
