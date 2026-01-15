@@ -7,8 +7,71 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
 }
+
+$rolActual = (int)($_SESSION['rol'] ?? 0);
+
+// Conexión a la base de datos
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = [
+    "Database" => "db_sia",
+    "Uid"      => "cmapADMIN",
+    "PWD"      => "@siaADMN56*",
+    "Encrypt"  => true,
+    "TrustServerCertificate" => false
+];
+$conn = sqlsrv_connect($serverName, $connectionOptions);
+
+// ========================
+// NUEVO SISTEMA DE NOTIFICACIONES DE INVENTARIO
+// ========================
+$alertasInventario = [];
+$totalAlertas = 0;
+
+// Solo para Admin (1) y Almacenista (2)
+if ($conn && in_array($rolActual, [1, 2], true)) {
+    // Consulta para detectar productos con problemas de inventario
+    $sqlAlertas = "SELECT 
+                    p.idCodigo,
+                    p.codigo,
+                    p.descripcion,
+                    i.cantidadActual,
+                    p.puntoReorden,
+                    p.stockMaximo,
+                    CASE 
+                        WHEN i.cantidadActual = 0 THEN 'SIN STOCK'
+                        WHEN i.cantidadActual <= p.puntoReorden THEN 'BAJO STOCK'
+                        WHEN i.cantidadActual >= p.stockMaximo THEN 'SOBRE STOCK'
+                    END AS tipoAlerta,
+                    CASE 
+                        WHEN i.cantidadActual = 0 THEN 1
+                        WHEN i.cantidadActual <= p.puntoReorden THEN 2
+                        WHEN i.cantidadActual >= p.stockMaximo THEN 3
+                    END AS prioridad
+                FROM Productos p
+                INNER JOIN Inventario i ON p.idCodigo = i.idCodigo
+                WHERE i.cantidadActual = 0 
+                   OR i.cantidadActual <= p.puntoReorden 
+                   OR i.cantidadActual >= p.stockMaximo
+                ORDER BY prioridad ASC, i.cantidadActual ASC";
+    
+    $stmtAlertas = sqlsrv_query($conn, $sqlAlertas);
+    if ($stmtAlertas) {
+        while ($alerta = sqlsrv_fetch_array($stmtAlertas, SQLSRV_FETCH_ASSOC)) {
+            $alertasInventario[] = $alerta;
+        }
+        sqlsrv_free_stmt($stmtAlertas);
+    }
+    
+    $totalAlertas = count($alertasInventario);
+}
+
+if ($conn) {
+    sqlsrv_close($conn);
+}
 ?>
+
 <!DOCTYPE html>
+
 <html>
 <head>
     <meta charset="UTF-8" />
@@ -22,25 +85,93 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
   <div class="brand">
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
+    <a href="homepage.php" class="home-button">INICIO</a>
   </div>
 
   <div class="header-right">
+    <!-- Sistema de Notificaciones de Inventario -->
+    <?php if (in_array($rolActual, [1, 2], true)): ?>
     <div class="notification-container">
-      <button class="icon-btn" id="notif-toggle" type="button">
-        <img src="img/bell.png" class="imgh3" alt="Notificaciones" />
+      <button class="icon-btn" id="notif-toggle" type="button" aria-label="Alertas de Inventario">
+        <img src="<?= $totalAlertas > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" 
+        class="notif-icon" alt="Alertas" />
+        <?php if ($totalAlertas > 0): ?>
+          <span class="contador-badge"><?= $totalAlertas ?></span>
+        <?php endif; ?>
       </button>
-      <div class="notification-dropdown" id="notif-dropdown" style="display:none;"></div>
-    </div>
 
-    <p><?= htmlspecialchars($_SESSION['usuario'] ?? '') ?></p>
+      <div class="notification-dropdown" id="notif-dropdown">
+        <?php if ($totalAlertas === 0): ?>
+          <div class="notif-empty">
+            <div class="check-icon">✅</div>
+            <strong>Inventario Óptimo</strong>
+            <p>Todos los productos están en niveles adecuados</p>
+          </div>
+        <?php else: ?>
+          <div class="notif-header">
+            <span class="notif-title">⚠️ Alertas de Inventario (<?= $totalAlertas ?>)</span>
+            <button class="btn-marcar-todas" onclick="marcarTodasLeidas()">
+              Marcar todas como leídas
+            </button>
+          </div>
+          <div class="alertas-container">
+            <?php foreach ($alertasInventario as $alerta): 
+              $claseAlerta = '';
+              $iconoAlerta = '';
+              
+              switch($alerta['tipoAlerta']) {
+                case 'SIN STOCK':
+                  $claseAlerta = 'alerta-sin-stock';
+                  $iconoAlerta = '🔴';
+                  break;
+                case 'BAJO STOCK':
+                  $claseAlerta = 'alerta-bajo-stock';
+                  $iconoAlerta = '🟡';
+                  break;
+                case 'SOBRE STOCK':
+                  $claseAlerta = 'alerta-sobre-stock';
+                  $iconoAlerta = '🟢';
+                  break;
+              }
+            ?>
+              <div class="alerta-item <?= $claseAlerta ?>" data-id="<?= $alerta['idCodigo'] ?>">
+                <div class="alerta-content">
+                  <div class="alerta-info">
+                    <div class="alerta-header">
+                      <span class="alerta-icono"><?= $iconoAlerta ?></span>
+                      <strong><?= htmlspecialchars($alerta['codigo']) ?></strong>
+                      <span class="alerta-tipo"><?= htmlspecialchars($alerta['tipoAlerta']) ?></span>
+                    </div>
+                    <div class="alerta-descripcion">
+                      <?= htmlspecialchars($alerta['descripcion']) ?>
+                    </div>
+                    <div class="alerta-detalles">
+                      <span>Stock actual: <strong><?= $alerta['cantidadActual'] ?></strong></span>
+                      <span>Punto reorden: <strong><?= $alerta['puntoReorden'] ?></strong></span>
+                      <span>Stock máximo: <strong><?= $alerta['stockMaximo'] ?></strong></span>
+                    </div>
+                  </div>
+                  <button class="btn-marcar-leido" onclick="marcarComoLeido(<?= $alerta['idCodigo'] ?>)">
+                    ✓
+                  </button>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+
+    <p><?= htmlspecialchars($_SESSION['usuario'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
 
     <div class="user-menu-container">
       <button class="icon-btn" id="user-toggle" type="button">
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
       </button>
-      <div class="user-dropdown" id="user-dropdown" style="display:none;">
-        <p><strong>Usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
-        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '') ?></p>
+      <div class="user-dropdown" id="user-dropdown">
+        <p><strong>Tipo de Usuario:</strong> <?= $rolActual ?></p>
+        <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
         <a href="passchng.php"><button class="user-option" type="button">CAMBIAR CONTRASEÑA</button></a>
       </div>
     </div>
@@ -49,13 +180,15 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
       <button class="icon-btn" id="menu-toggle" type="button">
         <img src="img/menu.png" alt="Menú" />
       </button>
-      <div class="dropdown" id="dropdown-menu" style="display:none;">
+      <div class="dropdown" id="dropdown-menu">
         <a href="homepage.php">Inicio</a>
         <a href="mnthclsr.php">Cierre de mes</a>
-        <a href="admin.php">Menu de administador</a>
+        <?php if ($rolActual === 1): ?>
+          <a href="admin.php">Menu de administrador</a>
+        <?php endif; ?>
         <a href="about.php">Acerca de</a>
         <a href="help.php">Ayuda</a>
-        <a href="logout.php">Cerrar Sesion</a>
+        <a href="logout.php">Cerrar Sesión</a>
       </div>
     </div>
   </div>
@@ -134,34 +267,8 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
   document.getElementById('btn-xlsx').onclick = () => window.open(buildUrl('xlsx'), '_blank');
 </script>
 
-<script>
-  // menús
-  const toggle = document.getElementById('menu-toggle');
-  const dropdown = document.getElementById('dropdown-menu');
-  toggle.addEventListener('click', () => {
-    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
-  });
-  window.addEventListener('click', (e) => {
-    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
-  });
+<script src="js/notificaciones.js"></script>
+<script src="js/menus.js"></script>
 
-  const userToggle = document.getElementById('user-toggle');
-  const userDropdown = document.getElementById('user-dropdown');
-  userToggle.addEventListener('click', () => {
-    userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
-  });
-  window.addEventListener('click', (e) => {
-    if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) userDropdown.style.display = 'none';
-  });
-
-  const notifToggle = document.getElementById('notif-toggle');
-  const notifDropdown = document.getElementById('notif-dropdown');
-  notifToggle.addEventListener('click', () => {
-    notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
-  });
-  window.addEventListener('click', (e) => {
-    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) notifDropdown.style.display = 'none';
-  });
-</script>
 </body>
 </html>
