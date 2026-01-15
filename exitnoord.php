@@ -39,83 +39,65 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
     $productos[] = $row;
 }
 
-// -------- Notificaciones (nuevo esquema) --------
-$rolActual   = (int)($_SESSION['rol'] ?? 0);
-$unreadCount = 0;
-$notifList   = [];
+$rolActual = (int)($_SESSION['rol'] ?? 0);
 
-if (in_array($rolActual, [1,2,3], true)) {
-    $serverName = "sqlserver-sia.database.windows.net";
-    $connectionOptions = [
-        "Database" => "db_sia",
-        "Uid"      => "cmapADMIN",
-        "PWD"      => "@siaADMN56*",
-        "Encrypt"  => true,
-        "TrustServerCertificate" => false
-    ];
-    $conn = sqlsrv_connect($serverName, $connectionOptions);
+// Conexión a la base de datos
+$serverName = "sqlserver-sia.database.windows.net";
+$connectionOptions = [
+    "Database" => "db_sia",
+    "Uid"      => "cmapADMIN",
+    "PWD"      => "@siaADMN56*",
+    "Encrypt"  => true,
+    "TrustServerCertificate" => false
+];
+$conn = sqlsrv_connect($serverName, $connectionOptions);
 
-    if ($conn) {
-        if ($rolActual === 1) {
-            // ADMIN: pendientes en Modificaciones
-            $stmtCount = sqlsrv_query(
-                $conn,
-                "SELECT COUNT(*) AS c
-                   FROM Modificaciones
-                  WHERE solicitudRevisada = 0"
-            );
-            $stmtList = sqlsrv_query(
-                $conn,
-                "SELECT TOP 10
-                        M.idModificacion,
-                        M.descripcion,
-                        M.fecha,
-                        M.tipo,
-                        M.cantidad,
-                        P.codigo AS codigoProducto
-                   FROM Modificaciones M
-              LEFT JOIN Productos P ON P.idCodigo = M.idCodigo
-                  WHERE M.solicitudRevisada = 0
-               ORDER BY M.fecha DESC"
-            );
-        } else {
-            // USUARIOS (2 y 3): avisos desde Notificaciones
-            $stmtCount = sqlsrv_query(
-                $conn,
-                "SELECT COUNT(*) AS c
-                   FROM Notificaciones
-                  WHERE estatusRevision = 0"
-            );
-            $stmtList = sqlsrv_query(
-                $conn,
-                "SELECT TOP 10
-                        N.idNotificacion,
-                        N.descripcion      AS comentarioAdmin,
-                        N.fechaNotificacion,
-                        P.codigo           AS codigoProducto
-                   FROM Notificaciones N
-              LEFT JOIN Modificaciones M ON M.idModificacion = N.idModificacion
-              LEFT JOIN Productos      P ON P.idCodigo       = M.idCodigo
-                  WHERE N.estatusRevision = 0
-               ORDER BY N.fechaNotificacion DESC"
-            );
+// ========================
+// NUEVO SISTEMA DE NOTIFICACIONES DE INVENTARIO
+// ========================
+$alertasInventario = [];
+$totalAlertas = 0;
+
+// Solo para Admin (1) y Almacenista (2)
+if ($conn && in_array($rolActual, [1, 2], true)) {
+    // Consulta para detectar productos con problemas de inventario
+    $sqlAlertas = "SELECT 
+                    p.idCodigo,
+                    p.codigo,
+                    p.descripcion,
+                    i.cantidadActual,
+                    p.puntoReorden,
+                    p.stockMaximo,
+                    CASE 
+                        WHEN i.cantidadActual = 0 THEN 'SIN STOCK'
+                        WHEN i.cantidadActual <= p.puntoReorden THEN 'BAJO STOCK'
+                        WHEN i.cantidadActual >= p.stockMaximo THEN 'SOBRE STOCK'
+                    END AS tipoAlerta,
+                    CASE 
+                        WHEN i.cantidadActual = 0 THEN 1
+                        WHEN i.cantidadActual <= p.puntoReorden THEN 2
+                        WHEN i.cantidadActual >= p.stockMaximo THEN 3
+                    END AS prioridad
+                FROM Productos p
+                INNER JOIN Inventario i ON p.idCodigo = i.idCodigo
+                WHERE i.cantidadActual = 0 
+                   OR i.cantidadActual <= p.puntoReorden 
+                   OR i.cantidadActual >= p.stockMaximo
+                ORDER BY prioridad ASC, i.cantidadActual ASC";
+    
+    $stmtAlertas = sqlsrv_query($conn, $sqlAlertas);
+    if ($stmtAlertas) {
+        while ($alerta = sqlsrv_fetch_array($stmtAlertas, SQLSRV_FETCH_ASSOC)) {
+            $alertasInventario[] = $alerta;
         }
-
-        if ($stmtCount) {
-            $row = sqlsrv_fetch_array($stmtCount, SQLSRV_FETCH_ASSOC);
-            $unreadCount = (int)($row['c'] ?? 0);
-            sqlsrv_free_stmt($stmtCount);
-        }
-
-        if ($stmtList) {
-            while ($r = sqlsrv_fetch_array($stmtList, SQLSRV_FETCH_ASSOC)) {
-                $notifList[] = $r;
-            }
-            sqlsrv_free_stmt($stmtList);
-        }
-
-        sqlsrv_close($conn);
+        sqlsrv_free_stmt($stmtAlertas);
     }
+    
+    $totalAlertas = count($alertasInventario);
+}
+
+if ($conn) {
+    sqlsrv_close($conn);
 }
 ?>
 
@@ -134,75 +116,83 @@ if (in_array($rolActual, [1,2,3], true)) {
   <div class="brand">
     <img src="img/cmapa.png" class="logo" />
     <h1>SIA - CMAPA</h1>
+    <a href="homepage.php" class="home-button">INICIO</a>
   </div>
 
   <div class="header-right">
+    <!-- Sistema de Notificaciones de Inventario -->
+    <?php if (in_array($rolActual, [1, 2], true)): ?>
     <div class="notification-container">
-      <button class="icon-btn" id="notif-toggle" type="button" aria-label="Notificaciones">
-        <img
-          src="<?= ($unreadCount > 0) ? 'img/belldot.png' : 'img/bell.png' ?>"
-          class="imgh3"
-          alt="Notificaciones"
-        />
+      <button class="icon-btn" id="notif-toggle" type="button" aria-label="Alertas de Inventario">
+        <img src="<?= $totalAlertas > 0 ? 'img/belldot.png' : 'img/bell.png' ?>" 
+        class="notif-icon" alt="Alertas" />
+        <?php if ($totalAlertas > 0): ?>
+          <span class="contador-badge"><?= $totalAlertas ?></span>
+        <?php endif; ?>
       </button>
 
-      <div class="notification-dropdown" id="notif-dropdown" style="display:none;">
-        <?php if ($unreadCount === 0): ?>
-          <div class="notif-empty" style="padding:10px;">No hay notificaciones nuevas.</div>
-
-        <?php elseif ($rolActual === 1): ?>
-          <!-- ADMIN: desde Modificaciones -->
-          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
-            <?php foreach ($notifList as $n): ?>
-              <?php
-                $f = $n['fecha'] ?? null;
-                $fechaTxt = ($f instanceof DateTime)
-                              ? $f->format('Y-m-d H:i')
-                              : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
-                $tipoTxt = strtoupper((string)($n['tipo'] ?? ''));
-                $qtyTxt  = isset($n['cantidad']) ? ' • Cant.: '.(int)$n['cantidad'] : '';
-                $codigo  = (string)($n['codigoProducto'] ?? '');
-              ?>
-              <li class="notif-item"
-                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  onclick="window.location.href='admnrqst.php'">
-                <div class="notif-desc" style="font-size:0.95rem;">
-                  [<?= htmlspecialchars($tipoTxt, ENT_QUOTES, 'UTF-8') ?>]
-                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong>
-                  <?= $qtyTxt ?> — <?= htmlspecialchars($n['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>
-                </div>
-                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-
+      <div class="notification-dropdown" id="notif-dropdown">
+        <?php if ($totalAlertas === 0): ?>
+          <div class="notif-empty">
+            <div class="check-icon">✅</div>
+            <strong>Inventario Óptimo</strong>
+            <p>Todos los productos están en niveles adecuados</p>
+          </div>
         <?php else: ?>
-          <!-- USUARIOS 2 y 3: desde Notificaciones -->
-          <ul class="notif-list" style="list-style:none; margin:0; padding:0; max-height:260px; overflow:auto;">
-            <?php foreach ($notifList as $n): ?>
-              <?php
-                $idNoti   = (int)($n['idNotificacion'] ?? 0);
-                $codigo   = (string)($n['codigoProducto'] ?? '');
-                $coment   = (string)($n['comentarioAdmin'] ?? '');
-                $f        = $n['fechaNotificacion'] ?? null;
-                $fechaTxt = ($f instanceof DateTime)
-                          ? $f->format('Y-m-d H:i')
-                          : (($dt = @date_create(is_string($f) ? $f : 'now')) ? $dt->format('Y-m-d H:i') : '');
-              ?>
-              <li class="notif-item"
-                  style="padding:8px 10px; cursor:pointer; border-bottom:1px solid #eaeaea;"
-                  onclick="ackUserNotif(<?= $idNoti ?>)">
-                <div class="notif-desc" style="font-size:0.95rem;">
-                  <strong><?= htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8') ?></strong> —
-                  <?= htmlspecialchars($coment, ENT_QUOTES, 'UTF-8') ?>
+          <div class="notif-header">
+            <span class="notif-title">⚠️ Alertas de Inventario (<?= $totalAlertas ?>)</span>
+            <button class="btn-marcar-todas" onclick="marcarTodasLeidas()">
+              Marcar todas como leídas
+            </button>
+          </div>
+          <div class="alertas-container">
+            <?php foreach ($alertasInventario as $alerta): 
+              $claseAlerta = '';
+              $iconoAlerta = '';
+              
+              switch($alerta['tipoAlerta']) {
+                case 'SIN STOCK':
+                  $claseAlerta = 'alerta-sin-stock';
+                  $iconoAlerta = '🔴';
+                  break;
+                case 'BAJO STOCK':
+                  $claseAlerta = 'alerta-bajo-stock';
+                  $iconoAlerta = '🟡';
+                  break;
+                case 'SOBRE STOCK':
+                  $claseAlerta = 'alerta-sobre-stock';
+                  $iconoAlerta = '🟢';
+                  break;
+              }
+            ?>
+              <div class="alerta-item <?= $claseAlerta ?>" data-id="<?= $alerta['idCodigo'] ?>">
+                <div class="alerta-content">
+                  <div class="alerta-info">
+                    <div class="alerta-header">
+                      <span class="alerta-icono"><?= $iconoAlerta ?></span>
+                      <strong><?= htmlspecialchars($alerta['codigo']) ?></strong>
+                      <span class="alerta-tipo"><?= htmlspecialchars($alerta['tipoAlerta']) ?></span>
+                    </div>
+                    <div class="alerta-descripcion">
+                      <?= htmlspecialchars($alerta['descripcion']) ?>
+                    </div>
+                    <div class="alerta-detalles">
+                      <span>Stock actual: <strong><?= $alerta['cantidadActual'] ?></strong></span>
+                      <span>Punto reorden: <strong><?= $alerta['puntoReorden'] ?></strong></span>
+                      <span>Stock máximo: <strong><?= $alerta['stockMaximo'] ?></strong></span>
+                    </div>
+                  </div>
+                  <button class="btn-marcar-leido" onclick="marcarComoLeido(<?= $alerta['idCodigo'] ?>)">
+                    ✓
+                  </button>
                 </div>
-                <div class="notif-date" style="font-size:0.8rem; opacity:0.7;"><?= $fechaTxt ?></div>
-              </li>
+              </div>
             <?php endforeach; ?>
-          </ul>
+          </div>
         <?php endif; ?>
       </div>
     </div>
+    <?php endif; ?>
 
     <p><?= htmlspecialchars($_SESSION['usuario'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
 
@@ -210,8 +200,8 @@ if (in_array($rolActual, [1,2,3], true)) {
       <button class="icon-btn" id="user-toggle" type="button">
         <img src="img/userB.png" class="imgh2" alt="Usuario" />
       </button>
-      <div class="user-dropdown" id="user-dropdown" style="display:none;">
-        <p><strong>Tipo de usuario:</strong> <?= (int)($_SESSION['rol'] ?? 0) ?></p>
+      <div class="user-dropdown" id="user-dropdown">
+        <p><strong>Tipo de Usuario:</strong> <?= $rolActual ?></p>
         <p><strong>Apodo:</strong> <?= htmlspecialchars($_SESSION['nombre'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
         <a href="passchng.php"><button class="user-option" type="button">CAMBIAR CONTRASEÑA</button></a>
       </div>
@@ -221,13 +211,15 @@ if (in_array($rolActual, [1,2,3], true)) {
       <button class="icon-btn" id="menu-toggle" type="button">
         <img src="img/menu.png" alt="Menú" />
       </button>
-      <div class="dropdown" id="dropdown-menu" style="display:none;">
+      <div class="dropdown" id="dropdown-menu">
         <a href="homepage.php">Inicio</a>
         <a href="mnthclsr.php">Cierre de mes</a>
-        <a href="admin.php">Menu de administador</a>
+        <?php if ($rolActual === 1): ?>
+          <a href="admin.php">Menu de administrador</a>
+        <?php endif; ?>
         <a href="about.php">Acerca de</a>
         <a href="help.php">Ayuda</a>
-        <a href="logout.php">Cerrar Sesion</a>
+        <a href="logout.php">Cerrar Sesión</a>
       </div>
     </div>
   </div>
@@ -328,59 +320,8 @@ function eliminarUltimo() {
 }
 </script>
 
-<script>
-  const toggle = document.getElementById('menu-toggle');
-  const dropdown = document.getElementById('dropdown-menu');
-  toggle.addEventListener('click', () => {
-    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
-  });
-  window.addEventListener('click', (e) => {
-    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
-      dropdown.style.display = 'none';
-    }
-  });
-</script>
+<script src="js/notificaciones.js"></script>
+<script src="js/menus.js"></script>
 
-<script>
-  const userToggle = document.getElementById('user-toggle');
-  const userDropdown = document.getElementById('user-dropdown');
-  userToggle.addEventListener('click', () => {
-    userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
-  });
-
-  // Cerrar el menú al hacer clic fuera
-  window.addEventListener('click', (e) => {
-    if (!userToggle.contains(e.target) && !userDropdown.contains(e.target)) {
-      userDropdown.style.display = 'none';
-    }
-  });
-</script>
-
-<script>
-// Notificaciones
-const notifToggle   = document.getElementById('notif-toggle');
-const notifDropdown = document.getElementById('notif-dropdown');
-if (notifToggle && notifDropdown) {
-  notifToggle.addEventListener('click', () => {
-    notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
-  });
-  window.addEventListener('click', (e) => {
-    if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
-      notifDropdown.style.display = 'none';
-    }
-  });
-}
-
-// Confirmar lectura (roles 2 y 3): marca estatusRevision=1 y redirige a inventario
-function ackUserNotif(idNotificacion) {
-  fetch('php/ack_user_notif.php', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-    body: 'id=' + encodeURIComponent(idNotificacion)
-  })
-  .then(r => r.json()).catch(() => ({}))
-  .finally(() => { window.location.href = 'inventory.php'; });
-}
-</script>
 </body>
 </html>
