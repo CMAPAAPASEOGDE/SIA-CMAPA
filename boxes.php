@@ -6,8 +6,8 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     exit();
 }
 
-$idRol = (int)($_SESSION['rol'] ?? 0);
-if (!in_array($idRol, [1, 2], true)) {
+$rolActual = (int)($_SESSION['rol'] ?? 0);
+if (!in_array($rolActual, [1, 2], true)) {
     header("Location: acceso_denegado.php");
     exit();
 }
@@ -25,7 +25,7 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'caja_eliminada') {
     echo '<div class="success-message">¡Caja eliminada correctamente! Los productos han sido devueltos al inventario.</div>';
 }
 
-// Conexión SQL Server (una sola vez)
+// Conexión SQL Server
 $serverName = "sqlserver-sia.database.windows.net";
 $connectionOptions = [
     "Database" => "db_sia",
@@ -39,19 +39,6 @@ if ($conn === false) {
     die(print_r(sqlsrv_errors(), true));
 }
 
-$rolActual = (int)($_SESSION['rol'] ?? 0);
-
-// Conexión a la base de datos
-$serverName = "sqlserver-sia.database.windows.net";
-$connectionOptions = [
-    "Database" => "db_sia",
-    "Uid"      => "cmapADMIN",
-    "PWD"      => "@siaADMN56*",
-    "Encrypt"  => true,
-    "TrustServerCertificate" => false
-];
-$conn = sqlsrv_connect($serverName, $connectionOptions);
-
 // ========================
 // NUEVO SISTEMA DE NOTIFICACIONES DE INVENTARIO
 // ========================
@@ -59,8 +46,7 @@ $alertasInventario = [];
 $totalAlertas = 0;
 
 // Solo para Admin (1) y Almacenista (2)
-if ($conn && in_array($rolActual, [1, 2], true)) {
-    // Consulta para detectar productos con problemas de inventario
+if (in_array($rolActual, [1, 2], true)) {
     $sqlAlertas = "SELECT 
                     p.idCodigo,
                     p.codigo,
@@ -96,13 +82,9 @@ if ($conn && in_array($rolActual, [1, 2], true)) {
     $totalAlertas = count($alertasInventario);
 }
 
-if ($conn) {
-    sqlsrv_close($conn);
-}
-
-/* ================================
-   Consulta de Cajas
-   ================================ */
+// ========================
+// Consulta de Cajas
+// ========================
 $sql = "SELECT C.numeroCaja, O.nombreCompleto AS nombreOperador, C.idCaja
         FROM CajaRegistro C
         INNER JOIN Operativo O ON C.idOperador = O.idOperador
@@ -116,6 +98,7 @@ if ($result === false) {
 <!DOCTYPE html>
 
 <html>
+
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">

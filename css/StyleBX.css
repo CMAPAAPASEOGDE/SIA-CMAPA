@@ -166,6 +166,7 @@ header p {
   background-color: #222;
 }
 
+/* ---------------  Sistema de Notificaciones de Inventario --------------- */
 .notification-container {
   position: relative;
 }
@@ -403,6 +404,14 @@ header p {
   background: #555;
 }
 
+/* Responsive */
+@media (max-width: 700px) {
+  .notification-dropdown {
+    width: 320px;
+    right: -50px;
+  }
+}
+
 .cajas-container {
   display: flex;
   flex-direction: column;
@@ -525,11 +534,4 @@ header p {
     border-radius: 5px;
     text-align: center;
     font-weight: bold;
-}
-
-@media (max-width: 700px) {
-  .notification-dropdown {
-    width: 320px;
-    right: -50px;
-  }
 }
