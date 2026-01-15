@@ -50,6 +50,26 @@ header h1 {
   margin-left: auto;    /* empuja todo esto a la derecha */
 }
 
+.home-button {
+  background-color: #0f037b;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: bold;
+  margin-left: 20px;
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+
+.home-button:hover {
+  background-color: #1a26a9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
 .icon-btn {
   background: none;
   border: none;
@@ -150,28 +170,237 @@ header p {
   position: relative;
 }
 
+.notif-icon {
+  height: 25px;
+}
+
+.contador-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #dc3545;
+  color: white;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  min-width: 18px;
+  text-align: center;
+  border: 2px solid #4a4c60;
+}
+
 .notification-dropdown {
   position: absolute;
   right: 0;
-  top: 40px;
-  background-color: #4a4c60;
-  color: white;
-  border-radius: 8px;
-  padding: 10px;
-  width: 260px;
+  top: 35px;
+  width: 400px;
+  max-height: 500px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 5px 25px rgba(0,0,0,0.2);
   display: none;
+  overflow: hidden;
+  z-index: 1001;
+}
+
+.notif-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #333;
+}
+
+.notif-empty .check-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.notif-empty strong {
+  display: block;
+  font-size: 18px;
+  color: #28a745;
+  margin-bottom: 5px;
+}
+
+.notif-empty p {
+  color: #666;
+  font-size: 14px;
+  margin: 0;
+}
+
+.notif-header {
+  padding: 15px;
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notif-title {
+  font-weight: bold;
+  color: #333;
+  font-size: 15px;
+}
+
+.btn-marcar-todas {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-marcar-todas:hover {
+  background: #5a6268;
+}
+
+.alertas-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.alerta-item {
+  border-bottom: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.alerta-item:last-child {
+  border-bottom: none;
+}
+
+.alerta-content {
+  padding: 12px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.alerta-info {
+  flex: 1;
+  padding-right: 10px;
+}
+
+.alerta-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.alerta-icono {
+  font-size: 16px;
+}
+
+.alerta-header strong {
+  color: #333;
+  font-size: 14px;
+}
+
+.alerta-tipo {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+.alerta-descripcion {
+  color: #666;
   font-size: 13px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
+  margin-bottom: 5px;
 }
 
-.notification-dropdown p {
-  margin: 8px 0;
-  line-height: 1.4;
+.alerta-detalles {
+  display: flex;
+  gap: 15px;
+  font-size: 11px;
+  color: #999;
 }
 
-.notification-dropdown u {
-  text-decoration-thickness: 1px;
+.alerta-detalles strong {
+  color: #333;
+}
+
+/* Tipos de alertas */
+.alerta-sin-stock {
+  background: #fff5f5;
+  border-left: 4px solid #dc3545;
+}
+
+.alerta-sin-stock .alerta-tipo {
+  background: #dc3545;
+  color: white;
+}
+
+.alerta-bajo-stock {
+  background: #fffdf0;
+  border-left: 4px solid #ffc107;
+}
+
+.alerta-bajo-stock .alerta-tipo {
+  background: #ffc107;
+  color: #333;
+}
+
+.alerta-sobre-stock {
+  background: #f0fff4;
+  border-left: 4px solid #28a745;
+}
+
+.alerta-sobre-stock .alerta-tipo {
+  background: #28a745;
+  color: white;
+}
+
+.btn-marcar-leido {
+  background: #007bff;
+  color: white;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-marcar-leido:hover {
+  background: #0056b3;
+  transform: scale(1.1);
+}
+
+.alerta-item.leida .btn-marcar-leido {
+  background: #28a745;
+  pointer-events: none;
+  cursor: default;
+}
+
+.alerta-item.leida .btn-marcar-leido:hover {
+  background: #28a745;
+  transform: none;
+}
+
+/* Scrollbar personalizada */
+.alertas-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.alertas-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.alertas-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.alertas-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 .main-container {
@@ -251,4 +480,11 @@ select {
 .boton-negro:hover {
   background-color: #222;
   transform: scale(1.01);
+}
+
+@media (max-width: 700px) {
+  .notification-dropdown {
+    width: 320px;
+    right: -50px;
+  }
 }
