@@ -205,12 +205,11 @@ if ($conn) {
     <!-- Barra con título -->
     <div class="admin-bar">
         <h2>MENU DE ADMINISTRADOR</h2>
-    </div>
+    </div>    
     <!-- Tarjeta de opciones -->
     <section class="admin-menu">
         <a href="admnedt.php"><button class="admin-btn">EDITAR ELEMENTOS</button></a>
         <a href="admnusrs.php"><button class="admin-btn">ADMINISTRACIÓN DE USUARIOS</button></a>
-        <a href="admnrqst.php"><button class="admin-btn">SOLICITUDES DE MODIFICACION</button></a>
         <button class="admin-btn">
             <a href="https://www.outlook.com" class="btn-link">OUTLOOK</a>
         </button>
